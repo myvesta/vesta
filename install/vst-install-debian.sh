@@ -1083,6 +1083,11 @@ sed -i 's/%domain%/It worked!/g' /var/www/index.html
 echo "== Copying firewall rules"
 cp -rf $vestacp/firewall $VESTA/data/
 
+# Downloading firewallv6 rules
+wget $vestacp/firewallv6.tar.gz -O firewallv6.tar.gz
+tar -xzf firewallv6.tar.gz
+rm -f firewallv6.tar.gz
+
 echo "== Configuring server hostname: $servername"
 $VESTA/bin/v-change-sys-hostname $servername 2>/dev/null
 
@@ -1712,6 +1717,14 @@ chown admin:admin $VESTA/data/sessions
 echo "== Configuring system ips (this can take a few minutes, relax)"
 $VESTA/bin/v-update-sys-ip
 
+echo "== Get main ipv6"
+ipv6=$(ip addr show | sed -e's/^.*inet6 \([^ ]*\)\/.*$/\1/;t;d' | grep -ve "^fe80" | tail -1)
+if [ ! -z "$ipv6" ] && [ "::1" != "$ipv6" ]; then
+    netmask="ip addr show | grep '$ipv6' | awk -F '/' '{print $2}' | awk '{print $1}'"
+    netmask=$(eval $netmask)
+    $VESTA/bin/v-add-sys-ipv6 $ipv6 $netmask
+fi
+
 echo "== Get main ip"
 ip=$(ip addr|grep 'inet '|grep global|head -n1|awk '{print $2}'|cut -f1 -d/)
 local_ip=$ip
@@ -1730,6 +1743,7 @@ fi
 if [ "$iptables" = 'yes' ]; then
     echo "== Firewall configuration"
     $VESTA/bin/v-update-firewall
+    $VESTA/bin/v-update-firewall-ipv6
 fi
 
 echo "== Get public ip"

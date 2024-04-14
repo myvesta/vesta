@@ -14,5 +14,11 @@ ID='13' RECORD='smtp' TYPE='A' PRIORITY='' VALUE='%ip%' SUSPENDED='no' TIME='%ti
 ID='14' RECORD='pop' TYPE='A' PRIORITY='' VALUE='%ip%' SUSPENDED='no' TIME='%time%' DATE='%date%'
 ID='15' RECORD='imap' TYPE='A' PRIORITY='' VALUE='%ip%' SUSPENDED='no' TIME='%time%' DATE='%date%'
 ID='16' RECORD='@' TYPE='MX' PRIORITY='10' VALUE='mail.%domain%.' SUSPENDED='no' TIME='%time%' DATE='%date%'
-ID='17' RECORD='@' TYPE='TXT' PRIORITY='' VALUE='"v=spf1 a mx ip4:%ip% ~all"' SUSPENDED='no' TIME='%time%' DATE='%date%'
+ID='17' RECORD='@' TYPE='TXT' PRIORITY='' VALUE='"v=spf1 a mx ip4:%ip% ip6:%ipv6% ~all"' SUSPENDED='no' TIME='%time%' DATE='%date%'
 ID='18' RECORD='_dmarc' TYPE='TXT' PRIORITY='' VALUE='"v=DMARC1; p=none"' SUSPENDED='no' TIME='%time%' DATE='%date%'
+ID='19' RECORD='@' TYPE='AAAA' PRIORITY='' VALUE='%ipv6%' SUSPENDED='no' TIME='%time%' DATE='%date%'
+ID='20' RECORD='mail' TYPE='AAAA' PRIORITY='' VALUE='%ipv6%' SUSPENDED='no' TIME='%time%' DATE='%date%'
+ID='21' RECORD='www' TYPE='AAAA' PRIORITY='' VALUE='%ipv6%' SUSPENDED='no' TIME='%time%' DATE='%date%'
+ID='22' RECORD='pop' TYPE='AAAA' PRIORITY='' VALUE='%ipv6%' SUSPENDED='no' TIME='%time%' DATE='%date%'
+ID='23' RECORD='ftp' TYPE='AAAA' PRIORITY='' VALUE='%ipv6%' SUSPENDED='no' TIME='%time%' DATE='%date%'
+
