@@ -3,11 +3,4 @@
 *.gzip
 *.gz
 .vscode
-conf
-data
-log
-php
-nginx
-ssl
-web/rrd
 .DS_Store
