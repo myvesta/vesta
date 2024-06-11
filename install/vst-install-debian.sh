@@ -1364,6 +1364,9 @@ if [ "$mysql" = 'yes' ] || [ "$mysql8" = 'yes' ]; then
       bash /root/phpmyadmin/pma.sh
       blowfish=$(gen_pass)
       echo "\$cfg['blowfish_secret'] = '$blowfish';" >> /etc/phpmyadmin/config.inc.php
+
+      # disable root login
+      echo "\$cfg['Servers'][\$i]['AllowRoot'] = FALSE;" >> /etc/phpmyadmin/config.inc.php
   fi
   if [ "$release" -gt 10 ]; then
       echo "=== Configure phpMyAdmin (Debian11 custom part)"
@@ -1381,6 +1384,9 @@ if [ "$mysql" = 'yes' ] || [ "$mysql8" = 'yes' ]; then
       bash /root/phpmyadmin/pma.sh
       blowfish=$(gen_pass)
       echo "\$cfg['blowfish_secret'] = '$blowfish';" >> /etc/phpmyadmin/config.inc.php
+
+      # disable root login
+      echo "\$cfg['Servers'][\$i]['AllowRoot'] = FALSE;" >> /etc/phpmyadmin/config.inc.php
   fi
 fi
 
