@@ -610,6 +610,9 @@ rebuild_pgsql_database() {
     if [ -z $HOST ] || [ -z $USER ] || [ -z $PASSWORD ] || [ -z $TPL ]; then
         echo "Error: postgresql config parsing failed"
         if [ ! -z "$SENDMAIL" ]; then
+            subj="Error: postgresql config parsing failed"
+            email=$($BIN/v-get-user-value admin CONTACT)
+
             echo "Can't parse PostgreSQL config" | $SENDMAIL -s "$subj" $email
         fi
         log_event "$E_PARSING" "$ARGUMENTS"
@@ -621,6 +624,9 @@ rebuild_pgsql_database() {
     if [ '0' -ne "$?" ];  then
         echo "Error: Connection failed"
         if [ ! -z "$SENDMAIL" ]; then
+            subj="Error: Connection failed"
+            email=$($BIN/v-get-user-value admin CONTACT)
+
             echo "Database connection to PostgreSQL host $HOST failed" |\
                 $SENDMAIL -s "$subj" $email
         fi
