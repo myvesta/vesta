@@ -339,7 +339,8 @@ if (!empty($_POST['save'])) {
             $v_backup_username = escapeshellarg($_POST['v_backup_username']);
             $v_backup_password = escapeshellarg($_POST['v_backup_password']);
             $v_backup_bpath = escapeshellarg($_POST['v_backup_bpath']);
-            exec (VESTA_CMD."v-add-backup-host ".$v_backup_type." ".$v_backup_host ." ".$v_backup_username." ".$v_backup_password." ".$v_backup_bpath, $output, $return_var);
+            $v_backup_port = escapeshellarg($_POST['v_backup_port']);
+            exec (VESTA_CMD."v-add-backup-host ".$v_backup_type." ".$v_backup_host ." ".$v_backup_username." ".$v_backup_password." ".$v_backup_bpath." ".$v_backup_port, $output, $return_var);
             check_return_code($return_var,$output);
             unset($output);
             if (empty($_SESSION['error_msg'])) $v_backup_host = $_POST['v_backup_host'];
@@ -347,12 +348,12 @@ if (!empty($_POST['save'])) {
             if (empty($_SESSION['error_msg'])) $v_backup_username = $_POST['v_backup_username'];
             if (empty($_SESSION['error_msg'])) $v_backup_password = $_POST['v_backup_password'];
             if (empty($_SESSION['error_msg'])) $v_backup_bpath = $_POST['v_backup_bpath'];
+            if (empty($_SESSION['error_msg'])) $v_backup_port = $_POST['v_backup_port'];
             $v_backup_new = 'yes';
             $v_backup_adv = 'yes';
             $v_backup_remote_adv = 'yes';
         }
     }
-
     // Change remote backup host type
     if (empty($_SESSION['error_msg'])) {
         if ((!empty($_POST['v_backup_host'])) && ($_POST['v_backup_type'] != $v_backup_type)) {
