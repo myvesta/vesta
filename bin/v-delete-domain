@@ -39,7 +39,8 @@ if [ ! -z "$WEB_SYSTEM" ]; then
     if [  ! -z "$str" ]; then
         domain_found='yes'
         $BIN/v-delete-web-domain $user $domain 'no'
-        check_result $? "can't suspend web" > /dev/null
+        check_result $? "can't delete web" > /dev/null
+        $BIN/v-delete-database-of-domain $domain
     fi
 fi
 
@@ -49,7 +50,7 @@ if [ ! -z "$DNS_SYSTEM" ]; then
     if [  ! -z "$str" ]; then
         domain_found='yes'
         $BIN/v-delete-dns-domain $user $domain 'no'
-        check_result $? "can't suspend dns" > /dev/null
+        check_result $? "can't delete dns" > /dev/null
     fi
 fi
 
@@ -59,7 +60,7 @@ if [ ! -z "$MAIL_SYSTEM" ]; then
     if [  ! -z "$str" ]; then
         domain_found='yes'
         $BIN/v-delete-mail-domain $user $domain
-        check_result $? "can't suspend mail" > /dev/null
+        check_result $? "can't delete mail" > /dev/null
     fi
 fi
 

@@ -1,0 +1,70 @@
+#!/bin/bash
+# info: change domain and database owner
+# options: DOMAIN USER
+#
+# The function of changing domain and database ownership.
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+whoami=$(whoami)
+if [ "$whoami" != "root" ]; then
+    echo "You must be root to execute this script"
+    exit 1
+fi
+
+# Importing system environment
+source /etc/profile
+
+# Argument definition
+domain=$1
+
+user=$(/usr/local/vesta/bin/v-search-domain-owner $domain)
+USER=$user
+
+# Includes
+source /usr/local/vesta/func/main.sh
+
+if [ -z "$user" ]; then
+    check_result $E_NOTEXIST "domain $domain doesn't exist"
+fi
+
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+
+check_args '1' "$#" 'DOMAIN'
+is_format_valid 'domain'
+is_object_valid 'user' 'USER' "$user"
+is_object_unsuspended 'user' 'USER' "$user"
+
+#----------------------------------------------------------#
+#                       Action                             #
+#----------------------------------------------------------#
+
+RET=$OK
+
+# echo "================================="
+r=$(/usr/local/vesta/bin/v-get-database-credentials-of-domain $domain)
+# echo $r
+eval $r
+# echo "================================="
+
+if [ ! -z "$DATABASE_NAME" ]; then
+    echo "=== v-delete-database $USER $DATABASE_NAME"
+    /usr/local/vesta/bin/v-delete-database $USER $DATABASE_NAME
+    if [ $? -ne 0 ]; then
+        echo "=== v-delete-database failed"
+        RET=$E_NOTEXIST
+    fi
+fi
+
+
+#----------------------------------------------------------#
+#                       Vesta                              #
+#----------------------------------------------------------#
+
+log_event "$RET" "$ARGUMENTS"
+
+exit
