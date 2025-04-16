@@ -753,31 +753,36 @@ if [ "$mysql" = 'no' ]; then
 fi
 if [ "$mysql8" = 'yes' ]; then
     echo "=== Preparing MySQL 8 apt repo"
-    software=$(echo "$software" | sed -e 's/exim4-daemon-heavy//')
-    software=$(echo "$software" | sed -e 's/exim4//')
-    #software="$software php-mysql roundcube-mysql"
-    echo "### THIS FILE IS AUTOMATICALLY CONFIGURED ###" > /etc/apt/sources.list.d/mysql.list
-    echo "# You may comment out entries below, but any other modifications may be lost." >> /etc/apt/sources.list.d/mysql.list
-    echo "# Use command 'dpkg-reconfigure mysql-apt-config' as root for modifications." >> /etc/apt/sources.list.d/mysql.list
-    echo "deb http://repo.mysql.com/apt/debian/ $codename mysql-apt-config" >> /etc/apt/sources.list.d/mysql.list
-    echo "deb http://repo.mysql.com/apt/debian/ $codename mysql-8.0" >> /etc/apt/sources.list.d/mysql.list
-    echo "deb http://repo.mysql.com/apt/debian/ $codename mysql-tools" >> /etc/apt/sources.list.d/mysql.list
-    echo "#deb http://repo.mysql.com/apt/debian/ $codename mysql-tools-preview" >> /etc/apt/sources.list.d/mysql.list
-    echo "deb-src http://repo.mysql.com/apt/debian/ $codename mysql-8.0" >> /etc/apt/sources.list.d/mysql.list
-
-    # apt-key adv --keyserver pgp.mit.edu --recv-keys 3A79BD29
-    key="467B942D3A79BD29"
-    readonly key
-    GNUPGHOME="$(mktemp -d)"
-    export GNUPGHOME
-    for keyserver in $(shuf -e ha.pool.sks-keyservers.net hkp://p80.pool.sks-keyservers.net:80 keyserver.ubuntu.com hkp://keyserver.ubuntu.com:80)
-    do
-        gpg --keyserver "${keyserver}" --recv-keys "${key}" 2>&1 && break
-    done
-    gpg --export "${key}" > /etc/apt/trusted.gpg.d/mysql.gpg
-    gpgconf --kill all
-    rm -rf "${GNUPGHOME}"
-    unset GNUPGHOME
+    if [ "$release" -lt 12 ]; then
+	    software=$(echo "$software" | sed -e 's/exim4-daemon-heavy//')
+	    software=$(echo "$software" | sed -e 's/exim4//')
+	    #software="$software php-mysql roundcube-mysql"
+	    echo "### THIS FILE IS AUTOMATICALLY CONFIGURED ###" > /etc/apt/sources.list.d/mysql.list
+	    echo "# You may comment out entries below, but any other modifications may be lost." >> /etc/apt/sources.list.d/mysql.list
+	    echo "# Use command 'dpkg-reconfigure mysql-apt-config' as root for modifications." >> /etc/apt/sources.list.d/mysql.list
+	    echo "deb http://repo.mysql.com/apt/debian/ $codename mysql-apt-config" >> /etc/apt/sources.list.d/mysql.list
+	    echo "deb http://repo.mysql.com/apt/debian/ $codename mysql-8.0" >> /etc/apt/sources.list.d/mysql.list
+	    echo "deb http://repo.mysql.com/apt/debian/ $codename mysql-tools" >> /etc/apt/sources.list.d/mysql.list
+	    echo "#deb http://repo.mysql.com/apt/debian/ $codename mysql-tools-preview" >> /etc/apt/sources.list.d/mysql.list
+	    echo "deb-src http://repo.mysql.com/apt/debian/ $codename mysql-8.0" >> /etc/apt/sources.list.d/mysql.list
+	
+	    # apt-key adv --keyserver pgp.mit.edu --recv-keys 3A79BD29
+	    key="467B942D3A79BD29"
+	    readonly key
+	    GNUPGHOME="$(mktemp -d)"
+	    export GNUPGHOME
+	    for keyserver in $(shuf -e ha.pool.sks-keyservers.net hkp://p80.pool.sks-keyservers.net:80 keyserver.ubuntu.com hkp://keyserver.ubuntu.com:80)
+	    do
+	        gpg --keyserver "${keyserver}" --recv-keys "${key}" 2>&1 && break
+	    done
+	    gpg --export "${key}" > /etc/apt/trusted.gpg.d/mysql.gpg
+	    gpgconf --kill all
+	    rm -rf "${GNUPGHOME}"
+	    unset GNUPGHOME
+     else
+	    wget https://dev.mysql.com/get/mysql-apt-config_0.8.30-1_all.deb
+            dpkg -i mysql-apt-config_0.8.30-1_all.deb
+     fi
     
     mpass=$(gen_pass)
     debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password $mpass"
