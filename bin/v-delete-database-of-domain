@@ -1,8 +1,9 @@
+ 
 #!/bin/bash
-# info: change domain and database owner
-# options: DOMAIN USER
+# info: delete database if domain has database
+# options: DOMAIN
 #
-# The function of changing domain and database ownership.
+# The function for deleting database if domain has database
 
 #----------------------------------------------------------#
 #                    Variable&Function                     #
@@ -59,7 +60,6 @@ if [ ! -z "$DATABASE_NAME" ]; then
         RET=$E_NOTEXIST
     fi
 fi
-
 
 #----------------------------------------------------------#
 #                       Vesta                              #
