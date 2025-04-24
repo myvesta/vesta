@@ -50,6 +50,14 @@ if [ -e "$home_dir" ]; then
     disk_usage=$(nice -n 19 du -shm $home_dir | cut -f 1 )
 fi
 
+# Defining hdd home directory
+home_dir="/hdd$HOMEDIR/$user/web/$domain/"
+
+# Checking home directory exist
+if [ -e "$home_dir" ] && [[ ! -L "$home_dir" ]]; then
+    disk_usage2=$(nice -n 19 du -shm $home_dir | cut -f 1 )
+    disk_usage=$(( disk_usage + disk_usage2 ))
+fi
 
 #----------------------------------------------------------#
 #                       Vesta                              #

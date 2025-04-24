@@ -359,6 +359,17 @@ search_objects() {
     IFS="$OLD_IFS"
 }
 
+# List objects
+list_objects() {
+    OLD_IFS="$IFS"
+    IFS=$'\n'
+    for line in $(cat $USER_DATA/$1.conf); do
+        eval $line
+        eval echo \$$2
+    done
+    IFS="$OLD_IFS"
+}
+
 # Get user value
 get_user_value() {
     grep "^${1//$/}=" $USER_DATA/user.conf |awk -F "'" '{print $2}'

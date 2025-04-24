@@ -32,10 +32,15 @@ is_object_valid 'user' 'USER' "$user"
 #----------------------------------------------------------#
 
 # Domain loop
-for domain in $(search_objects 'web' 'SUSPENDED' "no" 'DOMAIN'); do
+for domain in $(list_objects 'web' 'DOMAIN'); do
     home_dir="$HOMEDIR/$user/web/$domain/"
     if [ -e "$home_dir" ]; then
         disk_usage=$(nice -n 19 du -shm $home_dir | cut -f 1 )
+    fi
+    home_dir="/hdd$HOMEDIR/$user/web/$domain/"
+    if [ -e "$home_dir" ] && [[ ! -L "$home_dir" ]]; then
+        disk_usage2=$(nice -n 19 du -shm $home_dir | cut -f 1 )
+        disk_usage=$(( disk_usage + disk_usage2 ))
     fi
     update_object_value 'web' 'DOMAIN' "$domain" '$U_DISK' "$disk_usage"
 done

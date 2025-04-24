@@ -35,9 +35,9 @@ fi
 #----------------------------------------------------------#
 
 # Starting loop
-for domain in $(search_objects 'mail' 'SUSPENDED' "no" 'DOMAIN'); do
+for domain in $(list_objects 'mail' 'DOMAIN'); do
     dom_diks=0
-    accounts=$(search_objects "mail/$domain" 'SUSPENDED' "no" 'ACCOUNT')
+    accounts=$(list_objects "mail/$domain" 'ACCOUNT')
     for account in $accounts; do
         home_dir=$HOMEDIR/$user/mail/$domain/$account
         if [ -e "$home_dir" ]; then
