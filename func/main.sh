@@ -1155,17 +1155,16 @@ check_if_service_exists() {
     fi
 }
 
-# Checking the format of a string with key='value' pairs and setting variables, without using Perl
-# Code taken from HestiaCP and improved
+# Parsing config variables with key='value' and key="value" pairs and setting them as variables, without using Perl.
+# Inspired by HestiaCP function and improved
 parse_object_kv_list_non_eval() {
     # Let's combine all the parameters into one string, replace the new lines with a space
     local str="${*//$'\n'/ }"
     local backup_str=$str
-    # Escape " and $
-    # str="${str//\"/\\\"}"
-    # str="${str//\$/\\\$}"
 
-    local key val match
+    local key val match i
+    i=0
+    # Searching for key='value' blocks
     # Loop until we find the next key='value'
     while [[ $str =~ ([A-Za-z][[:alnum:]_]*)=\'([^\']*)\' ]]; do
         key="${BASH_REMATCH[1]}"
@@ -1177,23 +1176,25 @@ parse_object_kv_list_non_eval() {
             check_result "$E_INVALID" "Invalid key format [$key]"
         fi
 
-        # Value validation: must not contain an apostrophe
-        if ! [[ "$val" =~ ^[^\']*$ ]]; then
-            check_result "$E_INVALID" "Invalid value format [$val]"
-        fi
-
         # Declaring a global variable
         declare -g "$key"="$val"
 
         # Let's remove the processed part from str to continue
         str="${str#*$match}"
+        ((i++))
+        if [ $i -eq 100 ]; then
+            check_result "$E_INVALID" "Potentially conf-parsing infinite loop detected"
+        fi
     done
 
+    # Terminate function if we don't expect strings with double apostrophes
     if [ -z "$PARSE_DOUBLE_QUOTES_VAR" ]; then
         return;
     fi
 
+    # Searching for key="value" blocks
     str=$backup_str
+    i=0
     # Loop until we find the next key="value"
     while [[ $str =~ ([A-Za-z][[:alnum:]_]*)=\"([^\"]*)\" ]]; do
         key="${BASH_REMATCH[1]}"
@@ -1205,15 +1206,14 @@ parse_object_kv_list_non_eval() {
             check_result "$E_INVALID" "Invalid key format [$key]"
         fi
 
-        # Value validation: must not contain an apostrophe
-        if ! [[ "$val" =~ ^[^\']*$ ]]; then
-            check_result "$E_INVALID" "Invalid value format [$val]"
-        fi
-
         # Declaring a global variable
         declare -g "$key"="$val"
 
         # Let's remove the processed part from str to continue
         str="${str#*$match}"
+        ((i++))
+        if [ $i -eq 100 ]; then
+            check_result "$E_INVALID" "Potentially conf-parsing infinite loop detected"
+        fi
     done
 }
