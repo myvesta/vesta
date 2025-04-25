@@ -1154,3 +1154,37 @@ check_if_service_exists() {
         echo "0"
     fi
 }
+
+# Checking the format of a string with key='value' pairs and setting variables, without using Perl
+# Code taken from HestiaCP and improved
+parse_object_kv_list_non_eval() {
+    # Let's combine all the parameters into one string, replace the new lines with a space
+    local str="${*//$'\n'/ }"
+    # Escape " and $
+    str="${str//\"/\\\"}"
+    str="${str//\$/\\\$}"
+
+    local key val match
+    # Loop until we find the next key='value'
+    while [[ $str =~ ([A-Za-z][[:alnum:]_]*)=\'([^\']*)\' ]]; do
+        key="${BASH_REMATCH[1]}"
+        val="${BASH_REMATCH[2]}"
+        match="${BASH_REMATCH[0]}"
+
+        # Key validation: alphanumeric, length 2–66 (key must start and end with a letter/number)
+        if ! [[ "$key" =~ ^[[:alnum:]][_[:alnum:]]{0,64}[[:alnum:]]$ ]]; then
+            check_result "$E_INVALID" "Invalid key format [$key]"
+        fi
+
+        # Value validation: must not contain an apostrophe
+        if ! [[ "$val" =~ ^[^\']*$ ]]; then
+            check_result "$E_INVALID" "Invalid value format [$val]"
+        fi
+
+        # Declaring a global variable
+        declare -g "$key"="$val"
+
+        # Let's remove the processed part from str to continue
+        str="${str#*$match}"
+    done
+}
