@@ -1161,8 +1161,8 @@ parse_object_kv_list_non_eval() {
     # Let's combine all the parameters into one string, replace the new lines with a space
     local str="${*//$'\n'/ }"
     # Escape " and $
-    str="${str//\"/\\\"}"
-    str="${str//\$/\\\$}"
+    # str="${str//\"/\\\"}"
+    # str="${str//\$/\\\$}"
 
     local key val match
     # Loop until we find the next key='value'
