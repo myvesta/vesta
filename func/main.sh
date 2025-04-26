@@ -1160,9 +1160,11 @@ check_if_service_exists() {
 parse_object_kv_list_non_eval() {
     # Let's combine all the parameters into one string, replace the new lines with a space
     local str="${*//$'\n'/ }"
+    str=${str//\\\'/---QUOTE---}
+    str=${str//\\\"/---DQUOTE---}
     local backup_str=$str
 
-    local key val match i
+    local key val match i length length_val prefix position cut
     i=0
     # Searching for key='value' blocks
     # Loop until we find the next key='value'
@@ -1170,6 +1172,8 @@ parse_object_kv_list_non_eval() {
         key="${BASH_REMATCH[1]}"
         val="${BASH_REMATCH[2]}"
         match="${BASH_REMATCH[0]}"
+        length=${#match}
+        length_val=${#match}
 
         # Key validation: alphanumeric, length 2–66 (key must start and end with a letter/number)
         if ! [[ "$key" =~ ^[[:alnum:]][_[:alnum:]]{0,64}[[:alnum:]]$ ]]; then
@@ -1177,10 +1181,15 @@ parse_object_kv_list_non_eval() {
         fi
 
         # Declaring a global variable
+        val=${val/---QUOTE---/\\\'}
+        val=${val/---DQUOTE---/\\\"}
         declare -g "$key"="$val"
 
         # Let's remove the processed part from str to continue
-        str="${str#*$match}"
+        prefix=${str%%"$key="*}
+        position=${#prefix}
+        cut=$((position + 1 + length_val))
+        str=${str:cut}
         ((i++))
         if [ $i -eq 100 ]; then
             check_result "$E_INVALID" "Potentially conf-parsing infinite loop detected"
@@ -1200,6 +1209,8 @@ parse_object_kv_list_non_eval() {
         key="${BASH_REMATCH[1]}"
         val="${BASH_REMATCH[2]}"
         match="${BASH_REMATCH[0]}"
+        length=${#match}
+        length_val=${#match}
 
         # Key validation: alphanumeric, length 2–66 (key must start and end with a letter/number)
         if ! [[ "$key" =~ ^[[:alnum:]][_[:alnum:]]{0,64}[[:alnum:]]$ ]]; then
@@ -1207,10 +1218,15 @@ parse_object_kv_list_non_eval() {
         fi
 
         # Declaring a global variable
+        val=${val/---QUOTE---/\\\'}
+        val=${val/---DQUOTE---/\\\"}
         declare -g "$key"="$val"
 
         # Let's remove the processed part from str to continue
-        str="${str#*$match}"
+        prefix=${str%%"$key="*}
+        position=${#prefix}
+        cut=$((position + 1 + length_val))
+        str=${str:cut}
         ((i++))
         if [ $i -eq 100 ]; then
             check_result "$E_INVALID" "Potentially conf-parsing infinite loop detected"
