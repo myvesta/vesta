@@ -780,8 +780,9 @@ if [ "$mysql8" = 'yes' ]; then
 	    rm -rf "${GNUPGHOME}"
 	    unset GNUPGHOME
      else
-	    wget https://dev.mysql.com/get/mysql-apt-config_0.8.30-1_all.deb
-            dpkg -i mysql-apt-config_0.8.30-1_all.deb
+            # check latest on: https://dev.mysql.com/downloads/repo/apt/
+	    wget https://dev.mysql.com/get/mysql-apt-config_0.8.34-1_all.deb
+            dpkg -i mysql-apt-config_0.8.34-1_all.deb
      fi
     
     mpass=$(gen_pass)
