@@ -308,6 +308,11 @@ for auth in $authz; do
             if [[ $(echo "$answer" | grep 'addressesResolved') != "" ]]; then
                 break
             fi
+            if [ "$wildcard" = 'yes'  ]; then
+                if [[ $(echo "$answer" | grep '"status": "valid"') != "" ]]; then
+                    break
+                fi                
+            fi
             i=$((i + 1))
             if ((i > 30)); then
                 break
