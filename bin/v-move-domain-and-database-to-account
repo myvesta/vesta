@@ -92,31 +92,51 @@ fi
 #               Update Wordfence WAF Path                  #
 #----------------------------------------------------------#
 
-# Path to .user.ini file
-user_ini="$USER_DATA/web/$domain/public_html/.user.ini"
+filepath="$USER_DATA/web/$domain/public_html/.user.ini"
+filename=$(basename $filepath)
 
-# Check if .user.ini exists
-if [ -f "$user_ini" ]; then
-    echo "Updating .user.ini with new user path..."
+# Check if file exists
+if [ -f "$filepath" ]; then
+    echo "Updating $filename with new user path..."
     
     # Temporary file for modification
     tmp_file=$(mktemp)
     
     # Change path from old USER to new USER_TO
-    sed "s|/home/$owner/public_html|/home/$USER_TO/public_html|g" "$user_ini" > "$tmp_file"
+    sed "s|/home/$owner/public_html|/home/$USER_TO/public_html|g" "$filepath" > "$tmp_file"
     
-    # Check if replacement was successful and update .user.ini
+    # Check if replacement was successful and update file
     if [ $? -eq 0 ]; then
-        mv "$tmp_file" "$user_ini"
-        echo ".user.ini updated successfully."
+        mv "$tmp_file" "$filepath"
+        echo "$filename updated successfully."
     else
-        echo "Failed to update .user.ini file."
+        echo "Failed to update $filename file."
         rm "$tmp_file"  # Deletes temporary file
     fi
-else
-    echo ".user.ini does not exist, no changes made."
 fi
 
+filepath="$USER_DATA/web/$domain/public_html/wordfence-waf.php"
+filename=$(basename $filepath)
+
+# Check if file exists
+if [ -f "$filepath" ]; then
+    echo "Updating $filename with new user path..."
+    
+    # Temporary file for modification
+    tmp_file=$(mktemp)
+    
+    # Change path from old USER to new USER_TO
+    sed "s|/home/$owner/public_html|/home/$USER_TO/public_html|g" "$filepath" > "$tmp_file"
+    
+    # Check if replacement was successful and update file
+    if [ $? -eq 0 ]; then
+        mv "$tmp_file" "$filepath"
+        echo "$filename updated successfully."
+    else
+        echo "Failed to update $filename file."
+        rm "$tmp_file"  # Deletes temporary file
+    fi
+fi
 
 #----------------------------------------------------------#
 #                       Vesta                              #
