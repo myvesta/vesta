@@ -19,12 +19,24 @@ fi
 FROMFOLDER=$1
 TOFOLDER=$2
 
+echo "Executing: v-move-folder-and-make-symlink $1 $2"
+
 # Includes
 source $VESTA/func/main.sh
 
 #----------------------------------------------------------#
 #                    Verifications                         #
 #----------------------------------------------------------#
+
+if [ -z "$FROMFOLDER" ]; then
+    echo "First parameter is empty, aborting"
+    exit 1
+fi
+
+if [ -z "$TOFOLDER" ]; then
+    echo "Second parameter is empty, aborting"
+    exit 1
+fi
 
 # Trimming the ending slash, just in case
 FROMFOLDER=$(echo "$FROMFOLDER" | sed 's:/*$::')
