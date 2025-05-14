@@ -156,6 +156,10 @@ if [ ! -z "$mail_data" ]; then
     # Move data
     mv $HOMEDIR/$owner/mail/$domain $HOMEDIR/$user/mail/
 
+    if [ -d "/hdd/home/$owner/mail/$domain" ]; then
+        $BIN/v-move-folder-and-make-symlink /hdd/home/$owner/mail/$domain /hdd/home/$user/mail/$domain
+    fi
+
     # Change ownership
     find $HOMEDIR/$user/mail/$domain -user $owner \
         -exec chown -h $user {} \;
