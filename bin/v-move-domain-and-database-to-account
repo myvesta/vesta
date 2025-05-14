@@ -92,7 +92,7 @@ fi
 #               Update Wordfence WAF Path                  #
 #----------------------------------------------------------#
 
-filepath="$USER_DATA/web/$domain/public_html/.user.ini"
+filepath="/home/USER_TO/web/$domain/public_html/.user.ini"
 filename=$(basename $filepath)
 
 # Check if file exists
@@ -115,7 +115,7 @@ if [ -f "$filepath" ]; then
     fi
 fi
 
-filepath="$USER_DATA/web/$domain/public_html/wordfence-waf.php"
+filepath="/home/USER_TO/web/$domain/public_html/wordfence-waf.php"
 filename=$(basename $filepath)
 
 # Check if file exists
