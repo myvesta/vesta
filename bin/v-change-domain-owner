@@ -82,6 +82,10 @@ if [ ! -z "$web_data" ]; then
     # Move data
     mv $HOMEDIR/$owner/web/$domain $HOMEDIR/$user/web/
 
+    if [ -d "/hdd/home/$owner/web/$domain" ]; then
+        $BIN/v-move-folder-and-make-symlink /hdd/home/$owner/web/$domain /hdd/home/$user/web/$domain
+    fi
+
     # Change ownership
     find $HOMEDIR/$user/web/$domain -user $owner \
         -exec chown -h $user:$user {} \;
