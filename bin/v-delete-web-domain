@@ -130,6 +130,9 @@ rm -f /var/log/$WEB_SYSTEM/domains/$domain.error*
 
 # Deleting directory
 rm -rf $HOMEDIR/$user/web/$domain
+if [ -d "/hdd/home/$user/web/$domain" ]; then
+    rm -rf /hdd/home/$user/web/$domain
+fi
 
 
 #----------------------------------------------------------#
