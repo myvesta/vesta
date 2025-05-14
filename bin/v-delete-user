@@ -94,7 +94,7 @@ fi
 # Deleting user directories
 chattr -i $HOMEDIR/$user/conf
 rm -rf $HOMEDIR/$user
-if [ -f "/hdd/home/$user" ]; then
+if [ -d "/hdd/home/$user" ]; then
     rm -rf /hdd/home/$user
 fi
 rm -f /var/spool/mail/$user
