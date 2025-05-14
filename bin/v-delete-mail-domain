@@ -51,6 +51,9 @@ if [[ "$MAIL_SYSTEM" =~ exim ]]; then
     rm -f /etc/$MAIL_SYSTEM/domains/$domain_idn
     rm -rf $HOMEDIR/$user/conf/mail/$domain
     rm -rf $HOMEDIR/$user/mail/$domain_idn
+    if [ -d "/hdd/home/$user/mail/$domain_idn" ]; then
+        rm -rf /hdd/home/$user/mail/$domain_idn
+    fi
 fi
 
 # Deleting dkim dns record
