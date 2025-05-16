@@ -154,7 +154,7 @@ $(document).ready(function() {
                 $('#td_smtp_encryption').html('STARTTLS');
                 break;
             case 'ssl':
-                $('#td_imap_port').html('993');
+                $('#td_imap_port').html('993 or 995');
                 $('#td_imap_encryption').html('SSL / TLS');
                 $('#td_smtp_port').html('465');
                 $('#td_smtp_encryption').html('SSL / TLS');
