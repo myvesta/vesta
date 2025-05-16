@@ -4,7 +4,6 @@
 #                                                                    #
 ######################################################################
 
-
 # Placeholder for primary_hostname (to be set dynamically during installation)
 # primary_hostname = mail.domain.com
 
