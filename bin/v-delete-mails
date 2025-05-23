@@ -1,0 +1,127 @@
+#!/bin/bash
+# info: delete old emails (by mtime) for user/domain/account, with optional scope
+# usage:   v-delete-mails USER DOMAIN ACCOUNT MTIME_DAYS|all SCOPE
+# SCOPE:   all    – clean every Maildir folder (cur, new, tmp, custom subfolders)
+#          trash  – clean only Trash/Junk/Spam folders
+
+# load Vesta functions & config
+source "$VESTA/func/main.sh"
+source "$VESTA/conf/vesta.conf"
+
+# read arguments
+user="$1"
+domain="$2"
+account="$3"
+mtime="$4"
+scope="$5"
+
+# verify argument count
+check_args '5' "$#" 'USER DOMAIN ACCOUNT MTIME_DAYS|all SCOPE'
+
+# validate scope
+if [[ "$scope" != "all" && "$scope" != "trash" ]]; then
+  echo "ERROR: SCOPE must be 'all' or 'trash'."
+  exit 1
+fi
+
+# validate logical combinations
+if [[ "$user" == "all" ]]; then
+  if [[ "$domain" != "all" || "$account" != "all" ]]; then
+    echo "ERROR: When USER is 'all', both DOMAIN and ACCOUNT must be 'all'."
+    exit 1
+  fi
+elif [[ "$domain" == "all" && "$account" != "all" ]]; then
+  echo "ERROR: When DOMAIN is 'all', ACCOUNT must also be 'all'."
+  exit 1
+fi
+
+# build a detailed summary for the warning
+declare -a summary_parts
+if [[ "$user" == "all" ]]; then
+  summary_parts+=("all users")
+else
+  summary_parts+=("user '$user'")
+fi
+
+if [[ "$domain" == "all" ]]; then
+  summary_parts+=("all domains")
+else
+  summary_parts+=("domain '$domain'")
+fi
+
+if [[ "$account" == "all" ]]; then
+  summary_parts+=("all accounts")
+else
+  summary_parts+=("account '$account'")
+fi
+
+# join with commas
+summary=$(printf ", %s" "${summary_parts[@]}")
+summary=${summary:2}
+
+# only warn if any of them is 'all' or if mtime is 'all'
+if [[ "$mtime" == "all" || "$user" == "all" || "$domain" == "all" || "$account" == "all" ]]; then
+  echo "WARNING: This will delete emails older than '$mtime' days for ${summary}."
+  read -p "Are you sure? (yes/no): " confirm
+  [[ "$confirm" != "yes" ]] && { echo "Aborted."; exit 1; }
+fi
+
+# function to delete emails
+delete_emails() {
+  local u="$1" d="$2" a="$3"
+  local maildir="/home/$u/mail/$d/$a"
+
+  [[ ! -d "$maildir" ]] && return
+
+  echo "→ Cleaning '$a@$d' (user: $u), scope: $scope, mtime: $mtime"
+
+  # build find predicates
+  if [[ "$scope" == "all" ]]; then
+    folder_expr=( -path "*/cur/*" -o -path "*/new/*" -o -path "*/tmp/*" )
+  else
+    folder_expr=( -ipath "*/trash/*" -o -ipath "*/junk/*" -o -ipath "*/spam/*" )
+  fi
+
+  # assemble and run find
+  if [[ "$mtime" == "all" ]]; then
+    find "$maildir" -type f \( "${folder_expr[@]}" \) -print -delete 2>/dev/null
+  else
+    find "$maildir" -type f \( "${folder_expr[@]}" \) -mtime +"$mtime" -print -delete 2>/dev/null
+  fi
+}
+
+# collect users
+if [[ "$user" == "all" ]]; then
+  users=$(v-list-users plain | awk '{print $1}')
+else
+  users="$user"
+fi
+
+# iterate through users, domains, accounts
+for u in $users; do
+  if [[ "$domain" == "all" ]]; then
+    domains=$(v-list-mail-domains "$u" plain | awk '{print $1}')
+  else
+    domains="$domain"
+  fi
+
+  for d in $domains; do
+    if [[ "$account" == "all" ]]; then
+      accounts=$(v-list-mail-accounts "$u" "$d" plain | awk '{print $1}')
+    else
+      accounts="$account"
+    fi
+
+    for a in $accounts; do
+      delete_emails "$u" "$d" "$a"
+    done
+  done
+done
+
+# restart dovecot to refresh mailbox state
+systemctl restart dovecot
+
+# log the action (status first, then message)
+log_event "$OK" "Deleted emails (>$mtime days, scope=$scope) for $user $domain $account"
+
+exit 0
