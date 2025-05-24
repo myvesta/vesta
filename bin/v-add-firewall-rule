@@ -83,6 +83,16 @@ sort_fw_rules
 # Updating system firewall
 $BIN/v-update-firewall
 
+if [ "$WEB_SYSTEM" == 'nginx' ] || [ "$PROXY_SYSTEM" == 'nginx' ]; then
+    if [ "$port_ext" == "80,443" ]; then
+        touch /etc/nginx/conf.d/block.conf
+        if ! grep -q "deny $ip;" /etc/nginx/conf.d/block.conf; then
+            echo "deny $ip;" >> /etc/nginx/conf.d/block.conf
+            systemctl restart nginx
+        fi
+    fi
+fi
+
 
 #----------------------------------------------------------#
 #                       Vesta                              #
