@@ -21,9 +21,19 @@ if [ ! -d "/usr/local/vesta/data/upgrades" ]; then
     mkdir -p /usr/local/vesta/data/upgrades
 fi
 
+VESTA="/usr/local/vesta"
+
 # show changelog after update
 echo "1" > /usr/local/vesta/data/upgrades/show_changelog
 chmod a=rw /usr/local/vesta/data/upgrades/show_changelog
+
+# Fixing permissions for all websites
+if ! grep -q "fix-website-permissions-for-all-websites" /usr/local/vesta/data/users/admin/cron.conf; then
+    echo "== Fixing permissions for all websites"
+    command="sudo $VESTA/bin/v-fix-website-permissions-for-all-websites > /tmp/fix-website-permissions-for-all-websites.log 2>&1"
+    $VESTA/bin/v-add-cron-job 'admin' '05' '03' '*' '*' '*' "$command"
+    systemctl restart cron.service
+fi
 
 if ! grep -q "FILEMANAGER_KEY='FREEFM'" /usr/local/vesta/conf/vesta.conf; then
     echo "== Adding FileManager license to vesta.conf"

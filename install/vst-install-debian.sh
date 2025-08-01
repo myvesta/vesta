@@ -1894,7 +1894,9 @@ command="sudo $VESTA/bin/v-update-user-stats"
 $VESTA/bin/v-add-cron-job 'admin' '20' '00' '*' '*' '*' "$command"
 command="sudo $VESTA/bin/v-update-sys-rrd"
 $VESTA/bin/v-add-cron-job 'admin' '*/5' '*' '*' '*' '*' "$command"
-service cron restart
+command="sudo $VESTA/bin/v-fix-website-permissions-for-all-websites > /tmp/fix-website-permissions-for-all-websites.log 2>&1"
+$VESTA/bin/v-add-cron-job 'admin' '05' '03' '*' '*' '*' "$command"
+systemctl restart cron.service
 
 echo "== Building inititall rrd images"
 $VESTA/bin/v-update-sys-rrd
