@@ -116,9 +116,11 @@ if (isset($_GET['db'])) {
 // Data
 exec (VESTA_CMD."v-list-sys-info json", $output, $return_var);
 $sys = json_decode(implode('', $output), true);
+if (!is_array($sys)) $sys = array();
 unset($output);
 exec (VESTA_CMD."v-list-sys-services json", $output, $return_var);
 $data = json_decode(implode('', $output), true);
+if (!is_array($data)) $data = array();
 unset($output);
 
 // Render page

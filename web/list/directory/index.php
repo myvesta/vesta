@@ -22,6 +22,7 @@ if (empty($panel)) {
         exit;
     }
     $panel = json_decode(implode('', $output), true);
+    if (!is_array($panel)) $panel = array();
 }
 
 $path_a = !empty($_REQUEST['dir_a']) ? htmlentities($_REQUEST['dir_a']) : '';

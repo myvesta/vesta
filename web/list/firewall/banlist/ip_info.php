@@ -1,8 +1,8 @@
-<?
+<?php
 error_reporting(NULL);
 session_start();
 
-include($_SERVER['DOCUMENT_ROOT']."/inc/main.php");
+include($_SERVER['DOCUMENT_ROOT'].'/inc/main.php');
 
 if (!function_exists('str_contains')) {
     function str_contains($haystack, $needle)

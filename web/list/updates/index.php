@@ -14,6 +14,7 @@ if ($_SESSION['user'] != 'admin') {
 // Data
 exec (VESTA_CMD."v-list-sys-vesta-updates json", $output, $return_var);
 $data = json_decode(implode('', $output), true);
+if (!is_array($data)) $data = array();
 unset($output);
 exec (VESTA_CMD."v-list-sys-vesta-autoupdate plain", $output, $return_var);
 $autoupdate = $output['0'];

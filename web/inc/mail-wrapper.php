@@ -20,6 +20,7 @@ include("/usr/local/vesta/web/inc/main.php");
 // Set system language
 exec (VESTA_CMD . "v-list-sys-config json", $output, $return_var);
 $data = json_decode(implode('', $output), true);
+if (!is_array($data)) $data = array('config' => array());
 if (!empty( $data['config']['LANGUAGE'])) {
     $_SESSION['language'] = $data['config']['LANGUAGE'];
 } else {

@@ -9,14 +9,14 @@ include($_SERVER['DOCUMENT_ROOT']."/inc/main.php");
 if (empty($_GET['domain'])){
     exec (VESTA_CMD."v-list-mail-domains ".escapeshellarg($user)." json", $output, $return_var);
     $data = json_decode(implode('', $output), true);
-    $data = array_reverse($data, true);
+    $data = is_array($data) ? array_reverse($data, true) : array();
     unset($output);
 
     render_page($user, $TAB, 'list_mail');
 } else {
     exec (VESTA_CMD."v-list-mail-accounts ".escapeshellarg($user)." ".escapeshellarg($_GET['domain'])." json", $output, $return_var);
     $data = json_decode(implode('', $output), true);
-    $data = array_reverse($data, true);
+    $data = is_array($data) ? array_reverse($data, true) : array();
     unset($output);
 
     render_page($user, $TAB, 'list_mail_acc');

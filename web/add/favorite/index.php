@@ -1,4 +1,4 @@
-<?
+<?php
 
 error_reporting(NULL);
 session_start();

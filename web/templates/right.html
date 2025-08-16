@@ -64,7 +64,7 @@
                 $output='';
                 exec (VESTA_CMD . "v-list-user ".$GLOBALS['CURRENT_USER_FINAL']." json", $output, $return_var);
                 $data = json_decode(implode('', $output), true);
-                $data = array_reverse($data,true);
+                $data = is_array($data) ? array_reverse($data,true) : array();
                 //print_r($data); exit;
                 $key=$GLOBALS['CURRENT_USER_FINAL'];
                 if ($data[$key]['DISK_QUOTA']=='unlimited') echo __('unlimited');

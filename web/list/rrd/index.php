@@ -18,6 +18,7 @@ if (!empty($_GET['period'])) {
 // Data
 exec (VESTA_CMD."v-list-sys-rrd json", $output, $return_var);
 $data = json_decode(implode('', $output), true);
+if (!is_array($data)) $data = array();
 unset($output);
 
 // Render page

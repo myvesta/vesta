@@ -9,7 +9,7 @@ if($_REQUEST['ajax'] == 1){
     // Data
     exec (VESTA_CMD."v-list-user-notifications $user json", $output, $return_var);
     $data = json_decode(implode('', $output), true);
-    $data = array_reverse($data,true);
+    $data = is_array($data) ? array_reverse($data,true) : array();
     foreach($data as $key => $note){
         $note['ID'] = $key;
         $data[$key] = $note;
@@ -25,7 +25,7 @@ $TAB = 'NOTIFICATIONS';
 // Data
 exec (VESTA_CMD."v-list-user-notifications $user json", $output, $return_var);
 $data = json_decode(implode('', $output), true);
-$data = array_reverse($data,true);
+$data = is_array($data) ? array_reverse($data,true) : array();
 
 // Render page
 render_page($user, $TAB, 'list_notifications');

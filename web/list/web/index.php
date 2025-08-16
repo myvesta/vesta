@@ -8,7 +8,7 @@ include($_SERVER['DOCUMENT_ROOT']."/inc/main.php");
 // Data
 exec (VESTA_CMD."v-list-web-domains $user json", $output, $return_var);
 $data = json_decode(implode('', $output), true);
-$data = array_reverse($data,true);
+$data = is_array($data) ? array_reverse($data,true) : array();
 $ips = json_decode(shell_exec(VESTA_CMD.'v-list-sys-ips json'), true);
 
 // Render page

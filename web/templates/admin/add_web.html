@@ -253,7 +253,7 @@
                         </tr>
                         <tr>
                             <td class="vst-text step-top">
-                                <label><input type="checkbox" size="20" class="vst-checkbox" name="v_ftp" <?php if (!empty($v_ftp) && count($v_ftp_users)) echo "checked=yes" ?> onclick="App.Actions.WEB.toggle_additional_ftp_accounts(this)"> <?php print __('Additional FTP Account');?></label>
+                                <label><input type="checkbox" size="20" class="vst-checkbox" name="v_ftp" <?php if (!empty($v_ftp) && (is_array($v_ftp_users) && count($v_ftp_users))) echo "checked=yes" ?> onclick="App.Actions.WEB.toggle_additional_ftp_accounts(this)"> <?php print __('Additional FTP Account');?></label>
                             </td>
                         </tr>
                         <tr>
