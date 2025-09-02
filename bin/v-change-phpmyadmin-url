@@ -19,7 +19,7 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-OLD_PHPMYADMIN_URL=$(awk -F'/' '/^DB_PMA_URL=/{gsub(/'\''/,""); print $(NF-1)}' /usr/local/vesta/conf/vesta.conf)
+OLD_PHPMYADMIN_URL=$(awk -F'/' '/^DB_PMA_URL=/{gsub(/'\''/,""); print $2}' /usr/local/vesta/conf/vesta.conf)
 echo "OLD_PHPMYADMIN_URL: $OLD_PHPMYADMIN_URL"
 if [ -z "$OLD_PHPMYADMIN_URL" ]; then
     echo "DB_PMA_URL='https://$HOSTNAME/phpmyadmin/'" >> /usr/local/vesta/conf/vesta.conf
@@ -75,7 +75,7 @@ update_file() {
     
     if [ -f "$file" ]; then
         backup_file "$file"
-        sed -i "s|$old_pattern|$new_pattern|g" "$file"
+        sed -i "s/$old_pattern/$new_pattern/g" "$file"
         echo "= Updated: $file"
     else
         echo "****** Warning: File not found: $file *******"
@@ -87,43 +87,43 @@ echo "== Updating nginx templates..."
 
 # Update .stpl files
 update_file "/usr/local/vesta/data/templates/web/nginx/force-https-webmail-phpmyadmin.stpl" \
-    "location /$OLD_PHPMYADMIN_URL" \
-    "location /$NEW_PHPMYADMIN_URL"
+    "location \/$OLD_PHPMYADMIN_URL" \
+    "location \/$NEW_PHPMYADMIN_URL"
 
 update_file "/usr/local/vesta/data/templates/web/nginx/hosting-webmail-phpmyadmin.stpl" \
-    "location /$OLD_PHPMYADMIN_URL" \
-    "location /$NEW_PHPMYADMIN_URL"
+    "location \/$OLD_PHPMYADMIN_URL" \
+    "location \/$NEW_PHPMYADMIN_URL"
 
 # Update .tpl files
 update_file "/usr/local/vesta/data/templates/web/nginx/hosting-webmail-phpmyadmin.tpl" \
-    "location /$OLD_PHPMYADMIN_URL" \
-    "location /$NEW_PHPMYADMIN_URL"
+    "location \/$OLD_PHPMYADMIN_URL" \
+    "location \/$NEW_PHPMYADMIN_URL"
 
 # Update nginx include file
 echo "== Updating nginx include file..."
 update_file "/etc/nginx/conf.d/phpmyadmin.inc" \
-    "location /$OLD_PHPMYADMIN_URL" \
-    "location /$NEW_PHPMYADMIN_URL"
+    "location \/$OLD_PHPMYADMIN_URL" \
+    "location \/$NEW_PHPMYADMIN_URL"
 
 update_file "/etc/nginx/conf.d/phpmyadmin.inc" \
-    "alias /usr/share/$OLD_PHPMYADMIN_URL" \
-    "alias /usr/share/$NEW_PHPMYADMIN_URL"
+    "alias \/usr\/share\/$OLD_PHPMYADMIN_URL" \
+    "alias \/usr\/share\/$NEW_PHPMYADMIN_URL"
 
 update_file "/etc/nginx/conf.d/phpmyadmin.inc" \
-    "alias /usr/share/$OLD_PHPMYADMIN_URL/\$1" \
-    "alias /usr/share/$NEW_PHPMYADMIN_URL/\$1"
+    "alias \/usr\/share\/$OLD_PHPMYADMIN_URL/\$1" \
+    "alias \/usr\/share\/$NEW_PHPMYADMIN_URL/\$1"
 
 # Update Apache configuration
 echo "== Updating Apache configuration..."
 update_file "/etc/phpmyadmin/apache.conf" \
-    "Alias /$OLD_PHPMYADMIN_URL" \
-    "Alias /$NEW_PHPMYADMIN_URL"
+    "Alias \/$OLD_PHPMYADMIN_URL" \
+    "Alias \/$NEW_PHPMYADMIN_URL"
 
 update_file "/usr/local/vesta/conf/vesta.conf" \
-    "/$OLD_PHPMYADMIN_URL/" \
-    "/$NEW_PHPMYADMIN_URL/"
+    "\/$OLD_PHPMYADMIN_URL" \
+    "\/$NEW_PHPMYADMIN_URL"
 
-if  [ -L "/usr/share/$OLD_PHPMYADMIN_URL" ] && [ "$OLD_PHPMYADMIN_URL" != "phpmyadmin" ]; then
+if  [ "$OLD_PHPMYADMIN_URL" != "phpmyadmin" ]; then
     echo "= Removing symlink from /usr/share/$OLD_PHPMYADMIN_URL"
     rm -f /usr/share/$OLD_PHPMYADMIN_URL
 fi
