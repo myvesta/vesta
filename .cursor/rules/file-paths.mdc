@@ -36,3 +36,4 @@ alwaysApply: true
   - (in this project) web\ = /usr/local/vesta/web/ (on the Linux server)
   - (in this project) upd\ = /usr/local/vesta/upd/ (on the Linux server)
   - (in this project) test\ = /usr/local/vesta/test/ (on the Linux server)
+

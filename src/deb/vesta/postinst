@@ -34,9 +34,18 @@ if [ ! -f "/usr/local/vesta/data/upgrades/fixssl.conf" ]; then
             echo "== Fixing SSL for Apache 2.4.65+"
             echo -e "proxy_ssl_server_name on;\nproxy_ssl_name \$host;\nproxy_ssl_session_reuse off;" > /etc/nginx/conf.d/fixssl.conf
             touch /usr/local/vesta/data/upgrades/fixssl.conf
-            nginx_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'nginx' | grep -c 'running')    
-            if [ $nginx_running -eq 1 ]; then
-                echo "== Restarting Nginx"
+        fi
+    fi
+fi
+
+# Restarting Nginx if fixssl.conf is applied
+if [ ! -f "/usr/local/vesta/data/upgrades/fixssl.conf2" ]; then
+    if [ "$release" -ge 11 ]; then
+        if [ -f "/etc/apache2/apache2.conf" ] && [ -f "/etc/nginx/nginx.conf" ] && [ -f "/etc/nginx/conf.d/fixssl.conf" ]; then
+            touch /usr/local/vesta/data/upgrades/fixssl.conf2
+            nginx_running=$(/usr/local/vesta/bin/v-list-sys-services | grep -v 'vesta-nginx' | grep 'nginx' | grep -c 'running')
+            if [ $nginx_running -ge 1 ]; then
+                echo "== Restarting Nginx because fixssl.conf is applied"
                 systemctl restart nginx
             fi
         fi
