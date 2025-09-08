@@ -1,3 +1,9 @@
+Version 0.9.9-0-14 [2025-09-08]
+==================================================
+* Improvement: Introducing a new command: v-change-phpmyadmin-url
+* Bugfix: Restarting Nginx if fixssl.conf is applied
+* Basic .mdc rules and 'example-of-linux-root-folder' for better AI understanding and faster development in Cursor
+
 Version 0.9.9-0-13 [2025-08-15]
 ==================================================
 * Improvement: Activating FileManager licence for all users (credits to Official VestaCP)
