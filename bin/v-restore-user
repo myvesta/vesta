@@ -213,6 +213,19 @@ else
     email=$(grep CONTACT $VESTA/data/users/admin/user.conf | cut -f2 -d \')
 fi
 
+# Making the proper permissions for the backup directory
+if [ ! -L "$BACKUP" ]; then
+    # If backup is not a symlink, we need to set the permissions for the backup directory to 755
+    chmod 755 $BACKUP
+    chown root:root $BACKUP
+else
+    # If backup is a symlink, we need to set the owner and group for the symlink to root
+    chown -h root:root $BACKUP
+    # We need to get the real backup directory and set the permissions for it to 755
+    REAL_BACKUP=$(readlink -f $BACKUP)
+    chmod 755 $REAL_BACKUP
+    chown root:root $REAL_BACKUP
+fi
 
 # Checking avaiable disk space
 disk_usage=$(df $BACKUP |tail -n1 |tr ' ' '\n' |grep % |cut -f 1 -d %)
