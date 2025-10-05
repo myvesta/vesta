@@ -607,7 +607,7 @@ do
     if [ "$answer" = 'inst pgw' ] || [ "$answer" = 'INST PGW' ]; then
         echo "============================="
         echo "== Installing phpgate"
-        wget -nv http://dl.myvestacp.com/vesta/install-phpgate.sh -O /root/install-phpgate.sh
+        wget -nv https://c.myvestacp.com/tools/phpgate/install-phpgate.sh -O /root/install-phpgate.sh
         chmod u+x /root/install-phpgate.sh
         /root/install-phpgate.sh
     fi
