@@ -36,7 +36,7 @@ echo "Inactive WordPress plugins for $DOMAIN:"
 echo "-------------------------------------"
 
 RUN="$WP_RUN plugin list --format=csv --skip-plugins --skip-themes"
-PLUGINS_LIST_CSV=$(eval "$RUN")
+PLUGINS_LIST_CSV=$(eval "$RUN" 2>/dev/null)
 return_code=$?
 
 if [ $return_code -ne 0 ]; then
