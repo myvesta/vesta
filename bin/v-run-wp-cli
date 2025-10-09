@@ -45,20 +45,20 @@ is_object_unsuspended 'user' 'USER' "$user"
 is_object_unsuspended 'web' 'DOMAIN' "$domain"
 
 if [ ! -d "/home/$user" ]; then
-    echo "= User doesn't exist";
+    echo "= User doesn't exist" >&2;
     exit 1;
 fi
 
 if [[ "$wp_command" != core\ download* ]] && [[ "$wp_command" != core\ config* ]] && [ ! -f "/home/$user/web/$domain/public_html/wp-config.php" ]; then
-    echo '= Please install WordPress first.'
+    echo '= Please install WordPress first.' >&2
     exit 1;
 fi
 
 wpcli=""
 
 if [ ! -f "/usr/local/bin/wp" ]; then
-    echo "= WP CLI is not installed. Installing..."
-    /usr/local/vesta/bin/v-install-wp-cli
+    echo "= WP CLI is not installed. Installing..." >&2
+    /usr/local/vesta/bin/v-install-wp-cli >&2
 fi
 
 if [ -z "$USE_WP_CLI_MYVESTA" ]; then
@@ -69,9 +69,9 @@ if [ -z "$USE_WP_CLI_MYVESTA" ]; then
         # Calculate age in days
         age_days=$(( (current_time - file_ctime) / 86400 ))
         if [ "$age_days" -gt 30 ]; then
-            echo "= The /usr/local/bin/wp file is older than 30 days (based on CTime)."
-            echo "= Updating WP CLI..."
-            /usr/local/vesta/bin/v-install-wp-cli
+            echo "= The /usr/local/bin/wp file is older than 30 days (based on CTime)." >&2
+            echo "= Updating WP CLI..." >&2
+            /usr/local/vesta/bin/v-install-wp-cli >&2
         fi
     fi
 fi
@@ -95,7 +95,7 @@ if [ ! -z "$USE_WP_CLI_MYVESTA" ] && [ -f "/usr/local/bin/wp-cli/php/boot-fs.php
 fi
 
 if [ -z "$wpcli" ]; then
-    echo "= WP CLI is not installed. Please install it manually."
+    echo "= WP CLI is not installed. Please install it manually." >&2
     exit 1;
 fi
 
@@ -136,7 +136,7 @@ fi
 
 if [ -z "$SHOW_ERRORS" ]; then
     if grep -q "PHP Fatal error" /home/$user/web/$domain/wp-cli-error.log || [ $return_code -ne 0 ]; then
-        cat /home/$user/web/$domain/wp-cli-error.log
+        cat /home/$user/web/$domain/wp-cli-error.log >&2
     fi
 fi
 #----------------------------------------------------------#
