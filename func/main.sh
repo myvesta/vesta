@@ -87,7 +87,7 @@ log_history() {
 check_result() {
     if [ $1 -ne 0 ]; then
         if [ -z "$SILENT_MODE" ]; then
-            echo "Error: $2"
+            echo "Error: $2" >&2
         fi
         if [ ! -z "$3" ]; then
             log_event "$3" "$ARGUMENTS"
@@ -103,7 +103,7 @@ check_result() {
 check_args() {
     if [ "$1" -gt "$2" ]; then
         if [ -z "$SILENT_MODE" ]; then
-            echo "Usage: $(basename $0) $3"
+            echo "Usage: $(basename $0) $3" >&2
         fi
         check_result $E_ARGS "not enought arguments" >/dev/null
     fi
@@ -851,7 +851,7 @@ is_password_format_valid() {
 # After: is_format_valid_shell
 is_format_valid_shell() {	
     if [ -z "$(grep -w $1 /etc/shells)" ]; then	
-        echo "Error: shell $1 is not valid"	
+        echo "Error: shell $1 is not valid" >&2
         log_event "$E_INVALID" "$EVENT"	
         exit $E_INVALID	
     fi	
