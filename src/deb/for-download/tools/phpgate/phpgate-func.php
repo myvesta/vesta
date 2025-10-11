@@ -91,18 +91,21 @@ function phpgate_unban_banned($arr) {
 function phpgate_memcached_safe_update($key, $update_cb, $ttl=600) {
     global $phpgate_memcached; //, $phpgate_debug;
     $loop=0;
+    $cas = null;
     while (true) {
         $loop++;
         if ($loop==10) break; // if loop is 10, break
         $result_ok=true;
-        if (defined('Memcached::GET_EXTENDED')==false) $value = $phpgate_memcached->get($key, null, $cas);
-        else {
+        if (defined('Memcached::GET_EXTENDED')==false) {
+            $value = $phpgate_memcached->get($key, null, $cas);
+        } else {
             $r = $phpgate_memcached->get($key, null, Memcached::GET_EXTENDED);
             if (isset($r['cas'])) $cas = $r['cas']; // get cas value
             else $result_ok=false; // if cas is not set, consider it as not found
             if (isset($r['value'])) $value = $r['value']; // get value
             else $result_ok=false; // if value is not set, consider it as not found
         }
+
         if ($result_ok==false || $phpgate_memcached->getResultCode() == Memcached::RES_NOTFOUND) {
             // not found, add new value
             $value = call_user_func($update_cb, null);
@@ -111,7 +114,8 @@ function phpgate_memcached_safe_update($key, $update_cb, $ttl=600) {
         } else {
             // found, update value
             $value = call_user_func($update_cb, $value);
-            $phpgate_memcached->cas($cas, $key, $value, $ttl);
+            if (defined('Memcached::GET_EXTENDED')==false || $cas==null) $phpgate_memcached->set($key, $value, $ttl);
+            else $phpgate_memcached->cas($cas, $key, $value, $ttl);
             if ($phpgate_memcached->getResultCode() == Memcached::RES_SUCCESS) break;
         }
         //if ($phpgate_debug) echo "loop<br />\n";
@@ -132,6 +136,7 @@ if ($phpgate_the_same_ip==false) {
     if (isset($phpgate_max_retry)==false) $phpgate_max_retry=5;
     if (isset($phpgate_find_time)==false) $phpgate_find_time=600;
     // $phpgate_debug=false;
+    if (!class_exists('Memcached')) return;
     $phpgate_memcached = new Memcached();
     $phpgate_memcached->addServer('localhost', 11211);
 
