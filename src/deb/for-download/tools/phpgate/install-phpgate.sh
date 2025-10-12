@@ -27,9 +27,11 @@ fix_php_ini() {
     fi
     if [ -f "$file" ]; then
         if [ -z "$(grep phpgate $file)" ]; then
-            sed -i "s|auto_prepend_file =|auto_prepend_file = /usr/share/phpgate/phpgate.php|g" $file
             echo "= Fixing $file"
-            grep 'phpgate' $file
+            sed -i "s|auto_prepend_file =|auto_prepend_file = /usr/share/phpgate/phpgate.php|g" $file
+            if [ -z "$(grep 'phpgate' $file)" ]; then
+                echo "auto_prepend_file = /usr/share/phpgate/phpgate.php" >> $file
+            fi
             if [ "$1" = "/etc/php5/apache2/php.ini" ]; then
                 systemctl restart apache2
             else
