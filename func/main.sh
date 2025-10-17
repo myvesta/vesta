@@ -13,6 +13,9 @@ DNSTPL=$VESTA/data/templates/dns
 RRD=$VESTA/web/rrd
 SENDMAIL="$VESTA/web/inc/mail-wrapper.php"
 i_am_in_backup_all_users=0
+if [ -z "$REDIRECT_ERROR_TO_STDERR" ]; then
+    REDIRECT_ERROR_TO_STDERR=0
+fi
 
 # Return codes
 OK=0
@@ -87,7 +90,11 @@ log_history() {
 check_result() {
     if [ $1 -ne 0 ]; then
         if [ -z "$SILENT_MODE" ]; then
-            echo "Error: $2" >&2
+            if [ "$REDIRECT_ERROR_TO_STDERR" -eq 1 ]; then
+                echo "Error: $2" >&2
+            else
+                echo "Error: $2"
+            fi
         fi
         if [ ! -z "$3" ]; then
             log_event "$3" "$ARGUMENTS"
@@ -103,7 +110,11 @@ check_result() {
 check_args() {
     if [ "$1" -gt "$2" ]; then
         if [ -z "$SILENT_MODE" ]; then
-            echo "Usage: $(basename $0) $3" >&2
+            if [ "$REDIRECT_ERROR_TO_STDERR" -eq 1 ]; then
+                echo "Usage: $(basename $0) $3" >&2
+            else
+                echo "Usage: $(basename $0) $3"
+            fi
         fi
         check_result $E_ARGS "not enought arguments" >/dev/null
     fi
@@ -851,7 +862,11 @@ is_password_format_valid() {
 # After: is_format_valid_shell
 is_format_valid_shell() {	
     if [ -z "$(grep -w $1 /etc/shells)" ]; then	
-        echo "Error: shell $1 is not valid" >&2
+        if [ "$REDIRECT_ERROR_TO_STDERR" -eq 1 ]; then
+            echo "Error: shell $1 is not valid" >&2
+        else
+            echo "Error: shell $1 is not valid"
+        fi
         log_event "$E_INVALID" "$EVENT"	
         exit $E_INVALID	
     fi	
