@@ -215,6 +215,15 @@ add_web_config() {
         fi
     fi
 
+    # Check if /usr/local/vesta/conf/vesta.conf is loaded
+    if [ -z "$CRON_SYSTEM" ]; then
+        source /usr/local/vesta/conf/vesta.conf
+    fi
+    # Execute VESTA_WEB_CONF_CHANGE_TRIGGER if it is set
+    if [ ! -z "$VESTA_WEB_CONF_CHANGE_TRIGGER" ]; then
+        eval "$VESTA_WEB_CONF_CHANGE_TRIGGER $user $domain $1 'add'"
+    fi
+
     trigger="${2/%.tpl/.sh}"
     if [[ "$2" =~ stpl$ ]]; then
         trigger="${2/%.stpl/.sh}"
@@ -305,6 +314,15 @@ del_web_config() {
         if [ -f "$conf" ]; then
             rm -f $conf
         fi
+    fi
+
+    # Check if /usr/local/vesta/conf/vesta.conf is loaded
+    if [ -z "$CRON_SYSTEM" ]; then
+        source /usr/local/vesta/conf/vesta.conf
+    fi
+    # Execute VESTA_WEB_CONF_CHANGE_TRIGGER if it is set
+    if [ ! -z "$VESTA_WEB_CONF_CHANGE_TRIGGER" ]; then
+        eval "$VESTA_WEB_CONF_CHANGE_TRIGGER $user $domain $1 'delete'"
     fi
 }
 

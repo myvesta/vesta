@@ -38,6 +38,12 @@ is_object_unsuspended 'user' 'USER' "$user"
 
 # Deleting old web configs
 sed -i "/.*\/$user\/conf\/web\//d" /etc/$WEB_SYSTEM/conf.d/vesta.conf
+
+# Execute VESTA_WEB_CONF_CHANGE_TRIGGER if it is set
+if [ ! -z "$VESTA_WEB_CONF_CHANGE_TRIGGER" ]; then
+    eval "$VESTA_WEB_CONF_CHANGE_TRIGGER $user '' $WEB_SYSTEM 'delete'"
+fi
+
 if [ -e "$HOMEDIR/$user/conf/web/$WEB_SYSTEM.conf"  ]; then
     rm $HOMEDIR/$user/conf/web/$WEB_SYSTEM.conf
 fi
@@ -48,6 +54,11 @@ fi
 # Deleting old proxy configs
 if [ ! -z "$PROXY_SYSTEM" ]; then
     sed -i "/.*\/$user\/conf\/web\//d" /etc/$PROXY_SYSTEM/conf.d/vesta.conf
+
+    # Execute VESTA_WEB_CONF_CHANGE_TRIGGER if it is set
+    if [ ! -z "$VESTA_WEB_CONF_CHANGE_TRIGGER" ]; then
+        eval "$VESTA_WEB_CONF_CHANGE_TRIGGER $user '' $PROXY_SYSTEM 'delete'"
+    fi
 
     if [ -e "$HOMEDIR/$user/conf/web/$PROXY_SYSTEM.conf" ]; then
         rm $HOMEDIR/$user/conf/web/$PROXY_SYSTEM.conf
