@@ -192,7 +192,7 @@ web/ajax/{object}/{action}/{script}
 ```
 
 ### Example: Web Management
-- **Step 1**: [web/ajax/web/manage/index.php](mdc:web/ajax/web/manage/index.php)
+- **Step 1**: [web/ajax/web/manage/step1.php](mdc:web/ajax/web/manage/step1.php)
 - **Step 2**: [web/ajax/web/manage/step2.php](mdc:web/ajax/web/manage/step2.php)
 
 ### PHP Structure
