@@ -7,9 +7,9 @@ folder="/usr/local/vesta/data/df"
 mkdir -p $folder
 timestamp=$(date +%Y-%m-%d-%H-%M-%S)
 
-du --max-depth=1 -m -x / > $folder/snapshot-$timestamp.txt
+du --max-depth=1 -m -x / > $folder/snapshot-$timestamp.txt 2>/dev/null
 
-du --max-depth=6 -m -x /home > $folder/snapshot-temp.txt
+du --max-depth=6 -m -x /home > $folder/snapshot-temp.txt 2>/dev/null
 for i in {2..7}; do
     while IFS= read -r line; do
         count=0
@@ -26,7 +26,7 @@ done
 rm $folder/snapshot-temp.txt
 
 if [ -d "/hdd" ]; then
-    du --max-depth=7 -m -x /hdd > $folder/snapshot-temp.txt
+    du --max-depth=7 -m -x /hdd > $folder/snapshot-temp.txt 2>/dev/null
     for i in {1..8}; do
         while IFS= read -r line; do
             count=0
@@ -43,8 +43,8 @@ if [ -d "/hdd" ]; then
     rm $folder/snapshot-temp.txt
 fi
 
-du --max-depth=1 -m -x /var/lib/mysql >> $folder/snapshot-$timestamp.txt
-du --max-depth=1 -m -x /var/log >> $folder/snapshot-$timestamp.txt
+du --max-depth=1 -m -x /var/lib/mysql >> $folder/snapshot-$timestamp.txt 2>/dev/null
+du --max-depth=1 -m -x /var/log >> $folder/snapshot-$timestamp.txt 2>/dev/null
 
 chmod 600 $folder/snapshot-$timestamp.txt
 chown root:root $folder/snapshot-$timestamp.txt
