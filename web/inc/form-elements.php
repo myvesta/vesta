@@ -16,9 +16,11 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
 
     $myvesta_element = myvesta_str_get_between($myvesta_element_buffer, '<div id="'.$id.'"', '</div>', 0, 1, 1);
 
-    $myvesta_element = str_replace('display: none;', '', $myvesta_element);
     $myvesta_element = str_replace('display: none; ', '', $myvesta_element);
     $myvesta_element = str_replace(' display: none;', '', $myvesta_element);
+    $myvesta_element = str_replace('display: none;', '', $myvesta_element);
+
+    $myvesta_element = str_replace("id=\"".$id."\"", "id=\"".$id."-".$variable_name."\"", $myvesta_element);
 
     $myvesta_element = str_replace('Variable 1:', $label, $myvesta_element);
     if ($variable_name != null) {

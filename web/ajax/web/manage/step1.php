@@ -3,6 +3,7 @@
 // Main include
 $required_dataset_param = 'domain';
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 echo 'Ajax script: web / manage, step1, Domain: '.$domain;
 ?>
@@ -15,21 +16,23 @@ echo 'Ajax script: web / manage, step1, Domain: '.$domain;
     <input type="hidden" name="dataset[subaction]" value="<?=$_POST['dataset']['subaction']?>" />
     <input type="hidden" name="dataset[step]" value="2" />
     <input type="hidden" name="dataset[domain]" value="<?=$_POST['dataset']['domain']?>" />
+
+    <!--
     <input type="hidden" name="confirm_required" value="1" id="confirm_required" />
     <input type="hidden" name="confirm_required_default_value" value="yes" id="confirm_required_default_value" />
     <input type="hidden" name="confirm_required_title" value="Confirm" id="confirm_required_title" />
     <input type="hidden" name="confirm_required_content" value="Are you sure you want to continue?" id="confirm_required_content" />
     <input type="hidden" name="confirm_required_type" value="confirm" id="confirm_required_type" />
-    <input type="hidden" name="confirm_required_variable_label" value="Variable FROM STEP 1" id="confirm_required_variable_label" />
-    <input type="hidden" name="confirm_required_variable_name" value="var1_from_step1" id="confirm_required_variable_name" />
-    <input type="hidden" name="confirm_required_variable_value" value="val1_from_step1" id="confirm_required_variable_value" />
-    <input type="hidden" name="confirm_required_selected_value" value="" id="confirm_required_selected_value" />
-    <input type="hidden" name="confirm_required_selected_button" value="yes" id="confirm_required_selected_button" />
+    <input type="hidden" name="confirm_required_selected_button" value="no" id="confirm_required_selected_button" />
     <input type="hidden" name="confirm_required_callback" value="TESTFUNCTION" id="confirm_required_callback" />
+    -->
+
+    <?php
+        echo myvesta_get_element('input', 'Variable 1:', 'var1', 'val1');
+        echo myvesta_get_element('textarea', 'Variable 2:', 'var2', 'val2'); 
+        echo myvesta_get_element('listbox', 'Variable 3:', 'var3', array('1' => 'Option 1', '2' => 'Option 2', '3' => 'Option 3'), '2');
+    ?>
     
-    <span class="ajax-label ajax-newline">Variable 1:</span>
-    <input type="text" name="var1" value="val1" class="vst-input ajax-newline">
-    <span class="ajax-label ajax-newline">Variable 2:</span>
-    <input type="text" name="var2" value="val2" class="vst-input ajax-newline">
+    <br />
     <button type="submit" class="button ajax-button-margin-top">Submit</button>
 </form>
