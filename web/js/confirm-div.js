@@ -109,7 +109,6 @@ document.addEventListener('DOMContentLoaded', function () {
     //showConfirmDiv('Notification!!!', 'You have a new notification!!!', 'notify', '', '', '', '', '', 'TESTFUNCTION', 'OK !!!');
     //showConfirmDiv('Notification!!!', 'You have a new notification!!!', 'input', 'Enter name', 'name', 'Some name', '', 'OK !!!', 'TESTFUNCTION', 'OK/Cancel');
     //showConfirmDiv('Notification!!!', 'You have a new notification!!!', 'textarea', 'Enter name', 'name', 'Some name', '', 'OK !!!', 'TESTFUNCTION', 'OK/Cancel');
-    
     /*
     let options = [
         { key: "1", value: "Option 1" },
@@ -118,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function () {
       ];
     showConfirmDiv('Notification!!!', 'You have a new notification!!!', 'listbox', 'Select an option', 'option', options, '3', 'OK !!!', 'TESTFUNCTION', 'OK/Cancel');
     */
-   
+
     $(document).on('keydown', function(e) {
         if (ConfirmDivOpened) {
             if (ConfirmDivType == 'input') {
@@ -172,6 +171,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if ( ConfirmDivCallback != '') {
             var variableValue = '';
             if (ConfirmDivType == 'input') variableValue = $('#confirm-div-content-input-variable').val();
+            if (ConfirmDivType == 'textarea') variableValue = $('#confirm-div-content-textarea-variable').val();
+            if (ConfirmDivType == 'listbox') variableValue = $('#confirm-div-content-listbox-variable').val();
             ConfirmDivCallbacks[ConfirmDivCallback]('yes', variableValue);
         }
         if (ConfirmDivAction == 'send_ajax_request') {send_ajax_request();}
@@ -182,6 +183,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if ( ConfirmDivCallback != '') {
             var variableValue = '';
             if (ConfirmDivType == 'input') variableValue = $('#confirm-div-content-input-variable').val();
+            if (ConfirmDivType == 'textarea') variableValue = $('#confirm-div-content-textarea-variable').val();
+            if (ConfirmDivType == 'listbox') variableValue = $('#confirm-div-content-listbox-variable').val();
             ConfirmDivCallbacks[ConfirmDivCallback]('no', variableValue);
         }
     });
