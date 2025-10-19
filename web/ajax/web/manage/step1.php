@@ -11,11 +11,13 @@ echo 'Ajax script: web / manage, step1, Domain: '.$domain;
 <br /><br />
 <form id="floating-center-div-form" name="floating-center-div-form" method="post" action="/ajax/web/manage/step2.php">
     <input type="hidden" name="token" value="<?=$_SESSION['token']?>" />
-    <input type="hidden" name="dataset[object]" value="<?=$_POST['dataset']['object']?>" />
-    <input type="hidden" name="dataset[action]" value="<?=$_POST['dataset']['action']?>" />
-    <input type="hidden" name="dataset[subaction]" value="<?=$_POST['dataset']['subaction']?>" />
-    <input type="hidden" name="dataset[step]" value="2" />
-    <input type="hidden" name="dataset[domain]" value="<?=$_POST['dataset']['domain']?>" />
+    <?php
+    if (isset($_POST['dataset'])) {
+        foreach ($_POST['dataset'] as $key => $value) { 
+            echo '<input type="hidden" name="dataset['.$key.']" value="'.$value.'" />';
+        }
+    }
+    ?>
 
     <!--
     <input type="hidden" name="confirm_required" value="1" id="confirm_required" />
@@ -32,7 +34,7 @@ echo 'Ajax script: web / manage, step1, Domain: '.$domain;
         echo myvesta_get_element('textarea', 'Variable 2:', 'var2', 'val2'); 
         echo myvesta_get_element('listbox', 'Variable 3:', 'var3', array('1' => 'Option 1', '2' => 'Option 2', '3' => 'Option 3'), '2');
     ?>
-    
+
     <br />
     <button type="submit" class="button ajax-button-margin-top">Submit</button>
 </form>
