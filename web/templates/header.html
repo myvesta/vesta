@@ -14,7 +14,7 @@
     //  GLOBAL SETTINGS
     //
     <?php
-        $CURRENT_USER_FINAL=$_SESSION['user'];
+        if (isset($_SESSION['user'])) $CURRENT_USER_FINAL=$_SESSION['user'];
         if (isset($_SESSION['look']) && $_SESSION['look']!='') $CURRENT_USER_FINAL=$_SESSION['look'];
         
         $right_sidebar_right=0;
@@ -38,17 +38,17 @@
     GLOBAL.FTP_USER_PREFIX  = 'admin_';
     GLOBAL.DB_USER_PREFIX   = 'admin_';
     GLOBAL.DB_DBNAME_PREFIX = 'admin_';
-    GLOBAL.CURRENT_USER = '<?=$_SESSION['user']?>';
-    GLOBAL.CURRENT_USER_LOOK = '<?=$_SESSION['look']?>';
-    GLOBAL.CURRENT_USER_FINAL = '<?=$GLOBALS['CURRENT_USER_FINAL']?>';
+    GLOBAL.CURRENT_USER = '<?php if (isset($_SESSION['user'])) echo $_SESSION['user']; else echo ''; ?>';
+    GLOBAL.CURRENT_USER_LOOK = '<?php if (isset($_SESSION['look'])) echo $_SESSION['look']; else echo ''; ?>';
+    GLOBAL.CURRENT_USER_FINAL = '<?php if (isset($GLOBALS['CURRENT_USER_FINAL'])) echo $GLOBALS['CURRENT_USER_FINAL']; else echo ''; ?>';
     GLOBAL.AJAX_URL = '';
-    GLOBAL.TOKEN = '<?=$_SESSION['token']?>';
+    GLOBAL.TOKEN = '<?php if (isset($_SESSION['token'])) echo $_SESSION['token']; else echo ''; ?>';
   </script>
   <style>
     .l-content .l-center {margin-right: <?=$content_margin_right?>px}
   </style>
 </head>
-<body class="body-<?=strtolower($TAB)?> lang-<?=$_SESSION['language']?>">
+<body class="body-<?=strtolower($TAB)?> lang-<?php if (isset($_SESSION['language'])) echo $_SESSION['language']; else echo 'en'; ?>">
 
   <div id="floating-center-div" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50vw; max-width: 700px; background: #fff; z-index: 9998; box-shadow: 0 4px 32px rgba(0,0,0,0.6); border-radius: 8px; padding: 32px 24px; display: none;">
     <div id="floating-center-div-right-close" style="position: absolute; top: 10px; right: 10px; cursor: pointer; color: #999;">
