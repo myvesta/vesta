@@ -45,6 +45,15 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
     return $myvesta_element;
 }
 
+function myvesta_get_confirtmation_hidden_fields($type = 'confirm', $title = 'Confirm', $content = 'Are you sure you want to continue?', $selected_button = 'yes', $callback = 'TESTFUNCTION') {
+    $myvesta_element = '<input type="hidden" name="confirm_required" value="1" id="confirm_required" />
+    <input type="hidden" name="confirm_required_type" value="'.$type.'" id="confirm_required_type" />
+    <input type="hidden" name="confirm_required_title" value="'.$title.'" id="confirm_required_title" />
+    <input type="hidden" name="confirm_required_content" value="'.$content.'" id="confirm_required_content" />
+    <input type="hidden" name="confirm_required_selected_button" value="'.$selected_button.'" id="confirm_required_selected_button" />
+    <input type="hidden" name="confirm_required_callback" value="'.$callback.'" id="confirm_required_callback" />';
+    return $myvesta_element;
+}
 /*
 echo myvesta_get_element('input', 'Variable 1:', 'variable', 'variable value');
 echo "\n\n";
