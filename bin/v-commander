@@ -221,7 +221,9 @@ do
         
         kernelupdate=$(grep -c 'linux-image-' /var/log/apt/history.log)
         dbusupdate=$(grep -c ' dbus:a' /var/log/apt/history.log)
-        if [ $kernelupdate -gt 0 ] || [ $dbusupdate -gt 0 ] || [ -f "/run/reboot-required" ] || [ -f "/var/run/reboot-required" ]; then
+        microcodeupdate=$(grep -c '-microcode:amd64' /var/log/apt/history.log)
+        initramfsupdate=$(grep -c 'update-initramfs: Generating /boot/' /var/log/apt/term.log)
+        if [ $kernelupdate -gt 0 ] || [ $dbusupdate -gt 0 ] || [ $microcodeupdate -gt 0 ] || [ $initramfsupdate -gt 0 ] || [ -f "/run/reboot-required" ] || [ -f "/var/run/reboot-required" ]; then
             touch /root/kernelupdate
             echo "== kernel is updated, reboot is required!"
         fi

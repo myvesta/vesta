@@ -1,5 +1,6 @@
 var FloatingDivLoaded = true;
 var FloatingDivOpened = false;
+var FloatingEvent = null;
 
 function showFloatingDiv(title, contentHtml) {
     FloatingDivOpened = true;
@@ -30,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     $("#floating-center-div").on("submit", "#floating-center-div-form", function(e) {
+        FloatingEvent = e;
         e.preventDefault();
 
         if (typeof ConfirmDivLoaded !== 'undefined' && ConfirmDivLoaded) {
@@ -93,6 +95,17 @@ function send_ajax_request() {
     $("#floating-center-div-form").serializeArray().forEach(function(item) {
         formData[item.name] = item.value;
     });
+
+    e = FloatingEvent;
+    const submitter =
+    e.originalEvent && e.originalEvent.submitter
+        ? e.originalEvent.submitter
+        : null; // fallback for older browsers
+
+    const btnName  = submitter ? submitter.name  : null;
+    const btnValue = submitter ? submitter.value : null;
+
+    if (btnName) formData[btnName] = btnValue;
 
     $.ajax({
         url: url,
