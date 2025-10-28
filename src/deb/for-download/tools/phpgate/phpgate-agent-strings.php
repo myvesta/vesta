@@ -20,8 +20,20 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
         "ChatGPT" => 3,
         "GPTBot" => 3,
         "OAI-SearchBot" => 3,
-        "meta-externalagent" => 3,
-        // "Dalvik" => 3,
+        "facebookexternal" => 3,
+        "facebot" => 1,
+        "facebookcatalog" => 1,
+        "facebookplatform" => 1,
+        "meta-externalads" => 1,
+        "meta-webindexer" => 1,
+        "meta-external" => 3,
+        "meta-External" => 1,
+        "Meta-external" => 1,
+        "Meta-External" => 1,
+        "meta-crawler" => 1,
+        "facebook" => 1,
+        "Facebook" => 1,
+        "FaceBook" => 1,
         "ahrefs.com" => 1,
         "AhrefsBot" => 1,
         "MJ12bot" => 1,
@@ -59,7 +71,6 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
         "cert-manager/v" => -1,
         "Mail.RU_Bot" => -1,
         "RSiteAuditor" => -1,
-        "GuzzleHttp" => -1,
         "FreshpingBot" => -1,
         "smartocto-bot" => -1,
         "Ruby" => -1,
@@ -67,13 +78,19 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
         "Scrapy" => -1,
         "SeznamBot" => -1
     );
+        // "GuzzleHttp" => -1,
+        // "Dalvik" => 3,
+
     if (isset($phpgate_agent_strings_override)) {
         foreach ($phpgate_agent_strings_override as $agent_string => $block_after) {
             $phpgate_agent_strings[$agent_string] = $block_after;
         }
     }
     foreach ($phpgate_agent_strings as $agent_string => $block_after) {
-        if (strpos($_SERVER['HTTP_USER_AGENT'], $agent_string)!==false) phpgate_bot_detected($agent_string, $block_after);
+        if (strpos($_SERVER['HTTP_USER_AGENT'], $agent_string)!==false) {
+            phpgate_bot_detected($agent_string, $block_after);
+            break;
+        }
     }
 
     if (isset($phpgate_skip_empty_agent_string_check)==false && $_SERVER['HTTP_USER_AGENT'] == "" && $phpgate_the_same_ip==false) phpgate_cut_request("Your Browser Agent string is empty. Maybe your antivirus does it. Please turn it off if you want to view this site.\n");
