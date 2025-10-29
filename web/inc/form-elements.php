@@ -3,7 +3,7 @@
 include("/usr/local/vesta/func/string.php");
 
 $myvesta_element_buffer = file_get_contents("/usr/local/vesta/web/templates/header.html");
-$start_from = strpos($element_buffer, '<div id="confirm-div"');
+$start_from = strpos($myvesta_element_buffer, '<div id="confirm-div"');
 $myvesta_element_buffer = substr($myvesta_element_buffer, $start_from);
 //echo $myvesta_element_buffer;
 
@@ -13,6 +13,7 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
     else if ($element_name == 'textarea') $id = 'confirm-div-content-textarea';
     else if ($element_name == 'listbox') $id = 'confirm-div-content-listbox';
     else if ($element_name == 'button') $id = 'confirm-div-button';
+    else if ($element_name == 'checkbox') $id = 'confirm-div-content-checkbox';
     else return '';
 
     $myvesta_element = myvesta_str_get_between($myvesta_element_buffer, '<div id="'.$id.'"', '</div>', 0, 1, 1);
@@ -24,11 +25,14 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
     $myvesta_element = str_replace("id=\"".$id."\"", "id=\"".$id."-".$variable_name."\"", $myvesta_element);
 
     $myvesta_element = str_replace('Variable 1:', $label, $myvesta_element);
+    $myvesta_element = str_replace('Variable 1', $label, $myvesta_element);
+    
     if ($variable_name != null) {
         if ($element_name == 'input') $myvesta_element = str_replace('confirm-div-content-input-variable', $variable_name, $myvesta_element);
         else if ($element_name == 'textarea') $myvesta_element = str_replace('confirm-div-content-textarea-variable', $variable_name, $myvesta_element);
         else if ($element_name == 'listbox') $myvesta_element = str_replace('confirm-div-content-listbox-variable', $variable_name, $myvesta_element);
         else if ($element_name == 'button') $myvesta_element = str_replace('confirm-div-button-variable', $variable_name, $myvesta_element);
+        else if ($element_name == 'checkbox') $myvesta_element = str_replace('confirm-div-content-checkbox-variable', $variable_name, $myvesta_element);
     }
     if ($variable_value != null) {
         if ($element_name == 'input') $myvesta_element = str_replace('value1', $variable_value, $myvesta_element);
@@ -42,6 +46,25 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
                 $variable_value_options .= '>'.$value.'</option>';
             }
             $myvesta_element = str_replace('</select>', $variable_value_options.'</select>', $myvesta_element);
+        }
+        else if ($element_name == 'checkbox') {
+            if ($variable_value === '1') $variable_value = 'yes';
+            if ($variable_value === '0') $variable_value = 'no';
+            if ($variable_value === 1) $variable_value = 'checked="yes"';
+            if ($variable_value === 0) $variable_value = 'checked="no"';
+            if ($variable_value === true) $variable_value = 'checked="yes"';
+            if ($variable_value === false) $variable_value = 'checked="no"';
+            if ($variable_value === 'yes') $variable_value = 'checked="yes"';
+            if ($variable_value === 'no') $variable_value = 'checked="no"';
+            if ($variable_value === 'checked') $variable_value = 'checked="yes"';
+            if ($variable_value === 'unchecked') $variable_value = 'checked="no"';
+            if ($variable_value === 'true') $variable_value = 'checked="yes"';
+            if ($variable_value === 'false') $variable_value = 'checked="no"';
+            if ($variable_value === 'TRUE') $variable_value = 'checked="yes"';
+            if ($variable_value === 'FALSE') $variable_value = 'checked="no"';
+            if ($variable_value === '') $variable_value = 'checked="no"';
+            if ($variable_value === null) $variable_value = 'checked="no"';
+            $myvesta_element = str_replace('checked="yes"', $variable_value, $myvesta_element);
         }
     }
 
@@ -97,4 +120,6 @@ echo "\n\n";
 echo myvesta_get_element('button', 'Button 1:', 'button1', 'OK');
 echo "\n\n";
 echo myvesta_get_confirtmation_hidden_fields();
+echo myvesta_get_element('checkbox', 'Checkbox 1', 'variable', '1');
+echo "\n\n";
 */

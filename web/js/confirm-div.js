@@ -29,7 +29,7 @@ function showConfirmDiv(title, contentHtml, type = 'confirm', variableLabel = ''
     ConfirmDivType = type;
     if (type == 'confirm' && selectedButton == '') selectedButton = 'no';
     if (type == 'notify' && buttonLabels != '') $('#confirm-div-button-notify').html(buttonLabels);
-    if ((type == 'input' || type == 'confirm' || type == 'textarea') && buttonLabels != '') {
+    if ((type == 'input' || type == 'confirm' || type == 'textarea' || type == 'checkbox') && buttonLabels != '') {
         if (buttonLabels.includes('/')) {
             buttonLabels = buttonLabels.split('/');
             $('#confirm-div-button-yes').html(buttonLabels[0]);
@@ -46,13 +46,14 @@ function showConfirmDiv(title, contentHtml, type = 'confirm', variableLabel = ''
     $('#confirm-div-content-input').css('display','none');
     $('#confirm-div-content-textarea').css('display','none');
     $('#confirm-div-content-listbox').css('display','none');
+    $('#confirm-div-content-checkbox').css('display','none');
 
     $('#confirm-div-title').html(title);
     $('#confirm-div-content').html(contentHtml);
     $('#confirm-div').fadeIn();
 
 
-    if (type == 'confirm' || type == 'input' || type == 'textarea' || type == 'listbox') {
+    if (type == 'confirm' || type == 'input' || type == 'textarea' || type == 'listbox' || type == 'checkbox') {
         $('#confirm-div-buttons-confirm').css('display','flex');
         if (type == 'confirm') {
             if (selectedButton == 'no') {
@@ -96,6 +97,19 @@ function showConfirmDiv(title, contentHtml, type = 'confirm', variableLabel = ''
         }
         $('#confirm-div-content-listbox-variable').val(selectedValue);
     }
+    if (type == 'checkbox') {
+        $('#confirm-div-content-checkbox').css('display','block');
+        $('#confirm-div-content-checkbox-variable').attr('name', variableName);
+        currentCheckboxLabel = $('#confirm-div-content-checkbox-label').html();
+        currentCheckboxLabel = currentCheckboxLabel.replace(' Variable 1', ' '+variableLabel);
+        $('#confirm-div-content-checkbox-label').html(currentCheckboxLabel);
+        $('#confirm-div-content-checkbox-variable').focus();
+        if (variableValue === '1' || variableValue === 1 || variableValue === true || variableValue === 'true' || variableValue === 'TRUE' || variableValue === 'checked' || variableValue === 'CHECKED' || variableValue === 'YES' || variableValue === 'yes') {
+            $('#confirm-div-content-checkbox-variable').prop('checked', true);
+        } else {
+            $('#confirm-div-content-checkbox-variable').prop('checked', false);
+        }
+    }
 }
 
 function hideConfirmDiv(event) {
@@ -107,8 +121,9 @@ function hideConfirmDiv(event) {
 document.addEventListener('DOMContentLoaded', function () {
     //showConfirmDiv('Confirm', 'Are you sure you want to continue?', 'confirm', '', '', '', '', 'yes', 'TESTFUNCTION');
     //showConfirmDiv('Notification!!!', 'You have a new notification!!!', 'notify', '', '', '', '', '', 'TESTFUNCTION', 'OK !!!');
-    //showConfirmDiv('Notification!!!', 'You have a new notification!!!', 'input', 'Enter name', 'name', 'Some name', '', 'OK !!!', 'TESTFUNCTION', 'OK/Cancel');
-    //showConfirmDiv('Notification!!!', 'You have a new notification!!!', 'textarea', 'Enter name', 'name', 'Some name', '', 'OK !!!', 'TESTFUNCTION', 'OK/Cancel');
+    //showConfirmDiv('Notification!!!', 'You have a new notification!!!', 'input', 'Enter name', 'name', 'Some name', '', '', 'TESTFUNCTION', 'OK/Cancel');
+    //showConfirmDiv('Notification!!!', 'You have a new notification!!!', 'textarea', 'Enter name', 'name', 'Some name', '', '', 'TESTFUNCTION', 'OK/Cancel');
+    //showConfirmDiv('Notification', 'You have a new notification', 'checkbox', 'On/Off', 'onoff', '1', '', '', 'TESTFUNCTION', 'OK/Cancel');
     /*
     let options = [
         { key: "1", value: "Option 1" },
@@ -117,7 +132,6 @@ document.addEventListener('DOMContentLoaded', function () {
       ];
     showConfirmDiv('Notification!!!', 'You have a new notification!!!', 'listbox', 'Select an option', 'option', options, '3', 'OK !!!', 'TESTFUNCTION', 'OK/Cancel');
     */
-
     $(document).on('keydown', function(e) {
         if (ConfirmDivOpened) {
             if (ConfirmDivType == 'input') {
@@ -173,6 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (ConfirmDivType == 'input') variableValue = $('#confirm-div-content-input-variable').val();
             if (ConfirmDivType == 'textarea') variableValue = $('#confirm-div-content-textarea-variable').val();
             if (ConfirmDivType == 'listbox') variableValue = $('#confirm-div-content-listbox-variable').val();
+            if (ConfirmDivType == 'checkbox') if ($('#confirm-div-content-checkbox-variable').prop('checked')) variableValue = '1'; else variableValue = '0';
             ConfirmDivCallbacks[ConfirmDivCallback]('yes', variableValue);
         }
         if (ConfirmDivAction == 'send_ajax_request') {send_ajax_request();}
@@ -185,6 +200,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (ConfirmDivType == 'input') variableValue = $('#confirm-div-content-input-variable').val();
             if (ConfirmDivType == 'textarea') variableValue = $('#confirm-div-content-textarea-variable').val();
             if (ConfirmDivType == 'listbox') variableValue = $('#confirm-div-content-listbox-variable').val();
+            if (ConfirmDivType == 'checkbox') if ($('#confirm-div-content-checkbox-variable').prop('checked')) variableValue = '1'; else variableValue = '0';
             ConfirmDivCallbacks[ConfirmDivCallback]('no', variableValue);
         }
     });
