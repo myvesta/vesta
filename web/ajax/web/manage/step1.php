@@ -1,7 +1,7 @@
 <?php
 
 // Main include
-$required_dataset_param = 'domain';
+$required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
