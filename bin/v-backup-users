@@ -71,9 +71,9 @@ for user in $(grep '@' /etc/passwd |cut -f1 -d:); do
         if [ $STATUS -ne 0 ]; then
             FINAL_STATUS='CONTAINS ERRORS !!!'
             FINAL_CODE=1
-            echo -e "Backup failed for user: $user with status $STATUS\n" >> $log
+            echo -e "Backup failed for user '$user' with status $STATUS\n" >> $log
         else
-            echo -e "Backup successful for user: $user\n" >> $log
+            echo -e "Backup successful for user '$user'\n" >> $log
         fi
         i_am_in_backup_all_users=1
         echo -e "\n--------------------------------\n\n" >> $log
