@@ -48,7 +48,7 @@ if (isset($phpgate_skip_agent_string_check)==false && file_exists('/usr/share/ph
 
 if (isset($phpgate_skip_xmlrpc_block)==false && substr($_SERVER['PHP_SELF'], -10)=='xmlrpc.php') phpgate_cut_request();
 if (isset($phpgate_skip_wp_trackback_block)==false && substr($_SERVER['PHP_SELF'], -16)=='wp-trackback.php') phpgate_cut_request();
-if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], "_rstr_nocache")!==false) phpgate_cut_request();
+// if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], "_rstr_nocache")!==false) phpgate_cut_request();
 
 
 if (substr($_SERVER['PHP_SELF'], -12)=='wp-login.php') {
