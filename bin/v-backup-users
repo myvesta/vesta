@@ -53,6 +53,7 @@ if [ -z "$BACKUP_SYSTEM" ]; then
     exit
 fi
 FINAL_STATUS='OK'
+FINAL_CODE=0
 i_am_in_backup_all_users=1
 for user in $(grep '@' /etc/passwd |cut -f1 -d:); do
     if [ ! -f "$VESTA/data/users/$user/user.conf" ]; then
@@ -69,11 +70,27 @@ for user in $(grep '@' /etc/passwd |cut -f1 -d:); do
         STATUS=$?
         if [ $STATUS -ne 0 ]; then
             FINAL_STATUS='CONTAINS ERRORS !!!'
+            FINAL_CODE=1
+            echo -e "Backup failed for user: $user with status $STATUS\n" >> $log
+        else
+            echo -e "Backup successful for user: $user\n" >> $log
         fi
         i_am_in_backup_all_users=1
         echo -e "\n--------------------------------\n\n" >> $log
     fi
 done
+
+if [ $FINAL_CODE -eq 1 ]; then
+    touch /usr/local/vesta/data/df/backup-error.txt
+    if [ -f /usr/local/vesta/data/df/backup-success.txt ]; then
+        rm /usr/local/vesta/data/df/backup-success.txt
+    fi
+else
+    touch /usr/local/vesta/data/df/backup-success.txt
+    if [ -f /usr/local/vesta/data/df/backup-error.txt ]; then
+        rm /usr/local/vesta/data/df/backup-error.txt
+    fi
+fi
 
 if [ ! -z "$NOTIFY_ADMIN_FULL_BACKUP" ]; then
     cat $log |$SENDMAIL -s "Full backup report for $HOSTNAME; status=$FINAL_STATUS" "$NOTIFY_ADMIN_FULL_BACKUP" 'yes'

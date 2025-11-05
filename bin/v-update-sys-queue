@@ -58,6 +58,10 @@ case $queue in
     *)              check_args '1' '0' 'QUEUE' ;;
 esac
 
+if [ "$queue" = "disk" ]; then
+    du -sm /var/log/ | awk '{print $1}' > /usr/local/vesta/data/df/var-log-size.txt 2>/dev/null
+    du -sm /backup/ | awk '{print $1}' > /usr/local/vesta/data/df/backup-size.txt 2>/dev/null
+fi
 
 #----------------------------------------------------------#
 #                       Vesta                              #
