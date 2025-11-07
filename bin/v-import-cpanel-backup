@@ -158,13 +158,15 @@ for sk_dbr in $sk_db_list
 			sed -i "s/utf8mb4_unicode_520_ci/utf8mb4_unicode_ci/g" mysql/${sk_dbr}.create
 			sed -i "s/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g" mysql/${sk_dbr}.create
 			if grep -q ' enable the sandbox mode ' mysql/${sk_dbr}.create; then
-				v-sed '/*!999999\- enable the sandbox mode */' '' mysql/${sk_dbr}.create
+				sed -i 's@/\*M!999999\\- enable the sandbox mode \*/@@g' mysql/${sk_dbr}.create
+				sed -i 's@/\*!999999\\- enable the sandbox mode \*/@@g' mysql/${sk_dbr}.create
 			fi
 			mysql < mysql/${sk_dbr}.create
 			sed -i "s/utf8mb4_unicode_520_ci/utf8mb4_unicode_ci/g" mysql/${sk_dbr}.sql
 			sed -i "s/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g" mysql/${sk_dbr}.sql
 			if grep -q ' enable the sandbox mode ' mysql/${sk_dbr}.sql; then
-				v-sed '/*!999999\- enable the sandbox mode */' '' mysql/${sk_dbr}.sql
+				sed -i 's@/\*M!999999\\- enable the sandbox mode \*/@@g' mysql/${sk_dbr}.sql
+				sed -i 's@/\*!999999\\- enable the sandbox mode \*/@@g' mysql/${sk_dbr}.sql
 			fi
 			mysql ${sk_dbr} < mysql/${sk_dbr}.sql
 		else
