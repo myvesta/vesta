@@ -41,6 +41,11 @@ source $VESTA/func/db.sh
 source $VESTA/func/rebuild.sh
 source $VESTA/conf/vesta.conf
 
+# Set backup directory if vesta.conf set it to an empty string
+if [ "$BACKUP" = "" ]; then
+    BACKUP=/backup
+fi
+
 if [ ! -z "$OVERRIDE_BACKUP_PATH" ]; then
     BACKUP=$OVERRIDE_BACKUP_PATH
 fi
