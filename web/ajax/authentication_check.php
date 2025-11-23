@@ -1,6 +1,8 @@
 <?php
 error_reporting(NULL);
 
+$authentication_check_loaded = true;
+
 // Main include
 include($_SERVER['DOCUMENT_ROOT']."/inc/main.php");
 

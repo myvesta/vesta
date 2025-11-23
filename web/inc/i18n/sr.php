@@ -758,5 +758,12 @@ $LANG['sr'] = array(
     'Email Credentials' => 'Email lozinka i podešavanja',
     
     'restore selected' => 'vrati selektovano',
-    'First select what to restore' => 'Prvo selektujte šta tačno želite da vratite'
+    'First select what to restore' => 'Prvo selektujte šta tačno želite da vratite',
+    'Install WordPress' => 'Instaliraj WordPress',
+    'Yes' => 'Da',
+    'No' => 'Ne',
+    'OK' => 'U redu',
+    'Are you sure you want to continue' => 'Da li ste sigurni da želite da nastavite',
+    'There are previusly files in the domain directory' => 'Postoje prethodno instalirani fajlovi u direktorijumu domena',
+    'Are you sure you want to override them' => 'Da li ste sigurni da želite da pregazite prethodno instalirane fajlove',
 );

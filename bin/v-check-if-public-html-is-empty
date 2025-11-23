@@ -1,0 +1,52 @@
+#!/bin/bash
+# info: check if public_html/ folder is empty
+# options: USER DOMAIN
+#
+# The function return '1' if /home/$user/web/$domain/public_html/ folder contains only 'index.html' and 'robots.txt' files.
+# The function return '1' if /home/$user/web/$domain/public_html/ folder contains no files.
+# Otherwise it return '0'
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+# Argument definition
+user=$1
+domain=$2
+
+# Includes
+source /usr/local/vesta/func/main.sh
+source /usr/local/vesta/conf/vesta.conf
+
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+
+check_args '2' "$#" 'USER DOMAIN'
+is_format_valid 'user' 'domain'
+is_object_valid 'user' 'USER' "$user"
+# is_object_unsuspended 'user' 'USER' "$user" # we don't need to check if user is suspended, because we are checking if public_html/ folder exists
+
+if [ ! -d "/home/$user/web/$domain/public_html" ]; then
+    check_result $E_NOTEXIST "ERROR: Folder /home/$user/web/$domain/public_html doesn't exist"
+fi
+
+#----------------------------------------------------------#
+#                       Action                             #
+#----------------------------------------------------------#
+
+number_of_files=$(ls /home/$user/web/$domain/public_html | wc -l)
+
+if [ $number_of_files -eq 0 ]; then
+    echo "1" # Folder is empty
+    exit 0
+fi
+
+if [ $number_of_files -eq 2 ] && [ -f "/home/$user/web/$domain/public_html/index.html" ] && [ -f "/home/$user/web/$domain/public_html/robots.txt" ]; then
+    echo "1" # Folder contains only 'index.html' and 'robots.txt' files
+    exit 0
+else
+    echo "0" # Folder is not empty
+    exit 0
+fi
+

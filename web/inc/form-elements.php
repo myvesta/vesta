@@ -9,10 +9,29 @@ $myvesta_element_buffer = substr($myvesta_element_buffer, $start_from);
 
 function myvesta_get_element($element_name, $label=null, $variable_name=null, $variable_value=null, $selected_value=null, $style='', $replace_or_add_style='replace') {
     global $myvesta_element_buffer;
+
+    $variable_name_yes = 'yes';
+    $variable_name_no = 'no';
+    $variable_value_yes = 'Yes';
+    $variable_value_no = 'No';
+
     if ($element_name == 'input') $id = 'confirm-div-content-input';
     else if ($element_name == 'textarea') $id = 'confirm-div-content-textarea';
     else if ($element_name == 'listbox') $id = 'confirm-div-content-listbox';
     else if ($element_name == 'button') $id = 'confirm-div-button';
+    else if ($element_name == 'buttons_confirm') {
+        $id = 'confirm-div-buttons-confirm';
+        if (strpos($variable_name, '/') !== false) {
+            $variable_names = explode('/', $variable_name);
+            $variable_name_yes = $variable_names[0];
+            $variable_name_no = $variable_names[1];
+        }
+        if (strpos($variable_value, '/') !== false) {
+            $variable_values = explode('/', $variable_value);
+            $variable_value_yes = $variable_values[0];
+            $variable_value_no = $variable_values[1];
+        }
+    }
     else if ($element_name == 'checkbox') $id = 'confirm-div-content-checkbox';
     else return '';
 
@@ -66,6 +85,12 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
             if ($variable_value === null) $variable_value = 'checked="no"';
             $myvesta_element = str_replace('checked="yes"', $variable_value, $myvesta_element);
         }
+        else if ($element_name == 'buttons_confirm') {
+            $myvesta_element = str_replace('Yes', $variable_value_yes, $myvesta_element);
+            $myvesta_element = str_replace('No', $variable_value_no, $myvesta_element);
+            $myvesta_element = str_replace('confirm-div-button-yes', $variable_name_yes, $myvesta_element);
+            $myvesta_element = str_replace('confirm-div-button-no', $variable_name_no, $myvesta_element);
+        }
     }
 
     if ($style != '') {
@@ -78,7 +103,10 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
     return $myvesta_element;
 }
 
-function myvesta_get_confirtmation_hidden_fields($type = 'confirm', $title = 'Confirm', $content = 'Are you sure you want to continue?', $selected_button = 'yes', $callback = 'TESTFUNCTION') {
+function myvesta_get_confirtmation_hidden_fields($type = 'confirm', $title = '', $content = '', $selected_button = 'no', $callback = 'TESTFUNCTION') {
+    if ($title == '') $title = __('Confirm');
+    if ($content == '') $content = __('Are you sure you want to continue?');
+
     $myvesta_element = '<input type="hidden" name="confirm_required" value="1" id="confirm_required" />
     <input type="hidden" name="confirm_required_type" value="'.$type.'" id="confirm_required_type" />
     <input type="hidden" name="confirm_required_title" value="'.$title.'" id="confirm_required_title" />
@@ -100,12 +128,19 @@ function myvesta_close_form() {
     return $myvesta_element;
 }
 
-function myvesta_get_hidden_fields() {
+function myvesta_get_hidden_fields($hidden_fields = array()) {
     $myvesta_element = '';
     if (isset($_POST['dataset'])) {
         foreach ($_POST['dataset'] as $key => $value) { 
+            if (isset($hidden_fields['dataset'][$key])) {
+                $value = $hidden_fields['dataset'][$key];
+            }
             $myvesta_element .= '<input type="hidden" name="dataset['.$key.']" value="'.$value.'" />';
         }
+    }
+    foreach ($hidden_fields as $key => $value) {
+        if ($key == 'dataset') continue;
+        $myvesta_element .= '<input type="hidden" name="'.$key.'" value="'.$value.'" />';
     }
     return $myvesta_element;
 }
