@@ -1,0 +1,122 @@
+#!/bin/bash
+# info: Activate Wordfence WAF for domain
+# options: DOMAIN
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+whoami=$(whoami)
+if [ "$whoami" != "root" ]; then
+    echo "You must be root to execute this script"
+    exit 1
+fi
+
+# Importing system environment
+source /etc/profile
+
+SILENT_MODE=1
+
+# Argument definition
+domain=$1
+
+user=$(/usr/local/vesta/bin/v-search-domain-owner $domain)
+USER=$user
+
+# Includes
+source /usr/local/vesta/func/main.sh
+source /usr/local/vesta/func/domain.sh
+
+if [ -z "$user" ]; then
+    check_result $E_NOTEXIST "domain $domain doesn't exist"
+fi
+
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+
+check_args '1' "$#" 'DOMAIN'
+is_format_valid 'domain'
+is_object_valid 'user' 'USER' "$user"
+is_object_unsuspended 'user' 'USER' "$user"
+
+if [ ! -d "/home/$user" ]; then
+    echo "User $user doesn't exist"
+    exit 1
+fi
+
+if [ ! -d "/home/$user/web/$domain/public_html" ]; then
+    echo "Domain $domain doesn't exist"
+    exit 1
+fi
+
+#----------------------------------------------------------#
+#                       Action                             #
+#----------------------------------------------------------#
+
+# Get PHP version
+fpm_ver=$(/usr/local/vesta/bin/v-get-php-version-of-domain $domain)
+
+if [ -z "$fpm_ver" ]; then
+    echo "PHP version for domain $domain could not be determined."
+    exit 1
+fi
+
+config_file="/etc/php/${fpm_ver}/fpm/pool.d/${domain}.conf"
+
+# Path to WAF file
+waf_file="/home/$user/web/$domain/public_html/wordfence-waf.php"
+
+if [ ! -f "$waf_file" ]; then
+    echo "Wordfence WAF file $waf_file does not exist. Aborting."
+    exit 1
+fi
+
+# Prepare the line to append
+prepend_line="php_admin_value[auto_prepend_file] = $waf_file"
+
+# Check if already exists
+if grep -Fq "$prepend_line" "$config_file"; then
+    echo "auto_prepend_file already present in $config_file. Skipping insertion."
+else
+    echo "" >> "$config_file"
+    echo "$prepend_line" >> "$config_file"
+    echo "Inserted auto_prepend_file directive into $config_file"
+fi
+
+# Lock down the waf file
+chmod 444 "$waf_file"
+if [ $? -eq 0 ]; then
+    echo "Permissions set to 444 for $waf_file"
+else
+    echo "Failed to set permissions for $waf_file"
+    exit 1
+fi
+
+# Set immutable flag
+chattr +i "$waf_file"
+if [ $? -eq 0 ]; then
+    echo "Immutable flag set on $waf_file"
+else
+    echo "Failed to set immutable flag on $waf_file"
+    exit 1
+fi
+
+# Restart PHP-FPM
+echo "Restarting PHP-FPM service for PHP version ${fpm_ver}"
+systemctl restart php${fpm_ver}-fpm
+if [ $? -ne 0 ]; then
+    systemctl status php${fpm_ver}-fpm
+    echo "========================="
+    echo ""
+    echo "ERROR: php${fpm_ver}-fpm restart failed - please re-run the command and fix the problem !!!"
+    echo ""
+    exit $E_RESTART;
+else
+    echo "The PHP-FPM service for PHP version ${fpm_ver} has been restarted successfully."
+fi
+
+echo ""
+echo "Wordfence WAF has been successfully activated for domain $domain."
+
+exit 0
