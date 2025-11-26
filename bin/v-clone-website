@@ -366,7 +366,7 @@ if [ -d "/root/temp" ]; then
 fi
 mkdir -p /root/temp
 cd /root/temp
-mysqldump --max_allowed_packet=1024M $FROM_DATABASE_NAME > $FROM_DATABASE_NAME.sql
+mysqldump --skip-triggers --max_allowed_packet=1024M $FROM_DATABASE_NAME > $FROM_DATABASE_NAME.sql
 echo "=== Importing to database $TO_DATABASE_NAME"
 mysql $TO_DATABASE_NAME < $FROM_DATABASE_NAME.sql
 rm $FROM_DATABASE_NAME.sql
