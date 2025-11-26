@@ -58,7 +58,7 @@ mysql_query() {
 
 mysql_dump() {
     err="/tmp/e.mysql"
-    mysqldump --defaults-file=$mycnf --complete-insert --force --quick --single-transaction --max-allowed-packet=1024MB -r $1 $2 2> $err
+    mysqldump --skip-triggers --defaults-file=$mycnf --complete-insert --force --quick --single-transaction --max-allowed-packet=1024MB -r $1 $2 2> $err
     if [ '0' -ne "$?" ]; then
         rm -rf $tmpdir
         if [ "$notify" != 'no' ]; then
