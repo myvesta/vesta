@@ -20,6 +20,9 @@ source /etc/profile
 # Argument definition
 domain=$1
 
+echo "= Installing WordPress for domain: $domain"
+echo "Please wait..."
+
 user=$(/usr/local/vesta/bin/v-search-domain-owner $domain)
 USER=$user
 
@@ -98,7 +101,7 @@ if [ "$DB_EXISTS" = "yes" ]; then
     done
 fi
 
-PASSWDDB=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+PASSWDDB=$(vesta_generate_pass 12)
 
 #----------------------------------------------------------#
 #                       Action                             #
@@ -156,7 +159,7 @@ if [ ! -f "$WORKINGDIR/wp-config.php" ]; then
     exit 1;
 fi
 
-password=$(LC_CTYPE=C tr -dc A-Za-z0-9_\!\@\#\$\%\^\&\*\(\)-+= < /dev/urandom | head -c 12)
+password=$(vesta_generate_pass 12)
 
 wpadmin=$(echo "$domain" | sed 's#\.#_#g')_4dm1n
 

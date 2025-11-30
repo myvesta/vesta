@@ -14,6 +14,7 @@ function hideFloatingDiv() {
     FloatingDivOpened = false;
     //$('#floating-center-div').css('display','none');
     $('#floating-center-div').fadeOut();
+    clearSpawnedAjaxProcessInterval();
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -68,6 +69,7 @@ function more_button_click(id) {
     $('#floating-center-div-title').html('Loading... Please wait...');
     $('#floating-center-div').css('background','#eee');
     showFloatingDiv('Loading... Please wait...', '');
+    $('#floating-center-div-content').css('opacity','0.3');
 
     $.ajax({
         url: url,
@@ -76,10 +78,12 @@ function more_button_click(id) {
         success: function(response) {
             $('#floating-center-div').css('background','#fff');
             showFloatingDiv(title, response);
+            $('#floating-center-div-content').css('opacity','1');
         },
         error: function(xhr, status, error) {
             $('#floating-center-div').css('background','#fff');
             showFloatingDiv('Fatal error '+status, error);
+            $('#floating-center-div-content').css('opacity','1');
         }
     });
 }
@@ -90,6 +94,7 @@ function send_ajax_request() {
 
     $('#floating-center-div-title').html('Loading... Please wait...');
     $('#floating-center-div').css('background','#eee');
+    $('#floating-center-div-content').css('opacity','0.3');
 
     var formData = {};
     $("#floating-center-div-form").serializeArray().forEach(function(item) {
@@ -114,10 +119,55 @@ function send_ajax_request() {
         success: function(response) {
             $('#floating-center-div').css('background','#fff');
             showFloatingDiv(title, response);
+            $('#floating-center-div-content').css('opacity','1');
         },
         error: function(xhr, status, error) {
             $('#floating-center-div').css('background','#fff');
             showFloatingDiv('Fatal error '+status, error);
+            $('#floating-center-div-content').css('opacity','1');
+        }
+    });
+}
+
+
+var myvesta_interval_id = null;
+function startWatchingSpawnedAjaxProcess(user, hash) {
+    console.log('= starting ajax interval'); //: user: '+user+', hash: '+hash);
+    myvesta_interval_id = setInterval(function() {
+        run_ajax_call_for_spawned_ajax_process(user, hash);
+    }, 1000); 
+    return myvesta_interval_id;
+}
+
+function clearSpawnedAjaxProcessInterval() {
+    if (myvesta_interval_id != null) {
+        clearInterval(myvesta_interval_id);
+        myvesta_interval_id = null;
+        $('#copy-to-clipboard').show();
+        console.log('= cleared ajax interval');
+    }
+}
+
+function run_ajax_call_for_spawned_ajax_process(user, hash) {
+    $.ajax({
+        url: '/ajax/watch-spawned-ajax-process.php',
+        type: 'POST',
+        data: { user: user, hash: hash, token: GLOBAL.TOKEN },
+        success: function(response) {
+            //console.log('= response: ', response);
+            response = JSON.parse(response);
+            if (typeof response == 'object') {
+                //console.log('= response.code: ', response.code);
+                $('#confirm-div-content-textarea-variable').val(response.output);
+                if (response.code > 0) clearSpawnedAjaxProcessInterval();
+            } else {
+                $('#confirm-div-content-textarea-variable').val(response);
+                clearSpawnedAjaxProcessInterval();
+            }
+        },
+        error: function(xhr, status, error) {
+            $('#confirm-div-content-textarea-variable').val(error);
+            clearSpawnedAjaxProcessInterval();
         }
     });
 }

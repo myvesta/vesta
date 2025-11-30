@@ -1,0 +1,52 @@
+#!/bin/bash
+# info: Execute command and redirect its output to log file
+# options: USER COMMAND [ARGUMENTS...]
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+user=$1
+command=${@:2}
+
+# Read hash from stdin
+read -r hash
+
+# Deattach stdout and stderr from parent process
+exec >/dev/null 2>&1 </dev/null
+
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+
+if [ -z "$user" ]; then
+    echo "User is required"
+    exit 1
+fi
+
+if [ ! -d "/home/$user" ]; then
+    echo "User doesn't exist"
+    exit 1
+fi
+
+if [ -z "$command" ]; then
+    echo "Command is required"
+    exit 1
+fi
+
+log_file="/home/admin/tmp/$user-$hash.log"
+lock_file="/home/admin/tmp/$user-$hash.lock"
+
+#----------------------------------------------------------#
+#                    Execution                             #
+#----------------------------------------------------------#
+
+touch $lock_file
+$command > $log_file 2>&1
+rm $lock_file
+
+sleep 10;
+
+rm $log_file
+
+exit 0

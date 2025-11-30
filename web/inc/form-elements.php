@@ -145,6 +145,40 @@ function myvesta_get_hidden_fields($hidden_fields = array()) {
     return $myvesta_element;
 }
 
+function myvesta_get_disabled_textarea($value = '', $style = '', $copy_to_clipboard = true, $watch_spawned_ajax_process = false, $user = '', $hash = '') {
+    if ($style == '') $style = 'width: 680px; height: 380px; resize: none; font-family: monospace; font-size: 13px; white-space: pre;';
+    $myvesta_element = '<textarea disabled id="confirm-div-content-textarea-variable" name="confirm-div-content-textarea-variable" class="vst-textinput ajax-newline" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" style="'.$style.'">'.$value.'</textarea>';
+    if ($copy_to_clipboard) {
+        if ($watch_spawned_ajax_process) $display = 'display: none;';
+        else $display = '';
+        $myvesta_element .= '<button id="copy-to-clipboard" class="button confirm" style="margin-right: 10px; width: 200px; background-color: #27c24c !important; border-color: #27c24c !important; '.$display.'" autofocus>'.__('Copy to clipboard').'</button>';
+        $myvesta_element .= '<button id="close-floating-div-button" class="button cancel" style="margin-right: 10px; width: 110px;">'.__('Close').'</button>';
+        $myvesta_element .= '<script>
+                document.getElementById("copy-to-clipboard").addEventListener("click", function() {
+                    var textarea = document.getElementById("confirm-div-content-textarea-variable");
+                    navigator.clipboard.writeText(textarea.value);
+                    this.innerHTML = "'.__('Copied to clipboard').'";
+                    setTimeout(function() {
+                        document.getElementById("copy-to-clipboard").innerHTML = "'.__('Copy to clipboard').'";
+                    }, 1000);
+                });
+                document.getElementById("close-floating-div-button").addEventListener("click", function() {
+                    hideFloatingDiv();
+                });
+        </script>';
+    }
+    if ($watch_spawned_ajax_process) {
+        $myvesta_element .= '<script>
+            startWatchingSpawnedAjaxProcess("'.$user.'", "'.$hash.'");
+        </script>';
+    }
+    return $myvesta_element;
+}
+
+function myvesta_hide_floating_div() {
+    echo '<script>hideFloatingDiv();</script>'; exit;
+}
+
 /*
 echo myvesta_get_element('input', 'Variable 1:', 'variable', 'variable value');
 echo "\n\n";

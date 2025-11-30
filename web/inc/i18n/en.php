@@ -758,4 +758,16 @@ $LANG['en'] = array(
 
     'Email Credentials' => 'Email Credentials',
 
+    'restore selected' => 'restore selected',
+    'First select what to restore' => 'First select what to restore',
+    'Install WordPress' => 'Install WordPress',
+    'Yes' => 'Yes',
+    'No' => 'No',
+    'OK' => 'OK',
+    'Are you sure you want to continue' => 'Are you sure you want to continue',
+    'There are previusly files in the domain directory' => 'There are previusly files in the domain directory',
+    'Are you sure you want to override them' => 'Are you sure you want to override them',
+    'WordPress installation output' => 'WordPress installation output',
+    'Copy to clipboard' => 'Copy to clipboard',
+    'Copied to clipboard' => 'Copied to clipboard'
 );

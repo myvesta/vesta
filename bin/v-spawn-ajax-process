@@ -1,0 +1,41 @@
+#!/bin/bash
+# info: Spawn a command and define its log file
+# options: USER COMMAND [ARGUMENTS...]
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+user=$1
+command=${@:2}
+
+source /usr/local/vesta/func/main.sh
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+
+if [ -z "$user" ]; then
+    echo "User is required"
+    exit 1
+fi
+
+if [ ! -d "/home/$user" ]; then
+    echo "User doesn't exist"
+    exit 1
+fi
+
+if [ -z "$command" ]; then
+    echo "Command is required"
+    exit 1
+fi
+
+#----------------------------------------------------------#
+#                    Execution                             #
+#----------------------------------------------------------#
+
+hash=$(generate_password)
+printf '%s\n' "$hash" | /usr/local/vesta/bin/v-handle-spawned-ajax-process $user $command &
+
+echo $hash
+
+exit $?

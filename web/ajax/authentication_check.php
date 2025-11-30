@@ -25,12 +25,18 @@ if (isset($required_param)) {
 if (isset($required_param['dataset']['domain'])) $domain = $_REQUEST['dataset']['domain'];
 if (isset($required_param['domain'])) $domain = $_REQUEST['domain'];
 
-$logged_user = $_SESSION['user'];
-if (isset($_SESSION['look']) && !empty($_SESSION['look'])) $logged_user = $_SESSION['look'];
+$myvesta_logged_user = $_SESSION['user'];
+if (isset($_SESSION['look']) && !empty($_SESSION['look'])) $myvesta_logged_user = $_SESSION['look'];
 
 if (isset($domain)) {
-    $result = exec(VESTA_CMD."v-check-domain-owner ".$logged_user." ".$domain);
+    $result = exec(VESTA_CMD."v-check-domain-owner ".$myvesta_logged_user." ".$domain);
         if ($result !== '1') {
-            die('Domain is not owned by '.$logged_user);
+            die('Domain is not owned by '.$myvesta_logged_user);
         }
+}
+
+if (isset($match_user)) {
+    if ($myvesta_logged_user != $match_user) {
+        die('User is not '.$match_user);
+    }
 }
