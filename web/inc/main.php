@@ -8,7 +8,7 @@ if (file_exists("/usr/local/vesta/web/inc/switch_to_vesta_port") && isset($_SERV
 session_start();
 
 define('VESTA_CMD', '/usr/bin/sudo /usr/local/vesta/bin/');
-define('JS_LATEST_UPDATE', '1491697872');
+define('JS_LATEST_UPDATE', '1491697873');
 
 $i = 0;
 

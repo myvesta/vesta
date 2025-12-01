@@ -144,6 +144,21 @@ function clearSpawnedAjaxProcessInterval() {
         clearInterval(myvesta_interval_id);
         myvesta_interval_id = null;
         $('#copy-to-clipboard').show();
+        $('#close-floating-div-button').show();
+        $('#place-holder-floating-div-button').hide();
+
+        var text = $('#confirm-div-content-textarea-variable').val();
+        var startTag = "=========================COPY FROM HERE=========================";
+        var endTag   = "=========================COPY -TO- HERE=========================";
+
+        var startPos = text.indexOf(startTag);
+        var endPos   = text.indexOf(endTag);
+
+        if (startPos !== -1 && endPos !== -1 && endPos > startPos) {
+            var cleaned = text.substring(startPos + startTag.length, endPos).trim();
+            $('#confirm-div-content-textarea-variable').val(cleaned);
+        }
+
         console.log('= cleared ajax interval');
     }
 }

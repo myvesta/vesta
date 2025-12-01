@@ -167,7 +167,7 @@ wpadmin=$(echo "$domain" | sed 's#\.#_#g')_4dm1n
 
 mysql -u$DBUSER -p$PASSWDDB -e "USE $DBUSER; update wp_options set option_value = '$PROTOCOL://$domain' where option_name = 'siteurl'; update wp_options set option_value = '$PROTOCOL://$domain' where option_name = 'home';"
 
-echo "================================================================="
+echo "=========================COPY FROM HERE========================="
 echo "Your WordPress installation is complete."
 echo ""
 echo "Website URL: $PROTOCOL://$domain/"
@@ -176,7 +176,7 @@ echo "WordPress admin login: $PROTOCOL://$domain/wp-admin/"
 echo "Username: $wpadmin"
 echo "Password: $password"
 echo ""
-echo "================================================================="
+echo "=========================COPY -TO- HERE========================="
 
 chown -R $user:$user $WORKINGDIR
 
