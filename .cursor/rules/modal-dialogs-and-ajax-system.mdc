@@ -1,0 +1,959 @@
+# myVesta Modal Dialogs and AJAX Communication System
+
+This rule defines the complete system for creating modal dialogs (Floating Div forms) and AJAX communication in the myVesta web interface. This system allows you to create button actions like "Install WordPress" that open modal dialogs and handle multi-step AJAX workflows.
+
+## System Architecture Overview
+
+The modal dialogs system consists of:
+
+1. **Frontend Components**:
+   - HTML structure in [web/templates/header.html](mdc:web/templates/header.html)
+   - JavaScript logic in [web/js/floating-div.js](mdc:web/js/floating-div.js)
+   - Dataset values in list templates (e.g., [web/templates/user/list_web.html](mdc:web/templates/user/list_web.html))
+
+2. **Backend Components**:
+   - Authentication check in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php)
+   - Form element helpers in [web/inc/form-elements.php](mdc:web/inc/form-elements.php)
+   - AJAX endpoint scripts in [web/ajax/](mdc:web/ajax/)
+
+3. **Security Layer**:
+   - CSRF token validation
+   - Domain ownership verification
+   - User authentication
+   - Required parameter validation
+
+## Frontend Components
+
+### 1. HTML Structure (header.html)
+
+The system uses two main modal containers defined in [web/templates/header.html](mdc:web/templates/header.html):
+
+#### Floating Center Div (Main Modal)
+```html
+<div id="floating-center-div" style="position: fixed; top: 50%; left: 50%; ...">
+    <div id="floating-center-div-right-close">...</div>
+    <h1 id="floating-center-div-title"></h1>
+    <div id="floating-center-div-content"></div>
+</div>
+```
+
+**Purpose**: Main modal dialog for displaying forms and content.
+
+**Key Elements**:
+- `#floating-center-div-title` - Modal title
+- `#floating-center-div-content` - Modal content (forms, messages, etc.)
+- `#floating-center-div-right-close` - Close button
+
+#### Confirm Div (Reusable Elements)
+```html
+<div id="confirm-div">
+    <h1 id="confirm-div-title"></h1>
+    <div id="confirm-div-content"></div>
+    <div id="confirm-div-content-input">...</div>
+    <div id="confirm-div-content-textarea">...</div>
+    <div id="confirm-div-content-listbox">...</div>
+    <div id="confirm-div-content-checkbox">...</div>
+    <div id="confirm-div-buttons-confirm">...</div>
+    <div id="confirm-div-buttons-notify">...</div>
+    <div id="confirm-div-button">...</div>
+</div>
+```
+
+**Purpose**: Template container for reusable form elements (not directly displayed, used by form-elements.php).
+
+**Available Element Types**:
+- `input` - Text input field
+- `textarea` - Multi-line text area
+- `listbox` - Dropdown/select box
+- `checkbox` - Checkbox input
+- `button` - Single button
+- `buttons_confirm` - Yes/No confirmation buttons
+- `buttons_notify` - OK notification button
+
+### 2. Dataset Values Array
+
+In list templates (e.g., [web/templates/user/list_web.html](mdc:web/templates/user/list_web.html)), define a dataset array for each item:
+
+```html
+<script>
+  var dataset_values = [];
+</script>
+
+<?php foreach ($data as $key => $value) { ?>
+  <script>
+    dataset_values[<?=$i?>] = {
+      'url': '/ajax/web/manage/step1.php',
+      'title': '<?=$key?>',
+      'domain': '<?=$key?>',
+      'web_template': '<?=$data[$key]['TPL']?>',
+      'proxy_template': '<?=$data[$key]['PROXY']?>',
+      'backend_template': '<?=$data[$key]['BACKEND']?>',
+      'ssl_support': '<?=$data[$key]['SSL']?>',
+      'letsencrypt_support': '<?=$data[$key]['LETSENCRYPT']?>'
+    };
+  </script>
+<?php } ?>
+```
+
+**Key Properties**:
+- `url` - The AJAX endpoint to call (usually step1.php)
+- `title` - Modal title to display
+- Additional properties - Any data needed by the AJAX endpoint
+
+### 3. Trigger Button
+
+Add a button that calls `more_button_click()`:
+
+```html
+<div class="actions-panel__col">
+    <a href="javascript:void(0)" onclick="more_button_click(<?=$i?>)">
+        <?=__('WordPress')?>&nbsp;&nbsp;&nbsp; <i></i>
+    </a>
+</div>
+```
+
+**Parameters**:
+- Pass the index `$i` that corresponds to the dataset_values array
+- OR pass an object directly: `more_button_click({url: '...', title: '...', ...})`
+
+### 4. JavaScript Functions (floating-div.js)
+
+#### Core Functions
+
+**showFloatingDiv(title, contentHtml)**
+- Shows the modal dialog
+- Sets title and content
+- Fades in with animation
+
+**hideFloatingDiv()**
+- Hides the modal dialog
+- Clears spawned process intervals
+- Fades out with animation
+
+**more_button_click(id)**
+- Main entry point for button actions
+- Accepts array index or object
+- Makes initial AJAX request to load form
+- Displays loading state
+
+```javascript
+function more_button_click(id) {
+    if (typeof id != 'object') {
+        var url = dataset_values[id].url;
+        var title = dataset_values[id].title;
+    } else {
+        var url = id.url;
+        var title = id.title;
+    }
+    
+    $.ajax({
+        url: url,
+        type: 'POST',
+        data: { dataset: dataset_values[id], token: GLOBAL.TOKEN },
+        success: function(response) {
+            showFloatingDiv(title, response);
+        }
+    });
+}
+```
+
+**send_ajax_request()**
+- Handles form submission
+- Serializes form data
+- Captures which button was clicked
+- Sends AJAX POST request
+- Updates modal with response
+
+#### Long-Running Process Functions
+
+**startWatchingSpawnedAjaxProcess(user, hash)**
+- Starts polling for process output
+- Updates textarea with real-time output
+- Returns interval ID
+
+**clearSpawnedAjaxProcessInterval()**
+- Stops polling interval
+- Shows copy-to-clipboard button
+- Cleans up process markers
+
+**run_ajax_call_for_spawned_ajax_process(user, hash)**
+- Makes AJAX call to check process status
+- Updates textarea with output
+- Stops polling when process completes
+
+#### Event Handlers
+
+```javascript
+// ESC key closes modal
+$(document).on('keydown', function(e) {
+    if (e.key === "Escape" && FloatingDivOpened) hideFloatingDiv();
+});
+
+// Close button
+$('#floating-center-div-right-close').on('click', function() {
+    hideFloatingDiv();
+});
+
+// Form submission
+$("#floating-center-div").on("submit", "#floating-center-div-form", function(e) {
+    e.preventDefault();
+    send_ajax_request();
+});
+```
+
+## Backend Components
+
+### 1. Authentication Check (authentication_check.php)
+
+**ALWAYS** include this at the beginning of every AJAX endpoint:
+
+```php
+<?php
+// Main include
+$required_param['dataset']['domain'] = true;  // Define required parameters
+include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+```
+
+**What it does**:
+1. Includes main.php for core functions
+2. Validates CSRF token (`$_POST['token']` vs `$_SESSION['token']`)
+3. Validates required parameters exist
+4. Verifies domain ownership if domain parameter exists
+5. Sets `$myvesta_logged_user` variable (handles user impersonation)
+6. Dies with error message if any check fails
+
+**Setting Required Parameters**:
+
+```php
+// Require domain in dataset
+$required_param['dataset']['domain'] = true;
+
+// Require multiple dataset fields
+$required_param['dataset']['domain'] = true;
+$required_param['dataset']['database'] = true;
+
+// Require direct parameter
+$required_param['domain'] = true;
+
+// Match specific user (admin-only endpoint)
+$match_user = 'admin';
+```
+
+**Available Variables After Include**:
+- `$myvesta_logged_user` - Current user (handles look/impersonation)
+- `$domain` - Domain name if required
+- `$authentication_check_loaded` - Flag to check if included
+
+### 2. Form Element Functions (form-elements.php)
+
+Include after authentication check:
+
+```php
+include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
+```
+
+#### myvesta_open_form($action = '')
+
+Opens a form with CSRF token.
+
+```php
+echo myvesta_open_form('/ajax/web/manage/step2.php');
+```
+
+**Parameters**:
+- `$action` - Form action URL (defaults to current URI)
+
+**Returns**: Opening form tag with hidden token field
+
+#### myvesta_close_form()
+
+Closes the form.
+
+```php
+echo myvesta_close_form();
+```
+
+**Returns**: Closing form tag
+
+#### myvesta_get_hidden_fields($hidden_fields = array())
+
+Preserves dataset and adds additional hidden fields.
+
+```php
+// Preserve all dataset fields
+echo myvesta_get_hidden_fields();
+
+// Preserve dataset + add custom fields
+echo myvesta_get_hidden_fields(array(
+    'install_wordpress' => '1',
+    'custom_field' => 'value'
+));
+
+// Override dataset field
+echo myvesta_get_hidden_fields(array(
+    'dataset' => array('domain' => 'newdomain.com')
+));
+```
+
+**Parameters**:
+- `$hidden_fields` - Associative array of field names and values
+
+**Returns**: HTML hidden input fields
+
+#### myvesta_get_element($element_name, $label, $variable_name, $variable_value, $selected_value, $style, $replace_or_add_style)
+
+Creates form elements from templates in header.html.
+
+**Element Types**:
+
+##### Input Field
+```php
+echo myvesta_get_element(
+    'input',                    // Element type
+    'Username:',                // Label text
+    'username',                 // Field name
+    'defaultvalue',             // Default value
+    null,                       // Not used for input
+    'width: 300px;',            // CSS style
+    'replace'                   // replace or add
+);
+```
+
+##### Textarea
+```php
+echo myvesta_get_element(
+    'textarea',
+    'Description:',
+    'description',
+    'Default text content',
+    null,
+    'width: 400px; height: 200px;'
+);
+```
+
+##### Listbox (Dropdown)
+```php
+echo myvesta_get_element(
+    'listbox',
+    'Select Template:',
+    'template',
+    array(                      // Options array
+        'PHP-FPM-82' => 'PHP-FPM 8.2',
+        'PHP-FPM-81' => 'PHP-FPM 8.1',
+        'default' => 'Default'
+    ),
+    'PHP-FPM-82',              // Selected value
+    'width: 300px;'
+);
+```
+
+##### Checkbox
+```php
+echo myvesta_get_element(
+    'checkbox',
+    'Enable SSL',
+    'ssl_enabled',
+    'yes',                      // checked (yes/no, 1/0, true/false)
+    null,
+    'margin-top: 10px;'
+);
+```
+
+##### Single Button
+```php
+echo myvesta_get_element(
+    'button',
+    '',                         // Label not used for button
+    'install_wordpress',        // Button name
+    'Install WordPress',        // Button text
+    null,
+    'width: 200px;',
+    'add'                       // Add to existing styles
+);
+```
+
+##### Confirmation Buttons (Yes/No)
+```php
+echo myvesta_get_element(
+    'buttons_confirm',
+    '',
+    'Yes/No',                   // Button names (slash-separated)
+    __('Yes').'/'.__('No'),     // Button labels (slash-separated)
+    null,
+    ''
+);
+```
+
+**Parameters**:
+- `$element_name` - Type: 'input', 'textarea', 'listbox', 'checkbox', 'button', 'buttons_confirm'
+- `$label` - Label text (shown before element)
+- `$variable_name` - HTML name attribute
+- `$variable_value` - Default value or options array (for listbox)
+- `$selected_value` - Selected value (for listbox only)
+- `$style` - CSS style string
+- `$replace_or_add_style` - 'replace' or 'add' (default: 'replace')
+
+#### myvesta_get_disabled_textarea($value, $style, $copy_to_clipboard, $watch_spawned_ajax_process, $user, $hash)
+
+Creates a disabled textarea with optional copy-to-clipboard and real-time process watching.
+
+```php
+// Simple output display
+echo myvesta_get_disabled_textarea(
+    'Command output here',
+    '',                         // Default style
+    true,                       // Show copy button
+    false                       // No process watching
+);
+
+// Watch spawned process (for long-running tasks)
+echo myvesta_get_disabled_textarea(
+    '',                         // Initially empty
+    '',
+    true,
+    true,                       // Enable process watching
+    $myvesta_logged_user,
+    $hash                       // Process hash from v-spawn-ajax-process
+);
+```
+
+**Parameters**:
+- `$value` - Initial text content
+- `$style` - CSS style (defaults to monospace textarea style)
+- `$copy_to_clipboard` - Show copy-to-clipboard button (true/false)
+- `$watch_spawned_ajax_process` - Enable real-time output watching (true/false)
+- `$user` - Username (required if watching process)
+- `$hash` - Process hash (required if watching process)
+
+**Returns**: Textarea HTML + optional buttons + optional JavaScript
+
+#### myvesta_hide_floating_div()
+
+Closes the modal dialog and exits script.
+
+```php
+if (isset($_POST['No'])) {
+    myvesta_hide_floating_div();
+}
+```
+
+**Behavior**: Outputs JavaScript to hide modal and calls exit()
+
+### 3. Multi-Step AJAX Workflow Pattern
+
+The recommended pattern is to use step1.php, step2.php, and action-specific files.
+
+#### Step 1: Initial Form (step1.php)
+
+Shows the initial form/buttons to the user.
+
+```php
+<?php
+// Main include
+$required_param['dataset']['domain'] = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
+
+// Display form
+echo myvesta_open_form('/ajax/web/manage/step2.php');
+echo myvesta_get_hidden_fields();
+echo myvesta_get_element('button', '', 'install_wordpress', __('Install WordPress'), null, 'width: 200px;', 'add');
+echo myvesta_close_form();
+
+exit;
+?>
+```
+
+**Purpose**:
+- Loaded by `more_button_click()`
+- Receives `dataset` array via POST
+- Shows initial options/buttons
+- Form submits to step2.php
+
+#### Step 2: Action Router (step2.php)
+
+Routes to specific action handlers based on button clicked.
+
+```php
+<?php
+// Main include
+$required_param['dataset']['domain'] = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
+
+// Check which button was clicked
+if (!empty($_POST['install_wordpress'])) {
+    include($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/install.php");
+    exit;
+}
+
+if (!empty($_POST['another_action'])) {
+    include($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/another/action.php");
+    exit;
+}
+
+echo 'No action selected';
+exit;
+?>
+```
+
+**Purpose**:
+- Receives form submission from step1.php
+- Routes to appropriate action file
+- Can have multiple action handlers
+
+#### Step 3: Action Handler (wordpress/install.php)
+
+Executes the actual action with confirmations if needed.
+
+```php
+<?php
+if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
+
+$domain = $_REQUEST['dataset']['domain'];
+
+// Check if confirmation needed
+$is_empty = exec(VESTA_CMD."v-check-if-public-html-is-empty $user $domain", $output, $return_var);
+
+$run_action = false;
+
+if ($is_empty == '0') {
+    // Directory not empty, ask for confirmation
+    if (!isset($_POST['Yes']) && !isset($_POST['No'])) {
+        echo myvesta_open_form('/ajax/web/manage/step2.php');
+        echo __('There are previously files in the domain directory').'.<br />';
+        echo __('Are you sure you want to override them').'?<br /><br />';
+        echo myvesta_get_hidden_fields(array('install_wordpress' => '1'));
+        echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
+        echo myvesta_close_form();
+        exit;
+    } else {
+        if (isset($_POST['Yes'])) {
+            $run_action = true;
+        } elseif (isset($_POST['No'])) {
+            myvesta_hide_floating_div();
+        }
+    }
+}
+
+if ($is_empty == '1') {
+    $run_action = true;
+}
+
+if ($run_action) {
+    // Execute action using v-spawn-ajax-process for long-running tasks
+    $cmd = VESTA_CMD."v-spawn-ajax-process $user /usr/local/vesta/bin/v-install-wordpress $domain";
+    $hash = shell_exec($cmd);
+    $hash = trim($hash);
+    
+    echo '<b>'.__('WordPress installation output').':</b><br /><br />';
+    echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $hash);
+    exit;
+}
+?>
+```
+
+**Purpose**:
+- Performs the actual action
+- Can show confirmation dialogs
+- Handles Yes/No responses
+- Executes commands
+- Shows output with real-time updates
+
+**Key Patterns**:
+1. **Check authentication**: `if (!isset($authentication_check_loaded)) die(...)`
+2. **Conditional confirmation**: Ask for confirmation if needed
+3. **Preserve form state**: Use `myvesta_get_hidden_fields()` to maintain action context
+4. **Long-running tasks**: Use `v-spawn-ajax-process` + `myvesta_get_disabled_textarea()` with watching enabled
+
+## Security Best Practices
+
+### 1. CSRF Token
+- **Always** send `GLOBAL.TOKEN` in AJAX requests
+- Backend validates via authentication_check.php
+- Token is in `$_SESSION['token']`
+
+### 2. Domain Ownership
+- Set `$required_param['dataset']['domain'] = true`
+- authentication_check.php verifies ownership
+- Prevents users from accessing other users' domains
+
+### 3. Required Parameters
+- Define all required parameters before including authentication_check.php
+- Script dies if parameters are missing
+- Helps prevent undefined variable errors
+
+### 4. User Impersonation
+- Use `$myvesta_logged_user` instead of `$_SESSION['user']`
+- Handles admin impersonating other users
+- Always use for command execution
+
+### 5. Admin-Only Endpoints
+```php
+$match_user = 'admin';
+include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+```
+
+## Complete Examples
+
+### Example 1: Simple Action Button
+
+**Step 1**: Add dataset to list template
+
+```html
+<script>
+  dataset_values[<?=$i?>] = {
+    'url': '/ajax/database/backup/step1.php',
+    'title': 'Database: <?=$key?>',
+    'database': '<?=$key?>'
+  };
+</script>
+
+<a onclick="more_button_click(<?=$i?>)">Backup Database</a>
+```
+
+**Step 2**: Create step1.php
+
+```php
+<?php
+$required_param['dataset']['database'] = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
+
+echo myvesta_open_form('/ajax/database/backup/step2.php');
+echo myvesta_get_hidden_fields();
+echo myvesta_get_element('button', '', 'backup_now', __('Backup Now'), null, 'width: 200px;');
+echo myvesta_close_form();
+exit;
+?>
+```
+
+**Step 3**: Create step2.php
+
+```php
+<?php
+$required_param['dataset']['database'] = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
+
+if (!empty($_POST['backup_now'])) {
+    include($_SERVER['DOCUMENT_ROOT']."/ajax/database/backup/execute.php");
+    exit;
+}
+
+echo 'No action selected';
+exit;
+?>
+```
+
+**Step 4**: Create execute.php
+
+```php
+<?php
+if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
+
+$database = $_REQUEST['dataset']['database'];
+
+$cmd = VESTA_CMD."v-backup-database $myvesta_logged_user $database";
+exec($cmd, $output, $return_var);
+
+if ($return_var == 0) {
+    echo '<h2>'.__('Success').'</h2>';
+    echo __('Database backed up successfully');
+} else {
+    echo '<h2>'.__('Error').'</h2>';
+    echo __('Failed to backup database');
+}
+exit;
+?>
+```
+
+### Example 2: Form with Input and Confirmation
+
+**Step 1**: Create step1.php with form
+
+```php
+<?php
+$required_param['dataset']['domain'] = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
+
+echo myvesta_open_form('/ajax/web/subdomain/step2.php');
+echo myvesta_get_hidden_fields();
+
+echo myvesta_get_element('input', __('Subdomain name:'), 'subdomain', '', null, 'width: 300px;');
+echo '<br /><br />';
+
+echo myvesta_get_element('button', '', 'create_subdomain', __('Create Subdomain'), null, 'width: 200px;');
+echo myvesta_close_form();
+exit;
+?>
+```
+
+**Step 2**: Create execute.php with confirmation
+
+```php
+<?php
+if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
+
+$domain = $_REQUEST['dataset']['domain'];
+$subdomain = $_POST['subdomain'];
+
+// Validate input
+if (empty($subdomain)) {
+    echo '<span style="color: red;">'.__('Subdomain name cannot be empty').'</span>';
+    exit;
+}
+
+// Ask for confirmation
+if (!isset($_POST['Yes']) && !isset($_POST['No'])) {
+    echo myvesta_open_form('/ajax/web/subdomain/step2.php');
+    echo __('Create subdomain').': <b>'.$subdomain.'.'.$domain.'</b>?<br /><br />';
+    echo myvesta_get_hidden_fields(array(
+        'create_subdomain' => '1',
+        'subdomain' => $subdomain
+    ));
+    echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
+    echo myvesta_close_form();
+    exit;
+}
+
+if (isset($_POST['No'])) {
+    myvesta_hide_floating_div();
+}
+
+if (isset($_POST['Yes'])) {
+    // Execute command
+    $cmd = VESTA_CMD."v-add-web-domain-alias $myvesta_logged_user $domain $subdomain";
+    exec($cmd, $output, $return_var);
+    
+    if ($return_var == 0) {
+        echo '<h2>'.__('Success').'</h2>';
+        echo __('Subdomain created').': <b>'.$subdomain.'.'.$domain.'</b>';
+    } else {
+        echo '<h2>'.__('Error').'</h2>';
+        echo implode('<br />', $output);
+    }
+}
+exit;
+?>
+```
+
+### Example 3: Long-Running Process with Real-Time Output
+
+**Execute.php with process spawning**
+
+```php
+<?php
+if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
+
+$domain = $_REQUEST['dataset']['domain'];
+
+// Spawn long-running process
+$cmd = VESTA_CMD."v-spawn-ajax-process $myvesta_logged_user /usr/local/vesta/bin/v-install-wordpress $domain";
+$hash = shell_exec($cmd);
+$hash = trim($hash);
+
+// Show output with real-time watching
+echo '<h2>'.__('Installation in progress').'</h2>';
+echo '<p>'.__('Please wait while WordPress is being installed...').'</p><br />';
+echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $hash);
+
+exit;
+?>
+```
+
+**Notes on v-spawn-ajax-process**:
+- Returns a hash that identifies the process
+- Process output is captured in real-time
+- Frontend polls every second using `startWatchingSpawnedAjaxProcess()`
+- When process completes, polling stops and copy-to-clipboard button appears
+- Use for commands that take more than a few seconds
+
+## File Structure Example
+
+For a complete feature like "Manage WordPress", organize files like this:
+
+```
+web/ajax/web/manage/
+├── step1.php              # Initial form with action buttons
+├── step2.php              # Action router
+└── wordpress/
+    ├── install.php        # WordPress installation
+    ├── update.php         # WordPress update
+    └── delete.php         # WordPress deletion
+```
+
+## Common Pitfalls
+
+### 1. Forgetting to Include Authentication Check
+**Wrong**:
+```php
+<?php
+include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
+```
+
+**Correct**:
+```php
+<?php
+$required_param['dataset']['domain'] = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
+```
+
+### 2. Not Preserving Hidden Fields in Confirmation Dialogs
+**Wrong**:
+```php
+echo myvesta_open_form('/ajax/web/manage/step2.php');
+echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
+echo myvesta_close_form();
+```
+
+**Correct**:
+```php
+echo myvesta_open_form('/ajax/web/manage/step2.php');
+echo myvesta_get_hidden_fields(array('install_wordpress' => '1'));  // Preserve action
+echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
+echo myvesta_close_form();
+```
+
+### 3. Using Wrong User Variable
+**Wrong**:
+```php
+$cmd = VESTA_CMD."v-delete-web-domain $user $domain";
+```
+
+**Correct**:
+```php
+$cmd = VESTA_CMD."v-delete-web-domain $myvesta_logged_user $domain";
+```
+
+### 4. Not Checking Authentication in Action Files
+**Wrong**:
+```php
+<?php
+$domain = $_REQUEST['dataset']['domain'];
+// Execute action
+```
+
+**Correct**:
+```php
+<?php
+if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
+
+$domain = $_REQUEST['dataset']['domain'];
+// Execute action
+```
+
+### 5. Forgetting to Exit After Output
+**Wrong**:
+```php
+echo 'Success!';
+// Script continues, may cause issues
+```
+
+**Correct**:
+```php
+echo 'Success!';
+exit;
+```
+
+## Styling and UX Best Practices
+
+### 1. Use Consistent Button Styles
+```php
+// First action
+echo myvesta_get_element('button', '', 'action_name', __('Install'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
+
+// Second action
+echo myvesta_get_element('button', '', 'action_name', __('Update'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
+
+// Third action
+echo myvesta_get_element('button', '', 'action_name', __('Delete'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
+```
+
+### 2. Show Clear Loading States
+The system automatically shows "Loading... Please wait..." with opacity effect when making AJAX requests.
+
+### 3. Use Confirmation for Destructive Actions
+Always ask for confirmation before:
+- Deleting data
+- Overwriting files
+- Making irreversible changes
+
+### 4. Provide Informative Success/Error Messages
+```php
+if ($return_var == 0) {
+    echo '<h2 style="color: #27c24c;">'.__('Success').'</h2>';
+    echo '<p>'.__('WordPress has been successfully installed').'.</p>';
+    echo '<p><a href="http://'.$domain.'" target="_blank">'.__('Visit your website').'</a></p>';
+} else {
+    echo '<h2 style="color: #ff6b6b;">'.__('Error').'</h2>';
+    echo '<p>'.__('Installation failed').':</p>';
+    echo '<pre>'.implode("\n", $output).'</pre>';
+}
+```
+
+## Translation Support
+
+All user-facing text should use the `__()` function for translation:
+
+```php
+echo __('Install WordPress');
+echo __('Are you sure you want to continue?');
+echo __('Success');
+echo __('Error');
+```
+
+For strings with variables:
+```php
+echo __('Installing WordPress on %s', $domain);
+echo __('Database %s backed up successfully', $database);
+```
+
+## Testing Checklist
+
+When creating a new button action:
+
+- [ ] Dataset values correctly defined in list template
+- [ ] Button calls `more_button_click()` with correct index
+- [ ] step1.php includes authentication_check.php
+- [ ] Required parameters defined before authentication check
+- [ ] step1.php displays form with correct action URL
+- [ ] step2.php routes to correct action file
+- [ ] Action file checks `$authentication_check_loaded`
+- [ ] Hidden fields preserved through confirmation dialogs
+- [ ] CSRF token sent in all AJAX requests
+- [ ] Using `$myvesta_logged_user` instead of `$user`
+- [ ] All scripts end with `exit;`
+- [ ] Long-running tasks use `v-spawn-ajax-process`
+- [ ] Success/error messages are clear and translated
+- [ ] Confirmation shown for destructive actions
+- [ ] ESC key closes modal properly
+- [ ] Works when admin is impersonating user
+
+## Additional Resources
+
+- Main PHP functions: [web/inc/main.php](mdc:web/inc/main.php)
+- Translation function `__()`: [web/inc/i18n.php](mdc:web/inc/i18n.php)
+- Command constants: `VESTA_CMD` defined in [web/inc/main.php](mdc:web/inc/main.php)
+- String manipulation: [func/string.php](mdc:func/string.php)
+
+## Summary Workflow
+
+1. **User clicks button** → `more_button_click(index)` called
+2. **JavaScript sends AJAX request** → `dataset_values[index]` sent to `step1.php`
+3. **step1.php validates** → Shows form/buttons
+4. **User submits form** → `send_ajax_request()` posts to `step2.php`
+5. **step2.php routes** → Includes appropriate action file
+6. **Action file executes** → May show confirmation or run command
+7. **Result displayed** → Success/error message or real-time output
+8. **User closes modal** → ESC key or close button
+
+This pattern allows for:
+- Clean separation of concerns
+- Reusable action endpoints
+- Multi-step confirmations
+- Real-time process monitoring
+- Consistent security checks
+- Easy maintenance and extension
