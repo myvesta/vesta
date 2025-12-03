@@ -119,18 +119,14 @@
                     ?>
       <script>
         dataset_values[<?=$i?>] = {
-          'object': 'web',
-          'action': 'manage',
-          'subaction': '',
-          'step': '1',
+          'url': '/ajax/web/manage/step1.php',
           'title': '<?=$key?>',
           'domain': '<?=$key?>',
           'web_template': '<?=$data[$key]['TPL']?>',
           'proxy_template': '<?=$data[$key]['PROXY']?>',
           'backend_template': '<?=$data[$key]['BACKEND']?>',
           'ssl_support': '<?=$data[$key]['SSL']?>',
-          'letsencrypt_support': '<?=$data[$key]['LETSENCRYPT']?>',
-          'ip': '<?=$data[$key]['IP']?>'
+          'letsencrypt_support': '<?=$data[$key]['LETSENCRYPT']?>'
         };
       </script>        
 

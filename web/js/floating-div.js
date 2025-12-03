@@ -46,24 +46,11 @@ document.addEventListener('DOMContentLoaded', function () {
   
 function more_button_click(id) {
     if (typeof id != 'object') {
-        var object = dataset_values[id].object;
-        var action = dataset_values[id].action;
-        var step = dataset_values[id].step;
-        var script='step'+step+'.php';
+        var url=dataset_values[id].url;
         var title = dataset_values[id].title;
-        var subaction = dataset_values[id].subaction;
     } else {
-        var object = id.object;
-        var action = id.action;
-        var step = id.step;
-        var script='step'+step+'.php';
+        var url = id.url;
         var title = id.title;
-        var subaction = id.subaction;
-    }
-    if (subaction) {
-        var url = '/ajax/'+object+'/'+action+'/'+subaction+'/'+script;
-    } else {
-        var url = '/ajax/'+object+'/'+action+'/'+script;
     }
 
     $('#floating-center-div-title').html('Loading... Please wait...');
