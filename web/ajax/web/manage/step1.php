@@ -1,8 +1,10 @@
 <?php
 
-// Main include
-$required_param['dataset']['domain'] = true;
+// Authentication checks
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+
+// Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 echo myvesta_open_form('/ajax/web/manage/step2.php');

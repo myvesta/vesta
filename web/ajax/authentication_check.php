@@ -6,12 +6,20 @@ $authentication_check_loaded = true;
 // Main include
 include($_SERVER['DOCUMENT_ROOT']."/inc/main.php");
 
+function check_if_domain_is_owned_by_user($domain, $user) {
+    // Check if domain is owned by the user
+    $result = exec(VESTA_CMD."v-check-domain-owner ".$user." ".$domain);
+    if ($result !== '1') {
+        die('Domain is not owned by '.$user);
+    }
+}
+
 // Check token
 if (isset($_GET['token'])) $_POST['token'] = $_GET['token'];
 if (!isset($_SESSION['token']) || !isset($_POST['token']) || ($_SESSION['token'] != $_POST['token'])) die('Wrong token');
 
-if (isset($required_param)) {
-    foreach ($required_param as $param => $value) {
+if (isset($authentication_check_required_param)) {
+    foreach ($authentication_check_required_param as $param => $value) {
         if (is_array($value)) {
             foreach ($value as $key => $value) {
                 if (!isset($_REQUEST[$param][$key])) die("[$param][$key] is required. Current value is: ".$_REQUEST[$param][$key]."<br />_REQUEST is: <pre>".print_r($_REQUEST, true)."</pre>");
@@ -22,21 +30,18 @@ if (isset($required_param)) {
         }
     }
 }
-if (isset($required_param['dataset']['domain'])) $domain = $_REQUEST['dataset']['domain'];
-if (isset($required_param['domain'])) $domain = $_REQUEST['domain'];
+if (isset($authentication_check_required_param['dataset']['domain'])) $domain = $_REQUEST['dataset']['domain']; // get $domain from $_REQUEST['dataset']['domain']
+if (isset($authentication_check_required_param['domain'])) $domain = $_REQUEST['domain']; // get $domain from $_REQUEST['domain']
 
 $myvesta_logged_user = $_SESSION['user'];
 if (isset($_SESSION['look']) && !empty($_SESSION['look'])) $myvesta_logged_user = $_SESSION['look'];
 
-if (isset($domain)) {
-    $result = exec(VESTA_CMD."v-check-domain-owner ".$myvesta_logged_user." ".$domain);
-        if ($result !== '1') {
-            die('Domain is not owned by '.$myvesta_logged_user);
-        }
+if (isset($domain)) { // if $domain is set, check if domain is owned by the user
+    check_if_domain_is_owned_by_user($domain, $myvesta_logged_user);
 }
 
-if (isset($match_user)) {
-    if ($myvesta_logged_user != $match_user) {
-        die('User is not '.$match_user);
+if (isset($authentication_check_match_user)) { // if $authentication_check_match_user is set, check if logged user is the same as the user in $authentication_check_match_user
+    if ($myvesta_logged_user != $authentication_check_match_user) {
+        die('User is not '.$authentication_check_match_user);
     }
 }

@@ -9,7 +9,8 @@ if (!isset($_POST['user']) || !isset($_POST['hash'])) {
     return_ajax_result(1, "User and hash are required");
 }
 
-$match_user = $_POST['user'];
+// Authentication checks
+$authentication_check_match_user = $_POST['user'];
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
 
 $user = $_POST['user'];

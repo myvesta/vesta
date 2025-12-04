@@ -1,12 +1,18 @@
 <?php
+
+// Nested sub-script for WordPress installation
+
+// Authentication checks
 if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
 
+// Check if confirmation needed
 $is_empty_public_html=exec(VESTA_CMD."v-check-if-public-html-is-empty $user $domain", $output, $return_var);
 
 $run_action=false;
 $canceled=false;
 
 if ($is_empty_public_html=='0') {
+    // Directory not empty, ask for confirmation
     if (isset($_POST['Yes'])==false && isset($_POST['No'])==false) {
         echo myvesta_open_form('/ajax/web/manage/step2.php');
         echo __('There are previusly files in the domain directory').'.<br />';
@@ -27,6 +33,7 @@ if ($is_empty_public_html=='1') {
 }
 
 if ($run_action) {
+    // Execute action using v-spawn-ajax-process for long-running tasks
     $output='';
     $exec_output='';
     $cmd = VESTA_CMD."v-spawn-ajax-process $user /usr/local/vesta/bin/v-install-wordpress $domain";

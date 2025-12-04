@@ -1,13 +1,14 @@
 <?php
 
-// Main include
-$required_param['dataset']['domain'] = true;
+// Authentication checks
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+
+// Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
-//echo '<br /><br /><pre>'; print_r($_POST); echo '</pre>';
-
 if (!empty($_POST['install_wordpress'])) {
+    // Nested sub-script for WordPress installation
     include($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/install.php");
     exit;
 }

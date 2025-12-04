@@ -17,10 +17,11 @@ The modal dialogs system consists of:
    - AJAX endpoint scripts in [web/ajax/](mdc:web/ajax/)
 
 3. **Security Layer**:
-   - CSRF token validation
-   - Domain ownership verification
-   - User authentication
-   - Required parameter validation
+   - CSRF token validation in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php)
+   - User authentication check in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php) via `include($_SERVER['DOCUMENT_ROOT']."/inc/main.php");`
+   - Domain ownership verification in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php): both `$_REQUEST['dataset']['domain']` and `$_REQUEST['domain']` will be checked to see if they belong to `$myvesta_logged_user`
+   - Required parameter validation in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php) via `$authentication_check_required_param`
+   - Compare if `$authentication_check_match_user` is logged user in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php)
 
 ## Frontend Components
 
@@ -210,7 +211,7 @@ $("#floating-center-div").on("submit", "#floating-center-div-form", function(e) 
 ```php
 <?php
 // Main include
-$required_param['dataset']['domain'] = true;  // Define required parameters
+$authentication_check_required_param['dataset']['domain'] = true;  // Define required parameters
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
 ```
 
@@ -226,14 +227,14 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
 
 ```php
 // Require domain in dataset
-$required_param['dataset']['domain'] = true;
+$authentication_check_required_param['dataset']['domain'] = true;
 
 // Require multiple dataset fields
-$required_param['dataset']['domain'] = true;
-$required_param['dataset']['database'] = true;
+$authentication_check_required_param['dataset']['domain'] = true;
+$authentication_check_required_param['dataset']['database'] = true;
 
 // Require direct parameter
-$required_param['domain'] = true;
+$authentication_check_required_param['domain'] = true;
 
 // Match specific user (admin-only endpoint)
 $match_user = 'admin';
@@ -450,7 +451,7 @@ Shows the initial form/buttons to the user.
 ```php
 <?php
 // Main include
-$required_param['dataset']['domain'] = true;
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
@@ -477,7 +478,7 @@ Routes to specific action handlers based on button clicked.
 ```php
 <?php
 // Main include
-$required_param['dataset']['domain'] = true;
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
@@ -574,7 +575,7 @@ if ($run_action) {
 - Token is in `$_SESSION['token']`
 
 ### 2. Domain Ownership
-- Set `$required_param['dataset']['domain'] = true`
+- Set `$authentication_check_required_param['dataset']['domain'] = true`
 - authentication_check.php verifies ownership
 - Prevents users from accessing other users' domains
 
@@ -616,7 +617,7 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
 
 ```php
 <?php
-$required_param['dataset']['database'] = true;
+$authentication_check_required_param['dataset']['database'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
@@ -632,7 +633,7 @@ exit;
 
 ```php
 <?php
-$required_param['dataset']['database'] = true;
+$authentication_check_required_param['dataset']['database'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
@@ -674,7 +675,7 @@ exit;
 
 ```php
 <?php
-$required_param['dataset']['domain'] = true;
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
@@ -790,14 +791,20 @@ web/ajax/web/manage/
 **Wrong**:
 ```php
 <?php
+
+// Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 ```
 
 **Correct**:
 ```php
 <?php
-$required_param['dataset']['domain'] = true;
+
+// Authentication checks
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+
+// Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 ```
 
@@ -828,20 +835,23 @@ $cmd = VESTA_CMD."v-delete-web-domain $user $domain";
 $cmd = VESTA_CMD."v-delete-web-domain $myvesta_logged_user $domain";
 ```
 
-### 4. Not Checking Authentication in Action Files
+### 4. Not Checking Authentication in nested sub-srcipts like [web/ajax/web/manage/wordpress/install.php](mdc:web/ajax/web/manage/wordpress/install.php)
 **Wrong**:
 ```php
-<?php
-$domain = $_REQUEST['dataset']['domain'];
+
+// Nested sub-script for WordPress installation
+
 // Execute action
 ```
 
 **Correct**:
 ```php
-<?php
+
+// Nested sub-script for WordPress installation
+
+// Authentication checks
 if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
 
-$domain = $_REQUEST['dataset']['domain'];
 // Execute action
 ```
 
