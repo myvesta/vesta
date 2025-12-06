@@ -20,8 +20,8 @@ The modal dialogs system consists of:
    - CSRF token validation in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php)
    - User authentication check in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php) via `include($_SERVER['DOCUMENT_ROOT']."/inc/main.php");`
    - Domain ownership verification in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php): both `$_REQUEST['dataset']['domain']` and `$_REQUEST['domain']` will be checked to see if they belong to `$myvesta_logged_user`
-   - Required parameter validation in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php) via `$authentication_check_required_param`
-   - Compare if `$authentication_check_match_user` is logged user in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php)
+   - Required parameter validation in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php) via optional `$authentication_check_required_param`
+   - Compare if optional `$authentication_check_match_user` variable is equal to logged user in [web/ajax/authentication_check.php](mdc:web/ajax/authentication_check.php)
 
 ## Frontend Components
 
@@ -210,9 +210,11 @@ $("#floating-center-div").on("submit", "#floating-center-div-form", function(e) 
 
 ```php
 <?php
-// Main include
+
+// Authentication checks
+$authentication_check_this_is_nested_script = false;
 $authentication_check_required_param['dataset']['domain'] = true;  // Define required parameters
-include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 ```
 
 **What it does**:
@@ -237,7 +239,7 @@ $authentication_check_required_param['dataset']['database'] = true;
 $authentication_check_required_param['domain'] = true;
 
 // Match specific user (admin-only endpoint)
-$match_user = 'admin';
+$authentication_check_match_user = 'admin';
 ```
 
 **Available Variables After Include**:
@@ -450,9 +452,13 @@ Shows the initial form/buttons to the user.
 
 ```php
 <?php
-// Main include
+
+// Authentication checks
+$authentication_check_this_is_nested_script = false;
 $authentication_check_required_param['dataset']['domain'] = true;
-include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
+
+// Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 // Display form
@@ -477,19 +483,25 @@ Routes to specific action handlers based on button clicked.
 
 ```php
 <?php
-// Main include
+
+// Authentication checks
+$authentication_check_this_is_nested_script = false;
 $authentication_check_required_param['dataset']['domain'] = true;
-include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
+
+// Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 // Check which button was clicked
 if (!empty($_POST['install_wordpress'])) {
-    include($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/install.php");
+    // Nested sub-script for WordPress installation
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/install.php");
     exit;
 }
 
 if (!empty($_POST['another_action'])) {
-    include($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/another/action.php");
+    // Nested sub-script for Another action
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/another/action.php");
     exit;
 }
 
@@ -509,9 +521,11 @@ Executes the actual action with confirmations if needed.
 
 ```php
 <?php
-if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
 
-$domain = $_REQUEST['dataset']['domain'];
+// Nested sub-script for WordPress installation
+
+$authentication_check_this_is_nested_script = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Check if confirmation needed
 $is_empty = exec(VESTA_CMD."v-check-if-public-html-is-empty $user $domain", $output, $return_var);
@@ -576,8 +590,10 @@ if ($run_action) {
 
 ### 2. Domain Ownership
 - Set `$authentication_check_required_param['dataset']['domain'] = true`
-- authentication_check.php verifies ownership
-- Prevents users from accessing other users' domains
+- Set `$authentication_check_this_is_nested_script = false;` if PHP script is called via AJAX
+- Set `$authentication_check_this_is_nested_script = true;` if PHP script is sub-script of previously loaded PHP script
+- Add `include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");` so authentication_check.php can verify ownership
+- These steps will prevent users from accessing other users' domains
 
 ### 3. Required Parameters
 - Define all required parameters before including authentication_check.php
@@ -591,8 +607,8 @@ if ($run_action) {
 
 ### 5. Admin-Only Endpoints
 ```php
-$match_user = 'admin';
-include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+$authentication_check_match_user = 'admin';
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 ```
 
 ## Complete Examples
@@ -606,39 +622,50 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
   dataset_values[<?=$i?>] = {
     'url': '/ajax/database/backup/step1.php',
     'title': 'Database: <?=$key?>',
-    'database': '<?=$key?>'
+    'database_name': '<?=$key?>'
   };
 </script>
 
 <a onclick="more_button_click(<?=$i?>)">Backup Database</a>
 ```
 
-**Step 2**: Create step1.php
+**Step 2**: Create web/ajax/database/step1.php
 
 ```php
 <?php
-$authentication_check_required_param['dataset']['database'] = true;
-include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+
+// Authentication checks
+$authentication_check_this_is_nested_script = false;
+$authentication_check_required_param['dataset']['database_name'] = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
+
+// Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 echo myvesta_open_form('/ajax/database/backup/step2.php');
 echo myvesta_get_hidden_fields();
-echo myvesta_get_element('button', '', 'backup_now', __('Backup Now'), null, 'width: 200px;');
+echo myvesta_get_element('button', '', 'backup', __('Backup'), null, 'width: 200px;');
 echo myvesta_close_form();
 exit;
 ?>
 ```
 
-**Step 3**: Create step2.php
+**Step 3**: Create web/ajax/database/step2.php
 
 ```php
 <?php
+
+// Authentication checks
+$authentication_check_this_is_nested_script = false;
 $authentication_check_required_param['dataset']['database'] = true;
-include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
+
+// Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
-if (!empty($_POST['backup_now'])) {
-    include($_SERVER['DOCUMENT_ROOT']."/ajax/database/backup/execute.php");
+if (!empty($_POST['backup'])) {
+    // Nested sub-script for database backup
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/database/backup/execute.php");
     exit;
 }
 
@@ -647,13 +674,15 @@ exit;
 ?>
 ```
 
-**Step 4**: Create execute.php
+**Step 4**: Create web/ajax/database/backup/execute.php
 
 ```php
 <?php
-if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
 
-$database = $_REQUEST['dataset']['database'];
+// Nested sub-script for database backup
+
+$authentication_check_this_is_nested_script = true;
+$database = $_REQUEST['dataset']['database_name'];
 
 $cmd = VESTA_CMD."v-backup-database $myvesta_logged_user $database";
 exec($cmd, $output, $return_var);
@@ -671,12 +700,17 @@ exit;
 
 ### Example 2: Form with Input and Confirmation
 
-**Step 1**: Create step1.php with form
+**Step 1**: Create web/ajax/web/subdomain/step1.php with form
 
 ```php
 <?php
+
+// Authentication checks
+$authentication_check_this_is_nested_script = false;
 $authentication_check_required_param['dataset']['domain'] = true;
-include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
+
+// Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 echo myvesta_open_form('/ajax/web/subdomain/step2.php');
@@ -691,11 +725,40 @@ exit;
 ?>
 ```
 
-**Step 2**: Create execute.php with confirmation
+**Step 2**: Create web/ajax/web/subdomain/step2.php
 
 ```php
 <?php
-if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
+
+// Authentication checks
+$authentication_check_this_is_nested_script = false;
+$authentication_check_required_param['subdomain'] = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
+
+// Form elements include
+include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
+
+if (!empty($_POST['subdomain'])) {
+    // Nested sub-script for database backup
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/subdomain/execute.php");
+    exit;
+}
+
+echo 'No action selected';
+exit;
+?>
+```
+
+**Step 2**: Create web/ajax/web/subdomain/execute.php with confirmation
+
+```php
+<?php
+
+// Nested sub-script for creating subdomains
+
+// Authentication checks
+$authentication_check_this_is_nested_script = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 $domain = $_REQUEST['dataset']['domain'];
 $subdomain = $_POST['subdomain'];
@@ -742,11 +805,15 @@ exit;
 
 ### Example 3: Long-Running Process with Real-Time Output
 
-**Execute.php with process spawning**
+**execute.php with process spawning**
 
 ```php
 <?php
-if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
+// Nested sub-script for WordPress installation
+
+// Authentication checks
+$authentication_check_this_is_nested_script = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 $domain = $_REQUEST['dataset']['domain'];
 
@@ -801,8 +868,9 @@ include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 <?php
 
 // Authentication checks
+$authentication_check_this_is_nested_script = false;
 $authentication_check_required_param['dataset']['domain'] = true;
-include($_SERVER['DOCUMENT_ROOT']."/ajax/authentication_check.php");
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
@@ -850,7 +918,8 @@ $cmd = VESTA_CMD."v-delete-web-domain $myvesta_logged_user $domain";
 // Nested sub-script for WordPress installation
 
 // Authentication checks
-if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
+$authentication_check_this_is_nested_script = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Execute action
 ```
@@ -873,13 +942,13 @@ exit;
 ### 1. Use Consistent Button Styles
 ```php
 // First action
-echo myvesta_get_element('button', '', 'action_name', __('Install'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
+echo myvesta_get_element('button', '', 'action_name_for_install', __('Install'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
 
 // Second action
-echo myvesta_get_element('button', '', 'action_name', __('Update'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
+echo myvesta_get_element('button', '', 'action_name_for_update', __('Update'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
 
 // Third action
-echo myvesta_get_element('button', '', 'action_name', __('Delete'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
+echo myvesta_get_element('button', '', 'action_name_for_delete', __('Delete'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
 ```
 
 ### 2. Show Clear Loading States
@@ -927,12 +996,15 @@ When creating a new button action:
 
 - [ ] Dataset values correctly defined in list template
 - [ ] Button calls `more_button_click()` with correct index
-- [ ] step1.php includes authentication_check.php
-- [ ] Required parameters defined before authentication check
+- [ ] step1.php defines required parameters
+- [ ] step1.php set `$authentication_check_this_is_nested_script = false;`
+- [ ] step1.php includes `include_authentication_check.php`
 - [ ] step1.php displays form with correct action URL
+- [ ] step1.php add hidden fields
+- [ ] step2.php defines required parameters
+- [ ] step2.php set `$authentication_check_this_is_nested_script = false;`
+- [ ] step2.php includes `include_authentication_check.php`
 - [ ] step2.php routes to correct action file
-- [ ] Action file checks `$authentication_check_loaded`
-- [ ] Hidden fields preserved through confirmation dialogs
 - [ ] CSRF token sent in all AJAX requests
 - [ ] Using `$myvesta_logged_user` instead of `$user`
 - [ ] All scripts end with `exit;`

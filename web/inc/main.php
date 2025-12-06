@@ -98,13 +98,25 @@ if (isset($_SESSION['language'])) {
     }
 }
 
+$myvesta_logged_user = '';
+$myvesta_is_logged_in = false;
+$myvesta_is_admin_logged_in = false;
+$myvesta_admin_look = false;
+
 if (isset($_SESSION['user'])) {
     $user = $_SESSION['user'];
+    $myvesta_logged_user = $user;
+    if ($user != '') $myvesta_is_logged_in = true;
+    if ($user == 'admin') $myvesta_is_admin_logged_in = true;
 }
 
 if (isset($_SESSION['look']) && ( $_SESSION['look'] != 'admin' )) {
+    if ($user == 'admin') $myvesta_admin_look = true;
     $user = $_SESSION['look'];
+    $myvesta_logged_user = $user;
 }
+
+// echo 'myvesta_logged_user: '.$myvesta_logged_user."\n"; echo 'myvesta_is_logged_in: '.$myvesta_is_logged_in."\n"; echo 'myvesta_is_admin_logged_in: '.$myvesta_is_admin_logged_in."\n"; echo 'myvesta_admin_look: '.$myvesta_admin_look."\n";
 
 function get_favourites(){
     exec (VESTA_CMD."v-list-user-favourites ".$_SESSION['user']." json", $output, $return_var);

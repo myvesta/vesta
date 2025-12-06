@@ -310,7 +310,9 @@ echo "SEARCH_FOR_CONFIGS_DATABASE_NAME     = $SEARCH_FOR_CONFIGS_DATABASE_NAME"
 echo "SEARCH_FOR_CONFIGS_DATABASE_USERNAME = $SEARCH_FOR_CONFIGS_DATABASE_USERNAME"
 echo "EXCLUDE_UPLOADS = $EXCLUDE_UPLOADS"
 echo "==============================================================================="
-read -p "=== Press Enter to continue ==="
+if [ ! -z "$NO_PROMPT" ]; then
+    read -p "=== Press Enter to continue ==="
+fi
 
 #----------------------------------------------------------#
 #                       Action                             #

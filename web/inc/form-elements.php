@@ -153,7 +153,7 @@ function myvesta_get_disabled_textarea($value = '', $style = '', $copy_to_clipbo
         else $display = '';
         $myvesta_element .= '<button id="copy-to-clipboard" class="button confirm" style="margin-right: 10px; width: 200px; background-color: #27c24c !important; border-color: #27c24c !important; '.$display.'" autofocus>'.__('Copy to clipboard').'</button>';
         $myvesta_element .= '<button id="close-floating-div-button" class="button cancel" style="margin-right: 10px; width: 110px; '.$display.'">'.__('Close').'</button>';
-        $myvesta_element .= '<p id="place-holder-floating-div-button" class="button cancel" style="margin-right: 10px; width: 110px;background-color: white; color: white;border: 0;text-shadow: 0 0 0 #fff !important;">&nbsp;</p>';
+        $myvesta_element .= '<p id="place-holder-floating-div-button" style="margin-right: 10px; width: 110px;background-color: white; color: white;border: 1px solid white; text-shadow: 0 0 0 #fff !important; height: 10px; padding: 1px 16px 3px 16px; ">&nbsp;</p>';
         $myvesta_element .= '<script>
                 document.getElementById("copy-to-clipboard").addEventListener("click", function() {
                     var textarea = document.getElementById("confirm-div-content-textarea-variable");

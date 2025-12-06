@@ -36,17 +36,31 @@ fi
 
 log_file="/home/admin/tmp/$user-$hash.log"
 lock_file="/home/admin/tmp/$user-$hash.lock"
+exit_code_file="/home/admin/tmp/$user-$hash.exit_code"
 
 #----------------------------------------------------------#
 #                    Execution                             #
 #----------------------------------------------------------#
 
+# Signal parent process that command is running
 touch $lock_file
+
+# Execute command and redirect output to log file
 $command > $log_file 2>&1
+
+# Get exit code of command and save it to file
+exit_code=$?
+echo $exit_code > $exit_code_file
+
+# Signal parent process that command is finished
 rm $lock_file
 
+# Wait for 10 seconds to let Ajax process read output and exit code
 sleep 10;
 
+# Remove log file
 rm $log_file
+# Remove exit code file
+rm $exit_code_file
 
 exit 0

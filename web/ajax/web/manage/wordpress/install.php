@@ -3,7 +3,8 @@
 // Nested sub-script for WordPress installation
 
 // Authentication checks
-if (!isset($authentication_check_loaded)) die('Authentication check not loaded');
+$authentication_check_this_is_nested_script = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Check if confirmation needed
 $is_empty_public_html=exec(VESTA_CMD."v-check-if-public-html-is-empty $user $domain", $output, $return_var);
@@ -36,7 +37,7 @@ if ($run_action) {
     // Execute action using v-spawn-ajax-process for long-running tasks
     $output='';
     $exec_output='';
-    $cmd = VESTA_CMD."v-spawn-ajax-process $user /usr/local/vesta/bin/v-install-wordpress $domain";
+    $cmd = VESTA_CMD."v-spawn-ajax-process $myvesta_logged_user /usr/local/vesta/bin/v-install-wordpress $domain";
     $exec_output = shell_exec($cmd);
     $output=__('WordPress installation output').':';
     echo '<b>'.$output.'</b><br /><br />';

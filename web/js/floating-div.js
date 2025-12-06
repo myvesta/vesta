@@ -126,15 +126,23 @@ function startWatchingSpawnedAjaxProcess(user, hash) {
     return myvesta_interval_id;
 }
 
-function clearSpawnedAjaxProcessInterval() {
+var myvesta_ajax_original_output = '';
+var myvesta_ajax_exit_code = '';
+var myvesta_ajax_code = '';
+
+function clearSpawnedAjaxProcessInterval(code, exit_code, output) {
     if (myvesta_interval_id != null) {
+        if (typeof code == 'undefined') code = 8;
+        if (typeof exit_code == 'undefined') exit_code = '';
+        if (typeof output == 'undefined') output = '';
+        //console.log('= clearing ajax interval: code: '+myvesta_ajax_code+', exit_code: '+myvesta_ajax_exit_code+', output: '+myvesta_ajax_original_output);
         clearInterval(myvesta_interval_id);
         myvesta_interval_id = null;
         $('#copy-to-clipboard').show();
         $('#close-floating-div-button').show();
         $('#place-holder-floating-div-button').hide();
 
-        var text = $('#confirm-div-content-textarea-variable').val();
+        var text = output; // $('#confirm-div-content-textarea-variable').val();
         var startTag = "=========================COPY FROM HERE=========================";
         var endTag   = "=========================COPY -TO- HERE=========================";
 
@@ -150,6 +158,11 @@ function clearSpawnedAjaxProcessInterval() {
     }
 }
 
+function is_ajax_process_running() {
+    if (myvesta_interval_id != null) return true;
+    return false;
+}
+
 function run_ajax_call_for_spawned_ajax_process(user, hash) {
     $.ajax({
         url: '/ajax/watch-spawned-ajax-process.php',
@@ -160,16 +173,19 @@ function run_ajax_call_for_spawned_ajax_process(user, hash) {
             response = JSON.parse(response);
             if (typeof response == 'object') {
                 //console.log('= response.code: ', response.code);
-                $('#confirm-div-content-textarea-variable').val(response.output);
-                if (response.code > 0) clearSpawnedAjaxProcessInterval();
+                if (typeof response.output != 'undefined') myvesta_ajax_original_output = response.output;
+                if (typeof response.exit_code != 'undefined') myvesta_ajax_exit_code = response.exit_code;
+                if (typeof response.code != 'undefined') myvesta_ajax_code = response.code;
+                $('#confirm-div-content-textarea-variable').val(myvesta_ajax_original_output);
+                if (response.code > 0) clearSpawnedAjaxProcessInterval(response.code, response.exit_code, response.output);
             } else {
                 $('#confirm-div-content-textarea-variable').val(response);
-                clearSpawnedAjaxProcessInterval();
+                clearSpawnedAjaxProcessInterval(6, '', response);
             }
         },
         error: function(xhr, status, error) {
             $('#confirm-div-content-textarea-variable').val(error);
-            clearSpawnedAjaxProcessInterval();
+            clearSpawnedAjaxProcessInterval(7, '', error);
         }
     });
 }

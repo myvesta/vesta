@@ -1,5 +1,4 @@
 <?php
-error_reporting(NULL);
 
 $authentication_check_loaded = true;
 
@@ -30,13 +29,16 @@ if (isset($authentication_check_required_param)) {
         }
     }
 }
-if (isset($authentication_check_required_param['dataset']['domain'])) $domain = $_REQUEST['dataset']['domain']; // get $domain from $_REQUEST['dataset']['domain']
-if (isset($authentication_check_required_param['domain'])) $domain = $_REQUEST['domain']; // get $domain from $_REQUEST['domain']
-
-$myvesta_logged_user = $_SESSION['user'];
-if (isset($_SESSION['look']) && !empty($_SESSION['look'])) $myvesta_logged_user = $_SESSION['look'];
-
-if (isset($domain)) { // if $domain is set, check if domain is owned by the user
+if (isset($authentication_check_required_param['dataset']['domain'])) {
+    // get $domain from $_REQUEST['dataset']['domain']
+    $domain = $_REQUEST['dataset']['domain'];
+    // check if domain is owned by the user and die if not
+    check_if_domain_is_owned_by_user($domain, $myvesta_logged_user);
+}
+if (isset($authentication_check_required_param['domain'])) {
+    // get $domain from $_REQUEST['domain']
+    $domain = $_REQUEST['domain'];
+    // check if domain is owned by the user and die if not
     check_if_domain_is_owned_by_user($domain, $myvesta_logged_user);
 }
 
