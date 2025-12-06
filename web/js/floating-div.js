@@ -152,6 +152,7 @@ function clearSpawnedAjaxProcessInterval(code, exit_code, output) {
         if (startPos !== -1 && endPos !== -1 && endPos > startPos) {
             var cleaned = text.substring(startPos + startTag.length, endPos).trim();
             $('#confirm-div-content-textarea-variable').val(cleaned);
+            $('#show-full-output-button').show();
         }
 
         console.log('= cleared ajax interval');
@@ -188,4 +189,8 @@ function run_ajax_call_for_spawned_ajax_process(user, hash) {
             clearSpawnedAjaxProcessInterval(7, '', error);
         }
     });
+}
+
+function showFullOutput() {
+    $('#confirm-div-content-textarea-variable').val(myvesta_ajax_original_output);
 }

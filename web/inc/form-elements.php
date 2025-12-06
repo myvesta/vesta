@@ -152,6 +152,7 @@ function myvesta_get_disabled_textarea($value = '', $style = '', $copy_to_clipbo
         if ($watch_spawned_ajax_process) $display = 'display: none;';
         else $display = '';
         $myvesta_element .= '<button id="copy-to-clipboard" class="button confirm" style="margin-right: 10px; width: 200px; background-color: #27c24c !important; border-color: #27c24c !important; '.$display.'" autofocus>'.__('Copy to clipboard').'</button>';
+        $myvesta_element .= '<button id="show-full-output-button" class="button cancel" style="margin-right: 10px; width: 180px; background-color: #d3dce0 !important; border-color: #d3dce0 !important; '.$display.'">'.__('Show full output').'</button>';
         $myvesta_element .= '<button id="close-floating-div-button" class="button cancel" style="margin-right: 10px; width: 110px; '.$display.'">'.__('Close').'</button>';
         $myvesta_element .= '<p id="place-holder-floating-div-button" style="margin-right: 10px; width: 110px;background-color: white; color: white;border: 1px solid white; text-shadow: 0 0 0 #fff !important; height: 10px; padding: 1px 16px 3px 16px; ">&nbsp;</p>';
         $myvesta_element .= '<script>
@@ -165,6 +166,9 @@ function myvesta_get_disabled_textarea($value = '', $style = '', $copy_to_clipbo
                 });
                 document.getElementById("close-floating-div-button").addEventListener("click", function() {
                     hideFloatingDiv();
+                });
+                document.getElementById("show-full-output-button").addEventListener("click", function() {
+                    showFullOutput();
                 });
         </script>';
     }
