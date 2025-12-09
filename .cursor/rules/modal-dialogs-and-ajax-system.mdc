@@ -528,11 +528,12 @@ $authentication_check_this_is_nested_script = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Check if confirmation needed
-$is_empty = exec(VESTA_CMD."v-check-if-public-html-is-empty $user $domain", $output, $return_var);
+//  Always use escapeshellarg for all arguments to avoid shell injection
+$is_empty_public_html=exec(VESTA_CMD."v-check-if-public-html-is-empty ".escapeshellarg($user)." ".escapeshellarg($domain), $output, $return_var);
 
 $run_action = false;
 
-if ($is_empty == '0') {
+if ($is_empty_public_html == '0') {
     // Directory not empty, ask for confirmation
     if (!isset($_POST['Yes']) && !isset($_POST['No'])) {
         echo myvesta_open_form('/ajax/web/manage/step2.php');
@@ -551,17 +552,20 @@ if ($is_empty == '0') {
     }
 }
 
-if ($is_empty == '1') {
+if ($is_empty_public_html == '1') {
     $run_action = true;
 }
 
 if ($run_action) {
     // Execute action using v-spawn-ajax-process for long-running tasks
-    $cmd = VESTA_CMD."v-spawn-ajax-process $user /usr/local/vesta/bin/v-install-wordpress $domain";
-    $hash = shell_exec($cmd);
-    $hash = trim($hash);
-    
-    echo '<b>'.__('WordPress installation output').':</b><br /><br />';
+    $output='';
+    $exec_output='';
+    // Always use escapeshellarg for all arguments to avoid shell injection
+    $cmd = VESTA_CMD."v-spawn-ajax-process ".escapeshellarg($myvesta_logged_user)." /usr/local/vesta/bin/v-install-wordpress ".escapeshellarg($domain);
+    $exec_output = shell_exec($cmd);
+    $output=__('WordPress installation output').':';
+    echo '<b>'.$output.'</b><br /><br />';
+    $hash = trim($exec_output);
     echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $hash);
     exit;
 }
@@ -607,7 +611,9 @@ if ($run_action) {
 
 ### 5. Admin-Only Endpoints
 ```php
+// Authentication checks
 $authentication_check_match_user = 'admin';
+$authentication_check_this_is_nested_script = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 ```
 
@@ -681,19 +687,23 @@ exit;
 
 // Nested sub-script for database backup
 
+// Authentication checks
 $authentication_check_this_is_nested_script = true;
-$database = $_REQUEST['dataset']['database_name'];
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
-$cmd = VESTA_CMD."v-backup-database $myvesta_logged_user $database";
-exec($cmd, $output, $return_var);
+// Set $database_name variable
+$database_name = $_REQUEST['dataset']['database_name'];
 
-if ($return_var == 0) {
-    echo '<h2>'.__('Success').'</h2>';
-    echo __('Database backed up successfully');
-} else {
-    echo '<h2>'.__('Error').'</h2>';
-    echo __('Failed to backup database');
-}
+// Execute action using v-spawn-ajax-process for long-running tasks
+$output='';
+$exec_output='';
+// Always use escapeshellarg for all arguments to avoid shell injection
+$cmd = VESTA_CMD."v-spawn-ajax-process ".escapeshellarg($myvesta_logged_user)." /usr/local/vesta/bin/v-backup-database ".escapeshellarg($myvesta_logged_user)." ".escapeshellarg($database_name);
+$exec_output = shell_exec($cmd);
+$output=__('Database dump output').':';
+echo '<b>'.$output.'</b><br /><br />';
+$hash = trim($exec_output);
+echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $hash);
 exit;
 ?>
 ```
@@ -739,7 +749,7 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 if (!empty($_POST['subdomain'])) {
-    // Nested sub-script for database backup
+    // Nested sub-script for subdomain action
     include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/subdomain/execute.php");
     exit;
 }
@@ -760,7 +770,7 @@ exit;
 $authentication_check_this_is_nested_script = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
-$domain = $_REQUEST['dataset']['domain'];
+// Get $subdomain variable
 $subdomain = $_POST['subdomain'];
 
 // Validate input
@@ -788,7 +798,8 @@ if (isset($_POST['No'])) {
 
 if (isset($_POST['Yes'])) {
     // Execute command
-    $cmd = VESTA_CMD."v-add-web-domain-alias $myvesta_logged_user $domain $subdomain";
+    // Always use escapeshellarg for all arguments to avoid shell injection
+    $cmd = VESTA_CMD."v-add-web-domain-alias ".escapeshellarg($myvesta_logged_user)." ".escapeshellarg($domain)." ".escapeshellarg($subdomain);
     exec($cmd, $output, $return_var);
     
     if ($return_var == 0) {
@@ -805,26 +816,27 @@ exit;
 
 ### Example 3: Long-Running Process with Real-Time Output
 
-**execute.php with process spawning**
+**web/ajax/web/manage/wordpress/lock.php: execute with process spawning**
 
 ```php
 <?php
-// Nested sub-script for WordPress installation
+// Nested sub-script for locking WordPress
 
 // Authentication checks
 $authentication_check_this_is_nested_script = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
-$domain = $_REQUEST['dataset']['domain'];
-
 // Spawn long-running process
-$cmd = VESTA_CMD."v-spawn-ajax-process $myvesta_logged_user /usr/local/vesta/bin/v-install-wordpress $domain";
+$output='';
+$exec_output='';
+// Always use escapeshellarg for all arguments to avoid shell injection
+$cmd = VESTA_CMD."v-spawn-ajax-process ".escapeshellarg($myvesta_logged_user)." /usr/local/vesta/bin/v-lock-wordpress ".escapeshellarg($domain);
 $hash = shell_exec($cmd);
 $hash = trim($hash);
 
 // Show output with real-time watching
 echo '<h2>'.__('Installation in progress').'</h2>';
-echo '<p>'.__('Please wait while WordPress is being installed...').'</p><br />';
+echo '<p>'.__('Please wait while WordPress is being locked...').'</p><br />';
 echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $hash);
 
 exit;
@@ -849,7 +861,7 @@ web/ajax/web/manage/
 └── wordpress/
     ├── install.php        # WordPress installation
     ├── update.php         # WordPress update
-    └── delete.php         # WordPress deletion
+    └── lock.php           # WordPress locking
 ```
 
 ## Common Pitfalls
@@ -876,34 +888,7 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 ```
 
-### 2. Not Preserving Hidden Fields in Confirmation Dialogs
-**Wrong**:
-```php
-echo myvesta_open_form('/ajax/web/manage/step2.php');
-echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
-echo myvesta_close_form();
-```
-
-**Correct**:
-```php
-echo myvesta_open_form('/ajax/web/manage/step2.php');
-echo myvesta_get_hidden_fields(array('install_wordpress' => '1'));  // Preserve action
-echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
-echo myvesta_close_form();
-```
-
-### 3. Using Wrong User Variable
-**Wrong**:
-```php
-$cmd = VESTA_CMD."v-delete-web-domain $user $domain";
-```
-
-**Correct**:
-```php
-$cmd = VESTA_CMD."v-delete-web-domain $myvesta_logged_user $domain";
-```
-
-### 4. Not Checking Authentication in nested sub-srcipts like [web/ajax/web/manage/wordpress/install.php](mdc:web/ajax/web/manage/wordpress/install.php)
+### 2. Not Checking Authentication in nested sub-srcipts like [web/ajax/web/manage/wordpress/install.php](mdc:web/ajax/web/manage/wordpress/install.php)
 **Wrong**:
 ```php
 
@@ -924,7 +909,47 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 // Execute action
 ```
 
-### 5. Forgetting to Exit After Output
+### 3. Not using the PHP escapeshellarg(...) function for command arguments that will be executed with exec(...) or shell_exec(...)
+**Wrong**:
+```php
+$cmd = VESTA_CMD."v-spawn-ajax-process $myvesta_logged_user /usr/local/vesta/bin/v-install-wordpress $domain";
+$exec_output = shell_exec($cmd);
+```
+
+**Correct**:
+```php
+$cmd = VESTA_CMD."v-spawn-ajax-process ".escapeshellarg($myvesta_logged_user)." /usr/local/vesta/bin/v-install-wordpress ".escapeshellarg($domain);
+$exec_output = shell_exec($cmd);
+```
+
+### 4. Not Preserving Hidden Fields in Confirmation Dialogs
+**Wrong**:
+```php
+echo myvesta_open_form('/ajax/web/manage/step2.php');
+echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
+echo myvesta_close_form();
+```
+
+**Correct**:
+```php
+echo myvesta_open_form('/ajax/web/manage/step2.php');
+echo myvesta_get_hidden_fields(array('install_wordpress' => '1'));  // Preserve action
+echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
+echo myvesta_close_form();
+```
+
+### 5. Using Wrong User Variable
+**Wrong**:
+```php
+$cmd = VESTA_CMD."v-delete-web-domain ".escapeshellarg($_POST'user'])." ".escapeshellarg($domain);
+```
+
+**Correct**:
+```php
+$cmd = VESTA_CMD."v-delete-web-domain ".escapeshellarg($myvesta_logged_user)." ".escapeshellarg($domain);
+```
+
+### 6. Forgetting to Exit After Output
 **Wrong**:
 ```php
 echo 'Success!';
@@ -996,6 +1021,7 @@ When creating a new button action:
 
 - [ ] Dataset values correctly defined in list template
 - [ ] Button calls `more_button_click()` with correct index
+- [ ] CSRF token sent in all AJAX requests
 - [ ] step1.php defines required parameters
 - [ ] step1.php set `$authentication_check_this_is_nested_script = false;`
 - [ ] step1.php includes `include_authentication_check.php`
@@ -1005,9 +1031,12 @@ When creating a new button action:
 - [ ] step2.php set `$authentication_check_this_is_nested_script = false;`
 - [ ] step2.php includes `include_authentication_check.php`
 - [ ] step2.php routes to correct action file
-- [ ] CSRF token sent in all AJAX requests
+- [ ] execute.php as nested sub-script set `$authentication_check_this_is_nested_script = true;`
+- [ ] execute.php includes `include_authentication_check.php`
+- [ ] execute.php runs shell commands like `$cmd = VESTA_CMD."v-spawn-ajax-process ".escapeshellarg($myvesta_logged_user)." /usr/local/vesta/bin/v-install-wordpress ".escapeshellarg($domain);`
 - [ ] Using `$myvesta_logged_user` instead of `$user`
 - [ ] All scripts end with `exit;`
+- [ ] Always use `escapeshellarg($variable)` for all arguments to avoid shell injection
 - [ ] Long-running tasks use `v-spawn-ajax-process`
 - [ ] Success/error messages are clear and translated
 - [ ] Confirmation shown for destructive actions

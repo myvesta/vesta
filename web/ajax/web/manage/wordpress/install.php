@@ -7,7 +7,8 @@ $authentication_check_this_is_nested_script = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Check if confirmation needed
-$is_empty_public_html=exec(VESTA_CMD."v-check-if-public-html-is-empty $user $domain", $output, $return_var);
+//  Always use escapeshellarg for all arguments to avoid shell injection
+$is_empty_public_html=exec(VESTA_CMD."v-check-if-public-html-is-empty ".escapeshellarg($user)." ".escapeshellarg($domain), $output, $return_var);
 
 $run_action=false;
 $canceled=false;
@@ -37,11 +38,12 @@ if ($run_action) {
     // Execute action using v-spawn-ajax-process for long-running tasks
     $output='';
     $exec_output='';
-    $cmd = VESTA_CMD."v-spawn-ajax-process $myvesta_logged_user /usr/local/vesta/bin/v-install-wordpress $domain";
+    // Always use escapeshellarg for all arguments to avoid shell injection
+    $cmd = VESTA_CMD."v-spawn-ajax-process ".escapeshellarg($myvesta_logged_user)." /usr/local/vesta/bin/v-install-wordpress ".escapeshellarg($domain);
     $exec_output = shell_exec($cmd);
     $output=__('WordPress installation output').':';
     echo '<b>'.$output.'</b><br /><br />';
-    $exec_output = trim($exec_output);
-    echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $exec_output);
+    $hash = trim($exec_output);
+    echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $hash);
     exit;
 }

@@ -7,7 +7,8 @@ include($_SERVER['DOCUMENT_ROOT']."/inc/main.php");
 
 function check_if_domain_is_owned_by_user($domain, $user) {
     // Check if domain is owned by the user
-    $result = exec(VESTA_CMD."v-check-domain-owner ".$user." ".$domain);
+    //  Always use escapeshellarg for all arguments to avoid shell injection
+    $result = exec(VESTA_CMD."v-check-domain-owner ".escapeshellarg($user)." ".escapeshellarg($domain));
     if ($result !== '1') {
         die('Domain is not owned by '.$user);
     }
