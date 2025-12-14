@@ -44,6 +44,6 @@ if ($run_action) {
     $output=__('WordPress installation output').':';
     echo '<b>'.$output.'</b><br /><br />';
     $hash = trim($exec_output);
-    echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $hash);
+    echo myvesta_get_disabled_textarea('', '', true, true, true, $myvesta_logged_user, $hash);
     exit;
 }

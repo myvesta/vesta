@@ -769,5 +769,11 @@ $LANG['en'] = array(
     'Are you sure you want to override them' => 'Are you sure you want to override them',
     'WordPress installation output' => 'WordPress installation output',
     'Copy to clipboard' => 'Copy to clipboard',
-    'Copied to clipboard' => 'Copied to clipboard'
+    'Copied to clipboard' => 'Copied to clipboard',
+    'Lock WordPress' => 'Lock WordPress',
+    'Unlock WordPress' => 'Unlock WordPress',
+    'The WordPress is already locked' => 'The WordPress is already locked',
+    'The WordPress is already unlocked' => 'The WordPress is already unlocked',
+    'WordPress locking output' => 'WordPress locking output',
+    'WordPress unlocking output' => 'WordPress unlocking output'
 );

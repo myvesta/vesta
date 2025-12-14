@@ -180,6 +180,8 @@ echo "=========================COPY -TO- HERE========================="
 
 chown -R $user:$user $WORKINGDIR
 
+/usr/local/vesta/bin/v-fix-website-permissions $domain > /dev/null 2>&1
+
 #----------------------------------------------------------#
 #                       Vesta                              #
 #----------------------------------------------------------#

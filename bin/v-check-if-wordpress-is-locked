@@ -1,0 +1,50 @@
+#!/bin/bash
+# info: check if the WordPress in public_html/ folder is locked by v-lock-wordpress
+# options: USER DOMAIN
+#
+# The function return '1' if /home/$user/web/$domain/public_html/index.php file is owned by 'www-data' user
+# Otherwise it return '0'
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+user=$1
+domain=$2
+
+# Includes
+source /usr/local/vesta/func/main.sh
+source /usr/local/vesta/conf/vesta.conf
+
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+
+check_args '2' "$#" 'USER DOMAIN'
+is_format_valid 'user' 'domain'
+is_object_valid 'user' 'USER' "$user"
+
+if [ ! -d "/home/$user/web/$domain/public_html" ]; then
+    check_result $E_NOTEXIST "ERROR: Folder /home/$user/web/$domain/public_html doesn't exist"
+fi
+
+if [ ! -f "/home/$user/web/$domain/public_html/index.php" ]; then
+    check_result $E_NOTEXIST "ERROR: File /home/$user/web/$domain/public_html/index.php doesn't exist"
+fi
+
+#----------------------------------------------------------#
+#                       Action                             #
+#----------------------------------------------------------#
+
+file="/home/$user/web/$domain/public_html/index.php"
+
+if [ -e "$file" ]; then
+    owner=$(stat -c '%U' "$file")
+    if [ "$owner" = "www-data" ]; then
+        echo "1"
+        exit 0
+    fi
+fi
+
+echo "0"
+exit 0

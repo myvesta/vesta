@@ -19,6 +19,7 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
     else if ($element_name == 'textarea') $id = 'confirm-div-content-textarea';
     else if ($element_name == 'listbox') $id = 'confirm-div-content-listbox';
     else if ($element_name == 'button') $id = 'confirm-div-button';
+    else if ($element_name == 'button_gray') $id = 'confirm-div-button-gray';
     else if ($element_name == 'buttons_confirm') {
         $id = 'confirm-div-buttons-confirm';
         if (strpos($variable_name, '/') !== false) {
@@ -51,11 +52,13 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
         else if ($element_name == 'textarea') $myvesta_element = str_replace('confirm-div-content-textarea-variable', $variable_name, $myvesta_element);
         else if ($element_name == 'listbox') $myvesta_element = str_replace('confirm-div-content-listbox-variable', $variable_name, $myvesta_element);
         else if ($element_name == 'button') $myvesta_element = str_replace('confirm-div-button-variable', $variable_name, $myvesta_element);
+        else if ($element_name == 'button_gray') $myvesta_element = str_replace('confirm-div-button-gray-variable', $variable_name, $myvesta_element);
         else if ($element_name == 'checkbox') $myvesta_element = str_replace('confirm-div-content-checkbox-variable', $variable_name, $myvesta_element);
     }
     if ($variable_value != null) {
         if ($element_name == 'input') $myvesta_element = str_replace('value1', $variable_value, $myvesta_element);
         else if ($element_name == 'button') $myvesta_element = str_replace('OK', $variable_value, $myvesta_element);
+        else if ($element_name == 'button_gray') $myvesta_element = str_replace('Cancel', $variable_value, $myvesta_element);
         else if ($element_name == 'textarea') $myvesta_element = str_replace('</textarea>', $variable_value.'</textarea>', $myvesta_element);
         else if ($element_name == 'listbox') {
             $variable_value_options = '';
@@ -145,32 +148,42 @@ function myvesta_get_hidden_fields($hidden_fields = array()) {
     return $myvesta_element;
 }
 
-function myvesta_get_disabled_textarea($value = '', $style = '', $copy_to_clipboard = true, $watch_spawned_ajax_process = false, $user = '', $hash = '') {
+function myvesta_get_disabled_textarea($value = '', $style = '', $copy_to_clipboard = true, $close_button = true, $watch_spawned_ajax_process = false, $user = '', $hash = '') {
     if ($style == '') $style = 'width: 680px; height: 380px; resize: none; font-family: monospace; font-size: 13px; white-space: pre;';
     $myvesta_element = '<textarea disabled id="confirm-div-content-textarea-variable" name="confirm-div-content-textarea-variable" class="vst-textinput ajax-newline" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" style="'.$style.'">'.$value.'</textarea>';
-    if ($copy_to_clipboard) {
+    if ($copy_to_clipboard || $close_button) {
         if ($watch_spawned_ajax_process) $display = 'display: none;';
         else $display = '';
-        $myvesta_element .= '<button id="copy-to-clipboard" class="button confirm" style="margin-right: 10px; width: 200px; background-color: #27c24c !important; border-color: #27c24c !important; '.$display.'" autofocus>'.__('Copy to clipboard').'</button>';
-        $myvesta_element .= '<button id="show-full-output-button" class="button cancel" style="margin-right: 10px; width: 180px; background-color: #d3dce0 !important; border-color: #d3dce0 !important; '.$display.'">'.__('Show full output').'</button>';
-        $myvesta_element .= '<button id="close-floating-div-button" class="button cancel" style="margin-right: 10px; width: 110px; '.$display.'">'.__('Close').'</button>';
+        if ($copy_to_clipboard) {
+            $myvesta_element .= '<button id="copy-to-clipboard" class="button confirm" style="margin-right: 10px; width: 200px; background-color: #27c24c !important; border-color: #27c24c !important; '.$display.'" autofocus>'.__('Copy to clipboard').'</button>';
+            $myvesta_element .= '<button id="show-full-output-button" class="button cancel" style="margin-right: 10px; width: 180px; background-color: #d3dce0 !important; border-color: #d3dce0 !important; '.$display.'">'.__('Show full output').'</button>';
+        }
+        if ($close_button) {
+            $myvesta_element .= '<button id="close-floating-div-button" class="button cancel" style="margin-right: 10px; width: 110px; '.$display.'">'.__('Close').'</button>';
+        }
         $myvesta_element .= '<p id="place-holder-floating-div-button" style="margin-right: 10px; width: 110px;background-color: white; color: white;border: 1px solid white; text-shadow: 0 0 0 #fff !important; height: 10px; padding: 1px 16px 3px 16px; ">&nbsp;</p>';
-        $myvesta_element .= '<script>
-                document.getElementById("copy-to-clipboard").addEventListener("click", function() {
+        $myvesta_element .= '<script>';
+        if ($copy_to_clipboard) {
+            $myvesta_element .= '        document.getElementById("copy-to-clipboard").addEventListener("click", function() {
                     var textarea = document.getElementById("confirm-div-content-textarea-variable");
                     navigator.clipboard.writeText(textarea.value);
                     this.innerHTML = "'.__('Copied to clipboard').'";
                     setTimeout(function() {
                         document.getElementById("copy-to-clipboard").innerHTML = "'.__('Copy to clipboard').'";
                     }, 1000);
-                });
-                document.getElementById("close-floating-div-button").addEventListener("click", function() {
-                    hideFloatingDiv();
-                });
-                document.getElementById("show-full-output-button").addEventListener("click", function() {
-                    showFullOutput();
-                });
-        </script>';
+                });';
+        }
+        if ($close_button) {
+            $myvesta_element .= '        document.getElementById("close-floating-div-button").addEventListener("click", function() {
+                        hideFloatingDiv();
+                    });';
+        }
+        if ($copy_to_clipboard) {
+            $myvesta_element .= '        document.getElementById("show-full-output-button").addEventListener("click", function() {
+                        showFullOutput();
+                    });';
+        }
+        $myvesta_element .= '</script>';
     }
     if ($watch_spawned_ajax_process) {
         $myvesta_element .= '<script>
@@ -182,6 +195,16 @@ function myvesta_get_disabled_textarea($value = '', $style = '', $copy_to_clipbo
 
 function myvesta_hide_floating_div() {
     echo '<script>hideFloatingDiv();</script>'; exit;
+}
+
+function myvesta_get_close_button() {
+    $myvesta_element = '<button id="close-floating-div-button" class="button cancel" style="margin-right: 10px; width: 110px;">'.__('Close').'</button>';
+    $myvesta_element .= '<script>
+        document.getElementById("close-floating-div-button").addEventListener("click", function() {
+            hideFloatingDiv();
+        });
+    </script>';
+    return $myvesta_element;
 }
 
 /*

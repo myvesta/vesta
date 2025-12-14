@@ -768,5 +768,11 @@ $LANG['sr'] = array(
     'Are you sure you want to override them' => 'Da li ste sigurni da želite da pregazite prethodno instalirane fajlove',
     'WordPress installation output' => 'Rezultat WordPress instalacije',
     'Copy to clipboard' => 'Kopiraj u clipboard',
-    'Copied to clipboard' => 'Kopirano u clipboard'
+    'Copied to clipboard' => 'Kopirano u clipboard',
+    'Lock WordPress' => 'Zaključaj WordPress',
+    'Unlock WordPress' => 'Otključaj WordPress',
+    'The WordPress is already locked' => 'WordPress je već zaključan',
+    'The WordPress is already unlocked' => 'WordPress je već otključan',
+    'WordPress locking output' => 'Rezultat zaključavanja WordPressa',
+    'WordPress unlocking output' => 'Rezultat otključavanja WordPressa'
 );

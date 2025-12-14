@@ -388,7 +388,7 @@ echo myvesta_get_element(
 ```
 
 **Parameters**:
-- `$element_name` - Type: 'input', 'textarea', 'listbox', 'checkbox', 'button', 'buttons_confirm'
+- `$element_name` - Type: 'input', 'textarea', 'listbox', 'checkbox', 'button', 'button_gray', 'buttons_confirm'
 - `$label` - Label text (shown before element)
 - `$variable_name` - HTML name attribute
 - `$variable_value` - Default value or options array (for listbox)
@@ -396,7 +396,7 @@ echo myvesta_get_element(
 - `$style` - CSS style string
 - `$replace_or_add_style` - 'replace' or 'add' (default: 'replace')
 
-#### myvesta_get_disabled_textarea($value, $style, $copy_to_clipboard, $watch_spawned_ajax_process, $user, $hash)
+#### myvesta_get_disabled_textarea($value, $style, $copy_to_clipboard, $close_button, $watch_spawned_ajax_process, $user, $hash)
 
 Creates a disabled textarea with optional copy-to-clipboard and real-time process watching.
 
@@ -406,6 +406,7 @@ echo myvesta_get_disabled_textarea(
     'Command output here',
     '',                         // Default style
     true,                       // Show copy button
+    true,                       // Show close button
     false                       // No process watching
 );
 
@@ -413,7 +414,8 @@ echo myvesta_get_disabled_textarea(
 echo myvesta_get_disabled_textarea(
     '',                         // Initially empty
     '',
-    true,
+    true,                       // Show copy button
+    true,                       // Show close button
     true,                       // Enable process watching
     $myvesta_logged_user,
     $hash                       // Process hash from v-spawn-ajax-process
@@ -464,7 +466,7 @@ include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 // Display form
 echo myvesta_open_form('/ajax/web/manage/step2.php');
 echo myvesta_get_hidden_fields();
-echo myvesta_get_element('button', '', 'install_wordpress', __('Install WordPress'), null, 'width: 200px;', 'add');
+echo myvesta_get_element('button_gray', '', 'install_wordpress', __('Install WordPress'), null, 'width: 200px;', 'add');
 echo myvesta_close_form();
 
 exit;
@@ -566,7 +568,7 @@ if ($run_action) {
     $output=__('WordPress installation output').':';
     echo '<b>'.$output.'</b><br /><br />';
     $hash = trim($exec_output);
-    echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $hash);
+    echo myvesta_get_disabled_textarea('', '', true, true, true, $myvesta_logged_user, $hash);
     exit;
 }
 ?>
@@ -650,7 +652,7 @@ include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 echo myvesta_open_form('/ajax/database/backup/step2.php');
 echo myvesta_get_hidden_fields();
-echo myvesta_get_element('button', '', 'backup', __('Backup'), null, 'width: 200px;');
+echo myvesta_get_element('button_gray', '', 'backup', __('Backup'), null, 'width: 200px;', 'add');
 echo myvesta_close_form();
 exit;
 ?>
@@ -703,7 +705,7 @@ $exec_output = shell_exec($cmd);
 $output=__('Database dump output').':';
 echo '<b>'.$output.'</b><br /><br />';
 $hash = trim($exec_output);
-echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $hash);
+echo myvesta_get_disabled_textarea('', '', true, true, true, $myvesta_logged_user, $hash);
 exit;
 ?>
 ```
@@ -729,7 +731,7 @@ echo myvesta_get_hidden_fields();
 echo myvesta_get_element('input', __('Subdomain name:'), 'subdomain', '', null, 'width: 300px;');
 echo '<br /><br />';
 
-echo myvesta_get_element('button', '', 'create_subdomain', __('Create Subdomain'), null, 'width: 200px;');
+echo myvesta_get_element('button_gray', '', 'create_subdomain', __('Create Subdomain'), null, 'width: 200px;', 'add');
 echo myvesta_close_form();
 exit;
 ?>
@@ -837,7 +839,7 @@ $hash = trim($hash);
 // Show output with real-time watching
 echo '<h2>'.__('Installation in progress').'</h2>';
 echo '<p>'.__('Please wait while WordPress is being locked...').'</p><br />';
-echo myvesta_get_disabled_textarea('', '', true, true, $myvesta_logged_user, $hash);
+echo myvesta_get_disabled_textarea('', '', true, true, true, $myvesta_logged_user, $hash);
 
 exit;
 ?>
@@ -967,13 +969,13 @@ exit;
 ### 1. Use Consistent Button Styles
 ```php
 // First action
-echo myvesta_get_element('button', '', 'action_name_for_install', __('Install'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
+echo myvesta_get_element('button_gray', '', 'action_name_for_install', __('Install'), null, 'width: 200px;', 'add');
 
 // Second action
-echo myvesta_get_element('button', '', 'action_name_for_update', __('Update'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
+echo myvesta_get_element('button_gray', '', 'action_name_for_update', __('Update'), null, 'width: 200px;', 'add');
 
 // Third action
-echo myvesta_get_element('button', '', 'action_name_for_delete', __('Delete'), null, 'width: 200px; background-color: #27c24c; border-color: #27c24c;');
+echo myvesta_get_element('button_gray', '', 'action_name_for_delete', __('Delete'), null, 'width: 200px;', 'add');
 ```
 
 ### 2. Show Clear Loading States

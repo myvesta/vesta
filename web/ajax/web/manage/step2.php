@@ -14,5 +14,17 @@ if (!empty($_POST['install_wordpress'])) {
     exit;
 }
 
+if (!empty($_POST['lock_wordpress'])) {
+    // Nested sub-script for WordPress locking
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/lock.php");
+    exit;
+}
+
+if (!empty($_POST['unlock_wordpress'])) {
+    // Nested sub-script for WordPress unlocking
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/unlock.php");
+    exit;
+}
+
 echo 'No action selected';
 exit;
