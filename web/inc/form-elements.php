@@ -152,8 +152,8 @@ function myvesta_get_hidden_fields($hidden_fields = array()) {
     return $myvesta_element;
 }
 
-function myvesta_get_disabled_textarea($value = '', $style = '', $copy_to_clipboard = true, $close_button = true, $watch_spawned_ajax_process = false, $user = '', $hash = '') {
-    if ($style == '') $style = 'width: 680px; height: 380px; resize: none; font-family: monospace; font-size: 13px; white-space: pre;';
+function myvesta_get_disabled_textarea($value = '', $style = '', $copy_to_clipboard = true, $close_button = true, $watch_spawned_ajax_process = false, $user = '', $hash = '', $height = 380) {
+    if ($style == '') $style = 'width: 680px; height: '.$height.'px; resize: none; font-family: monospace; font-size: 13px; white-space: pre;';
     $myvesta_element = '<textarea disabled id="confirm-div-content-textarea-variable" name="confirm-div-content-textarea-variable" class="vst-textinput ajax-newline" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" style="'.$style.'">'.$value.'</textarea>';
     if ($copy_to_clipboard || $close_button) {
         if ($watch_spawned_ajax_process) $display = 'display: none;';

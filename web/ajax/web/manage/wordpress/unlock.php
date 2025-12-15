@@ -26,5 +26,5 @@ $exec_output = shell_exec($cmd);
 $output=__('WordPress unlocking output').':';
 echo '<b>'.$output.'</b><br /><br />';
 $hash = trim($exec_output);
-echo myvesta_get_disabled_textarea('', '', false, true, true, $myvesta_logged_user, $hash);
+echo myvesta_get_disabled_textarea('', '', false, true, true, $myvesta_logged_user, $hash, 100);
 exit;
