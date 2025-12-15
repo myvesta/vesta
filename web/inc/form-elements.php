@@ -7,7 +7,7 @@ $start_from = strpos($myvesta_element_buffer, '<div id="confirm-div"');
 $myvesta_element_buffer = substr($myvesta_element_buffer, $start_from);
 //echo $myvesta_element_buffer;
 
-function myvesta_get_element($element_name, $label=null, $variable_name=null, $variable_value=null, $selected_value=null, $style='', $replace_or_add_style='replace') {
+function myvesta_get_element($element_name, $label=null, $variable_name=null, $variable_value=null, $selected_value=null, $style='', $replace_or_add_style='replace', $link_text=null, $link_url=null) {
     global $myvesta_element_buffer;
 
     $variable_name_yes = 'yes';
@@ -102,6 +102,10 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
     }
     $myvesta_element = str_replace('data-element-style-begin="1"', '', $myvesta_element);
     $myvesta_element = str_replace('data-element-style-end="1"', '', $myvesta_element);
+
+    if ($link_text != null && $link_url != null) {
+        $myvesta_element = str_replace('</div>', '<a href="'.$link_url.'" target="_blank" style="color: #007bff !important;">'.$link_text.'</a></div>', $myvesta_element);
+    }
 
     return $myvesta_element;
 }
