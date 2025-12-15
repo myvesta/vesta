@@ -178,6 +178,7 @@ function run_ajax_call_for_spawned_ajax_process(user, hash) {
                 if (typeof response.exit_code != 'undefined') myvesta_ajax_exit_code = response.exit_code;
                 if (typeof response.code != 'undefined') myvesta_ajax_code = response.code;
                 $('#confirm-div-content-textarea-variable').val(myvesta_ajax_original_output);
+                $('#confirm-div-content-textarea-variable').scrollTop($('#confirm-div-content-textarea-variable').prop('scrollHeight'));
                 if (response.code > 0) clearSpawnedAjaxProcessInterval(response.code, response.exit_code, response.output);
             } else {
                 $('#confirm-div-content-textarea-variable').val(response);

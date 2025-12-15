@@ -26,5 +26,17 @@ if (!empty($_POST['unlock_wordpress'])) {
     exit;
 }
 
+if (!empty($_POST['clone_wordpress'])) {
+    // Nested sub-script for WordPress cloning
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/clone-step1.php");
+    exit;
+}
+
+if (!empty($_POST['clone_wordpress_step2'])) {
+    // Nested sub-script for WordPress cloning
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/clone-step2.php");
+    exit;
+}
+
 echo 'No action selected';
 exit;

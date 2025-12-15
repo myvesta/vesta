@@ -776,5 +776,8 @@ $LANG['sr'] = array(
     'WordPress locking output' => 'Rezultat zaključavanja WordPressa',
     'WordPress unlocking output' => 'Rezultat otključavanja WordPressa',
     'The WordPress is not installed' => 'WordPress nije instaliran',
-    'What\'s this?' => 'Šta je ovo?'
+    'What\'s this?' => 'Šta je ovo?',
+    'WordPress cloning output' => 'Rezultat kloniranja WordPressa',
+    'Select the domain to clone the WordPress to' => 'Selektuj domen/poddomen na koji želiš da kloniraš WordPress',
+    'The domain to clone the WordPress to is the same as the domain to clone from' => 'Domen/poddomen na koji želiš da kloniraš WordPress je isti kao i domen/poddomen sa koga želiš da kloniraš WordPress'
 );

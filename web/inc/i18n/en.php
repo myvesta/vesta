@@ -777,5 +777,8 @@ $LANG['en'] = array(
     'WordPress locking output' => 'WordPress locking output',
     'WordPress unlocking output' => 'WordPress unlocking output',
     'The WordPress is not installed' => 'The WordPress is not installed',
-    'What\'s this?' => 'What\'s this?'
+    'What\'s this?' => 'What\'s this?',
+    'WordPress cloning output' => 'WordPress cloning output',
+    'Select the domain to clone the WordPress to' => 'Select the domain/subdomain to clone the WordPress to',
+    'The domain to clone the WordPress to is the same as the domain to clone from' => 'The domain/subdomain to clone the WordPress to is the same as the domain/subdomain to clone from'
 );
