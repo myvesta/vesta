@@ -775,5 +775,7 @@ $LANG['en'] = array(
     'The WordPress is already locked' => 'The WordPress is already locked',
     'The WordPress is already unlocked' => 'The WordPress is already unlocked',
     'WordPress locking output' => 'WordPress locking output',
-    'WordPress unlocking output' => 'WordPress unlocking output'
+    'WordPress unlocking output' => 'WordPress unlocking output',
+    'The WordPress is not installed' => 'The WordPress is not installed',
+    'What\'s this?' => 'What\'s this?'
 );

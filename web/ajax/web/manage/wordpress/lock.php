@@ -6,10 +6,19 @@
 $authentication_check_this_is_nested_script = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
+// Check if WordPress is installed
+//  Always use escapeshellarg for all arguments to avoid shell injection
+$is_wordpress_installed=exec(VESTA_CMD."v-check-if-wordpress-is-installed ".escapeshellarg($user)." ".escapeshellarg($domain), $output, $return_var);
+if ($is_wordpress_installed == '0') {
+    // WordPress is not installed
+    echo __('The WordPress is not installed').'.<br /><br />';
+    echo myvesta_get_close_button();
+    exit;
+}
+
 // Check if WordPress is locked
 //  Always use escapeshellarg for all arguments to avoid shell injection
 $is_wordpress_locked=exec(VESTA_CMD."v-check-if-wordpress-is-locked ".escapeshellarg($user)." ".escapeshellarg($domain), $output, $return_var);
-
 if ($is_wordpress_locked=='1') {
     // WordPress is locked
     echo __('The WordPress is already locked').'.<br /><br />';

@@ -16,10 +16,13 @@ echo myvesta_get_hidden_fields();
 // install button block
 echo myvesta_get_element('button_gray', '', 'install_wordpress', __('Install WordPress'), null, 'width: 200px;', 'add', '['.__("What's this?").']', 'https://forum.myvestacp.com/viewtopic.php?t=386');
 
-// lock/unlock buttons block
-$is_wordpress_locked=exec(VESTA_CMD."v-check-if-wordpress-is-locked ".escapeshellarg($user)." ".escapeshellarg($domain), $output, $return_var);
-if ($is_wordpress_locked == '0') echo myvesta_get_element('button_gray', '', 'lock_wordpress', __('Lock WordPress'), null, 'width: 200px;', 'add', '['.__("What's this?").']', 'https://forum.myvestacp.com/viewtopic.php?t=725');
-if ($is_wordpress_locked == '1') echo myvesta_get_element('button_gray', '', 'unlock_wordpress', __('Unlock WordPress'), null, 'width: 200px;', 'add', '['.__("What's this?").']', 'https://forum.myvestacp.com/viewtopic.php?t=725');
+$is_wordpress_installed=exec(VESTA_CMD."v-check-if-wordpress-is-installed ".escapeshellarg($user)." ".escapeshellarg($domain), $output, $return_var);
+if ($is_wordpress_installed == '1') {
+    // lock/unlock buttons block
+    $is_wordpress_locked=exec(VESTA_CMD."v-check-if-wordpress-is-locked ".escapeshellarg($user)." ".escapeshellarg($domain), $output, $return_var);
+    if ($is_wordpress_locked == '0') echo myvesta_get_element('button_gray', '', 'lock_wordpress', __('Lock WordPress'), null, 'width: 200px;', 'add', '['.__("What's this?").']', 'https://forum.myvestacp.com/viewtopic.php?t=725');
+    if ($is_wordpress_locked == '1') echo myvesta_get_element('button_gray', '', 'unlock_wordpress', __('Unlock WordPress'), null, 'width: 200px;', 'add', '['.__("What's this?").']', 'https://forum.myvestacp.com/viewtopic.php?t=725');
+}
 
 echo myvesta_close_form();
 

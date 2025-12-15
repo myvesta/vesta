@@ -774,5 +774,7 @@ $LANG['sr'] = array(
     'The WordPress is already locked' => 'WordPress je već zaključan',
     'The WordPress is already unlocked' => 'WordPress je već otključan',
     'WordPress locking output' => 'Rezultat zaključavanja WordPressa',
-    'WordPress unlocking output' => 'Rezultat otključavanja WordPressa'
+    'WordPress unlocking output' => 'Rezultat otključavanja WordPressa',
+    'The WordPress is not installed' => 'WordPress nije instaliran',
+    'What\'s this?' => 'Šta je ovo?'
 );
