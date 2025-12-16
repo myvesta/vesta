@@ -29,25 +29,47 @@ document.addEventListener('DOMContentLoaded', function () {
         if (FloatingDivOpened && !dialogsOpened) {
             if (e.key === "Escape") hideFloatingDiv();
 
-            if (e.key === "ArrowUp" && FloatingDivDisabledTextarea==true) {
-                console.log('= ArrowUp');
+            if ((e.key === "ArrowUp" || e.key === "PageUp") && FloatingDivDisabledTextarea==true) {
+                if (e.key === "PageUp") console.log('= PageUp');
+                else console.log('= ArrowUp');
+                var step = 20;
+                if (e.key === "PageUp") step = 100;
                 var scrollHeight = $('#confirm-div-content-textarea-variable').prop('scrollHeight');
                 var scrollTop = $('#confirm-div-content-textarea-variable').scrollTop();
-                if (scrollTop > 20) {
-                    $('#confirm-div-content-textarea-variable').scrollTop(scrollTop-20);
+                if (scrollTop > step) {
+                    $('#confirm-div-content-textarea-variable').scrollTop(scrollTop-step);
+                } else {
+                    $('#confirm-div-content-textarea-variable').scrollTop(0);
                 }
                 $('#confirm-div-content-textarea-variable').focus();
                 e.preventDefault();
                 return;
             }
 
-            if (e.key === "ArrowDown" && FloatingDivDisabledTextarea==true) {
-                console.log('= ArrowDown');
+            if ((e.key === "ArrowDown" || e.key === "PageDown") && FloatingDivDisabledTextarea==true) {
+                if (e.key === "PageDown") console.log('= PageDown');
+                else console.log('= ArrowDown');
+                var step = 20;
+                if (e.key === "PageDown") step = 100;
                 var scrollHeight = $('#confirm-div-content-textarea-variable').prop('scrollHeight');
                 var scrollTop = $('#confirm-div-content-textarea-variable').scrollTop();
-                if (scrollTop < scrollHeight-20) {
-                    $('#confirm-div-content-textarea-variable').scrollTop(scrollTop+20);
+                if (scrollTop < scrollHeight-step) {
+                    $('#confirm-div-content-textarea-variable').scrollTop(scrollTop+step);
+                } else {
+                    $('#confirm-div-content-textarea-variable').scrollTop(scrollHeight);
                 }
+                $('#confirm-div-content-textarea-variable').focus();
+                e.preventDefault();
+                return;
+            }
+            if (e.key === "Home") {
+                $('#confirm-div-content-textarea-variable').scrollTop(0);
+                $('#confirm-div-content-textarea-variable').focus();
+                e.preventDefault();
+                return;
+            }
+            if (e.key === "End") {
+                $('#confirm-div-content-textarea-variable').scrollTop($('#confirm-div-content-textarea-variable').prop('scrollHeight'));
                 $('#confirm-div-content-textarea-variable').focus();
                 e.preventDefault();
                 return;
