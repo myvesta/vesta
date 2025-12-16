@@ -58,7 +58,9 @@ mysql_query() {
 
 mysql_dump() {
     err="/tmp/e.mysql"
-    mysqldump --skip-triggers --defaults-file=$mycnf --complete-insert --force --quick --single-transaction --max-allowed-packet=1024MB -r $1 $2 2> $err
+    # IMPORTANT: --defaults-file must be the first argument.
+    # MariaDB/MySQL fails with "unknown variable 'defaults-file=...'" if it is placed after other options.
+    mysqldump --defaults-file=$mycnf --skip-triggers --complete-insert --force --quick --single-transaction --max-allowed-packet=1024MB -r $1 $2 2> $err
     if [ '0' -ne "$?" ]; then
         rm -rf $tmpdir
         if [ "$notify" != 'no' ]; then
