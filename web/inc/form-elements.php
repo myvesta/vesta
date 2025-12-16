@@ -167,6 +167,7 @@ function myvesta_get_disabled_textarea($value = '', $style = '', $copy_to_clipbo
         }
         $myvesta_element .= '<p id="place-holder-floating-div-button" style="margin-right: 10px; width: 110px;background-color: white; color: white;border: 1px solid white; text-shadow: 0 0 0 #fff !important; height: 10px; padding: 1px 16px 3px 16px; ">&nbsp;</p>';
         $myvesta_element .= '<script>';
+        $myvesta_element .= '        FloatingDivDisabledTextarea = true;';
         if ($copy_to_clipboard) {
             $myvesta_element .= '        document.getElementById("copy-to-clipboard").addEventListener("click", function() {
                     var textarea = document.getElementById("confirm-div-content-textarea-variable");

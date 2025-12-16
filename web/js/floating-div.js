@@ -1,6 +1,7 @@
 var FloatingDivLoaded = true;
 var FloatingDivOpened = false;
 var FloatingEvent = null;
+var FloatingDivDisabledTextarea = false;
 
 function showFloatingDiv(title, contentHtml) {
     FloatingDivOpened = true;
@@ -12,6 +13,7 @@ function showFloatingDiv(title, contentHtml) {
 
 function hideFloatingDiv() {
     FloatingDivOpened = false;
+    FloatingDivDisabledTextarea = false;
     //$('#floating-center-div').css('display','none');
     $('#floating-center-div').fadeOut();
     clearSpawnedAjaxProcessInterval();
@@ -24,7 +26,33 @@ document.addEventListener('DOMContentLoaded', function () {
             if (ConfirmDivOpened) dialogsOpened = true;
         }
 
-        if (e.key === "Escape" && FloatingDivOpened && !dialogsOpened) hideFloatingDiv();
+        if (FloatingDivOpened && !dialogsOpened) {
+            if (e.key === "Escape") hideFloatingDiv();
+
+            if (e.key === "ArrowUp" && FloatingDivDisabledTextarea==true) {
+                console.log('= ArrowUp');
+                var scrollHeight = $('#confirm-div-content-textarea-variable').prop('scrollHeight');
+                var scrollTop = $('#confirm-div-content-textarea-variable').scrollTop();
+                if (scrollTop > 20) {
+                    $('#confirm-div-content-textarea-variable').scrollTop(scrollTop-20);
+                }
+                $('#confirm-div-content-textarea-variable').focus();
+                e.preventDefault();
+                return;
+            }
+
+            if (e.key === "ArrowDown" && FloatingDivDisabledTextarea==true) {
+                console.log('= ArrowDown');
+                var scrollHeight = $('#confirm-div-content-textarea-variable').prop('scrollHeight');
+                var scrollTop = $('#confirm-div-content-textarea-variable').scrollTop();
+                if (scrollTop < scrollHeight-20) {
+                    $('#confirm-div-content-textarea-variable').scrollTop(scrollTop+20);
+                }
+                $('#confirm-div-content-textarea-variable').focus();
+                e.preventDefault();
+                return;
+            }
+        }
     });
 
     $('#floating-center-div-right-close').on('click', function() {
@@ -179,14 +207,17 @@ function run_ajax_call_for_spawned_ajax_process(user, hash) {
                 if (typeof response.code != 'undefined') myvesta_ajax_code = response.code;
                 $('#confirm-div-content-textarea-variable').val(myvesta_ajax_original_output);
                 $('#confirm-div-content-textarea-variable').scrollTop($('#confirm-div-content-textarea-variable').prop('scrollHeight'));
+                $('#confirm-div-content-textarea-variable').focus();
                 if (response.code > 0) clearSpawnedAjaxProcessInterval(response.code, response.exit_code, response.output);
             } else {
                 $('#confirm-div-content-textarea-variable').val(response);
+                $('#confirm-div-content-textarea-variable').focus();
                 clearSpawnedAjaxProcessInterval(6, '', response);
             }
         },
         error: function(xhr, status, error) {
             $('#confirm-div-content-textarea-variable').val(error);
+            $('#confirm-div-content-textarea-variable').focus();
             clearSpawnedAjaxProcessInterval(7, '', error);
         }
     });
