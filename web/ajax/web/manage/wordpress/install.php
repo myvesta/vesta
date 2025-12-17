@@ -4,11 +4,12 @@
 
 // Authentication checks
 $authentication_check_this_is_nested_script = true;
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Check if confirmation needed
 //  Always use escapeshellarg for all arguments to avoid shell injection
-$is_empty_public_html=exec(VESTA_CMD."v-check-if-public-html-is-empty ".escapeshellarg($user)." ".escapeshellarg($domain), $output, $return_var);
+$is_empty_public_html=exec(VESTA_CMD."v-check-if-public-html-is-empty ".escapeshellarg($myvesta_logged_user)." ".escapeshellarg($domain), $output, $return_var);
 
 $run_action=false;
 $canceled=false;

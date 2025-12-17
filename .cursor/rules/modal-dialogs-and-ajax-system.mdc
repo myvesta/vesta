@@ -212,7 +212,7 @@ $("#floating-center-div").on("submit", "#floating-center-div-form", function(e) 
 <?php
 
 // Authentication checks
-$authentication_check_this_is_nested_script = false;
+$authentication_check_this_is_nested_script = false;               // This means that the script is called directly via AJAX
 $authentication_check_required_param['dataset']['domain'] = true;  // Define required parameters
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 ```
@@ -527,6 +527,7 @@ Executes the actual action with confirmations if needed.
 // Nested sub-script for WordPress installation
 
 $authentication_check_this_is_nested_script = true;
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Check if confirmation needed
@@ -595,10 +596,11 @@ if ($run_action) {
 - Token is in `$_SESSION['token']`
 
 ### 2. Domain Ownership
-- Set `$authentication_check_required_param['dataset']['domain'] = true`
-- Set `$authentication_check_this_is_nested_script = false;` if PHP script is called via AJAX
+- Set `$authentication_check_this_is_nested_script = false;` if PHP script is called directly via AJAX
 - Set `$authentication_check_this_is_nested_script = true;` if PHP script is sub-script of previously loaded PHP script
+- Set `$authentication_check_required_param['dataset']['important_POST_field_or_variable'] = true`
 - Add `include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");` so authentication_check.php can verify ownership
+- If an field includes another domain in the action, check ownership of that domain as well: `$domain2 = $_POST['domain2']; check_if_domain_is_owned_by_user($domain2, $myvesta_logged_user);`
 - These steps will prevent users from accessing other users' domains
 
 ### 3. Required Parameters
@@ -665,7 +667,7 @@ exit;
 
 // Authentication checks
 $authentication_check_this_is_nested_script = false;
-$authentication_check_required_param['dataset']['database'] = true;
+$authentication_check_required_param['dataset']['database_name'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Form elements include
@@ -691,6 +693,7 @@ exit;
 
 // Authentication checks
 $authentication_check_this_is_nested_script = true;
+$authentication_check_required_param['dataset']['database_name'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Set $database_name variable
@@ -710,7 +713,7 @@ exit;
 ?>
 ```
 
-### Example 2: Form with Input and Confirmation
+### Example 2: Form with two steps, first step contains Input field, second step contains Confirmation and Execution
 
 **Step 1**: Create web/ajax/web/subdomain/step1.php with form
 
@@ -727,32 +730,34 @@ include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 echo myvesta_open_form('/ajax/web/subdomain/step2.php');
 echo myvesta_get_hidden_fields();
-
-echo myvesta_get_element('input', __('Subdomain name:'), 'subdomain', '', null, 'width: 300px;');
-echo '<br /><br />';
-
-echo myvesta_get_element('button_gray', '', 'create_subdomain', __('Create Subdomain'), null, 'width: 200px;', 'add');
+echo myvesta_get_element('button_gray', '', 'create_subdomain_step1', __('Create subdomain'), null, 'width: 200px;', 'add');
 echo myvesta_close_form();
 exit;
 ?>
 ```
 
-**Step 2**: Create web/ajax/web/subdomain/step2.php
+**Step 2**: Create web/ajax/web/subdomain/step2.php (router script)
 
 ```php
 <?php
 
 // Authentication checks
 $authentication_check_this_is_nested_script = false;
-$authentication_check_required_param['subdomain'] = true;
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
-if (!empty($_POST['subdomain'])) {
-    // Nested sub-script for subdomain action
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/subdomain/execute.php");
+if (!empty($_POST['create_subdomain_step1'])) {
+    // Nested sub-script for creating a subdomain, step1
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/subdomain/create-step1.php");
+    exit;
+}
+
+if (!empty($_POST['create_subdomain_step2'])) {
+    // Nested sub-script for creating a subdomain, step2
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/subdomain/create-step2.php");
     exit;
 }
 
@@ -761,7 +766,29 @@ exit;
 ?>
 ```
 
-**Step 2**: Create web/ajax/web/subdomain/execute.php with confirmation
+**Step 2**: Create web/ajax/web/subdomain/create-step1.php with 'subdomain' field (step 1)
+
+```php
+<?php
+
+// Nested sub-script for creating a subdomain
+
+// Authentication checks
+$authentication_check_this_is_nested_script = true;
+$authentication_check_required_param['dataset']['domain'] = true;
+include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
+
+echo myvesta_open_form('/ajax/web/subdomain/step2.php');
+echo __('Create subdomain for domain').': <b>'.$domain.'</b><br /><br />';
+echo myvesta_get_hidden_fields();
+echo myvesta_get_element('input', __('Subdomain name:'), 'subdomain', '', null, 'width: 300px;');
+echo myvesta_get_element('button', '', 'create_subdomain_step2', __('Create subdomain'), null, 'width: 200px;', 'add');
+echo myvesta_close_form();
+exit;
+?>
+```
+
+**Step 2**: Create web/ajax/web/subdomain/create-step2.php with confirmation and action execution (step 2)
 
 ```php
 <?php
@@ -770,6 +797,8 @@ exit;
 
 // Authentication checks
 $authentication_check_this_is_nested_script = true;
+$authentication_check_required_param['dataset']['domain'] = true;
+$authentication_check_required_param['subdomain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Get $subdomain variable
@@ -786,8 +815,8 @@ if (!isset($_POST['Yes']) && !isset($_POST['No'])) {
     echo myvesta_open_form('/ajax/web/subdomain/step2.php');
     echo __('Create subdomain').': <b>'.$subdomain.'.'.$domain.'</b>?<br /><br />';
     echo myvesta_get_hidden_fields(array(
-        'create_subdomain' => '1',
-        'subdomain' => $subdomain
+        'create_subdomain_step2' => '1',  // action for step2.php router
+        'subdomain' => $subdomain         // repeating field from step 1
     ));
     echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
     echo myvesta_close_form();
@@ -827,6 +856,7 @@ exit;
 
 // Authentication checks
 $authentication_check_this_is_nested_script = true;
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Check if WordPress is installed
@@ -879,8 +909,10 @@ web/ajax/web/manage/
 ├── step2.php              # Action router
 └── wordpress/
     ├── install.php        # WordPress installation
-    ├── update.php         # WordPress update
-    └── lock.php           # WordPress locking
+    ├── lock.php           # WordPress locking
+    ├── unlock.php         # WordPress unlocking
+    ├── clone-step1.php    # WordPress clonning step1
+    └── clone-step2.php    # WordPress clonning step2
 ```
 
 ## Common Pitfalls
@@ -923,6 +955,7 @@ include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 // Authentication checks
 $authentication_check_this_is_nested_script = true;
+$authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
 // Execute action
@@ -1043,14 +1076,17 @@ When creating a new button action:
 - [ ] CSRF token sent in all AJAX requests
 - [ ] step1.php defines required parameters
 - [ ] step1.php set `$authentication_check_this_is_nested_script = false;`
+- [ ] step1.php set `$authentication_check_required_param['dataset']['important_POST_field_or_variable'] = true;`
 - [ ] step1.php includes `include_authentication_check.php`
 - [ ] step1.php displays form with correct action URL
 - [ ] step1.php add hidden fields
 - [ ] step2.php defines required parameters
 - [ ] step2.php set `$authentication_check_this_is_nested_script = false;`
+- [ ] step2.php set `$authentication_check_required_param['dataset']['important_POST_field_or_variable'] = true;`
 - [ ] step2.php includes `include_authentication_check.php`
 - [ ] step2.php routes to correct action file
 - [ ] execute.php as nested sub-script set `$authentication_check_this_is_nested_script = true;`
+- [ ] execute.php set `$authentication_check_required_param['dataset']['important_POST_field_or_variable'] = true;`
 - [ ] execute.php includes `include_authentication_check.php`
 - [ ] execute.php runs shell commands like `$cmd = VESTA_CMD."v-spawn-ajax-process ".escapeshellarg($myvesta_logged_user)." /usr/local/vesta/bin/v-install-wordpress ".escapeshellarg($domain);`
 - [ ] Using `$myvesta_logged_user` instead of `$user`

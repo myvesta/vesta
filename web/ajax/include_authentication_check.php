@@ -12,4 +12,6 @@ if ($authentication_check_this_is_nested_script == false) {
 
     if (!isset($authentication_check_loaded)) die('Authentication check not loaded in nested script');
 
+    check_required_params($authentication_check_required_param);
+
 }
