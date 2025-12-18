@@ -83,7 +83,7 @@ In list templates (e.g., [web/templates/user/list_web.html](mdc:web/templates/us
 <?php foreach ($data as $key => $value) { ?>
   <script>
     dataset_values[<?=$i?>] = {
-      'url': '/ajax/web/manage/step1.php',
+      'url': '/ajax/web/index.php',
       'title': '<?=$key?>',
       'domain': '<?=$key?>',
       'web_template': '<?=$data[$key]['TPL']?>',
@@ -97,7 +97,7 @@ In list templates (e.g., [web/templates/user/list_web.html](mdc:web/templates/us
 ```
 
 **Key Properties**:
-- `url` - The AJAX endpoint to call (usually step1.php)
+- `url` - The AJAX endpoint to call (usually index.php)
 - `title` - Modal title to display
 - Additional properties - Any data needed by the AJAX endpoint
 
@@ -260,7 +260,7 @@ include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 Opens a form with CSRF token.
 
 ```php
-echo myvesta_open_form('/ajax/web/manage/step2.php');
+echo myvesta_open_form('/ajax/web/router.php'); // send form to router.php
 ```
 
 **Parameters**:
@@ -288,7 +288,7 @@ echo myvesta_get_hidden_fields();
 
 // Preserve dataset + add custom fields
 echo myvesta_get_hidden_fields(array(
-    'install_wordpress' => '1',
+    'wordpress_install' => '1',
     'custom_field' => 'value'
 ));
 
@@ -367,7 +367,7 @@ echo myvesta_get_element(
 echo myvesta_get_element(
     'button',
     '',                         // Label not used for button
-    'install_wordpress',        // Button name
+    'wordpress_install',        // Button name
     'Install WordPress',        // Button text
     null,
     'width: 200px;',
@@ -446,9 +446,9 @@ if (isset($_POST['No'])) {
 
 ### 3. Multi-Step AJAX Workflow Pattern
 
-The recommended pattern is to use step1.php, step2.php, and action-specific files.
+The recommended pattern is to use index.php, router.php, and action-specific files in `actions/` folder.
 
-#### Step 1: Initial Form (step1.php)
+#### Step 1: Initial Form (index.php)
 
 Shows the initial form/buttons to the user.
 
@@ -464,9 +464,9 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 // Display form
-echo myvesta_open_form('/ajax/web/manage/step2.php');
+echo myvesta_open_form('/ajax/web/wordpress/router.php'); // send form to router.php
 echo myvesta_get_hidden_fields();
-echo myvesta_get_element('button_gray', '', 'install_wordpress', __('Install WordPress'), null, 'width: 200px;', 'add');
+echo myvesta_get_element('button_gray', '', 'wordpress_install', __('Install WordPress'), null, 'width: 200px;', 'add');
 echo myvesta_close_form();
 
 exit;
@@ -477,9 +477,9 @@ exit;
 - Loaded by `more_button_click()`
 - Receives `dataset` array via POST
 - Shows initial options/buttons
-- Form submits to step2.php
+- Form submits to router.php
 
-#### Step 2: Action Router (step2.php)
+#### Step 2: Action Router (router.php)
 
 Routes to specific action handlers based on button clicked.
 
@@ -495,15 +495,15 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
 // Check which button was clicked
-if (!empty($_POST['install_wordpress'])) {
+if (!empty($_POST['wordpress_install'])) {
     // Nested sub-script for WordPress installation
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/install.php");
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/wordpress/actions/install.php");
     exit;
 }
 
 if (!empty($_POST['another_action'])) {
     // Nested sub-script for Another action
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/another/action.php");
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/another/action.php");
     exit;
 }
 
@@ -513,7 +513,7 @@ exit;
 ```
 
 **Purpose**:
-- Receives form submission from step1.php
+- Receives form submission from index.php
 - Routes to appropriate action file
 - Can have multiple action handlers
 
@@ -539,10 +539,12 @@ $run_action = false;
 if ($is_empty_public_html == '0') {
     // Directory not empty, ask for confirmation
     if (!isset($_POST['Yes']) && !isset($_POST['No'])) {
-        echo myvesta_open_form('/ajax/web/manage/step2.php');
+        echo myvesta_open_form('/ajax/web/wordpress/router.php'); // send form to router.php
         echo __('There are previously files in the domain directory').'.<br />';
         echo __('Are you sure you want to override them').'?<br /><br />';
-        echo myvesta_get_hidden_fields(array('install_wordpress' => '1'));
+        echo myvesta_get_hidden_fields(array(
+            'wordpress_install' => '1' // action for router.php
+            )); // Preserve action
         echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
         echo myvesta_close_form();
         exit;
@@ -583,7 +585,7 @@ if ($run_action) {
 - Shows output with real-time updates
 
 **Key Patterns**:
-1. **Check authentication**: `if (!isset($authentication_check_loaded)) die(...)`
+1. **Check authentication**: `include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");`
 2. **Conditional confirmation**: Ask for confirmation if needed
 3. **Preserve form state**: Use `myvesta_get_hidden_fields()` to maintain action context
 4. **Long-running tasks**: Use `v-spawn-ajax-process` + `myvesta_get_disabled_textarea()` with watching enabled
@@ -630,16 +632,16 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 ```html
 <script>
   dataset_values[<?=$i?>] = {
-    'url': '/ajax/database/backup/step1.php',
+    'url': '/ajax/database/index.php',
     'title': 'Database: <?=$key?>',
     'database_name': '<?=$key?>'
   };
 </script>
 
-<a onclick="more_button_click(<?=$i?>)">Backup Database</a>
+<a onclick="more_button_click(<?=$i?>)"><?=__('Manage Database')?></a>
 ```
 
-**Step 2**: Create web/ajax/database/step1.php
+**Step 2**: Create web/ajax/database/index.php
 
 ```php
 <?php
@@ -652,15 +654,15 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 // Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
-echo myvesta_open_form('/ajax/database/backup/step2.php');
+echo myvesta_open_form('/ajax/database/router.php'); // send form to router.php
 echo myvesta_get_hidden_fields();
-echo myvesta_get_element('button_gray', '', 'backup', __('Backup'), null, 'width: 200px;', 'add');
+echo myvesta_get_element('button_gray', '', 'database_backup', __('Backup'), null, 'width: 200px;', 'add');
 echo myvesta_close_form();
 exit;
 ?>
 ```
 
-**Step 3**: Create web/ajax/database/step2.php
+**Step 3**: Create web/ajax/database/router.php
 
 ```php
 <?php
@@ -673,9 +675,9 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 // Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
-if (!empty($_POST['backup'])) {
+if (!empty($_POST['database_backup'])) {
     // Nested sub-script for database backup
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/database/backup/execute.php");
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/database/actions/backup.php");
     exit;
 }
 
@@ -684,7 +686,7 @@ exit;
 ?>
 ```
 
-**Step 4**: Create web/ajax/database/backup/execute.php
+**Step 4**: Create web/ajax/database/actions/backup.php
 
 ```php
 <?php
@@ -715,7 +717,7 @@ exit;
 
 ### Example 2: Form with two steps, first step contains Input field, second step contains Confirmation and Execution
 
-**Step 1**: Create web/ajax/web/subdomain/step1.php with form
+**Step 1**: Create web/ajax/web/subdomain/index.php with form
 
 ```php
 <?php
@@ -728,15 +730,15 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 // Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
-echo myvesta_open_form('/ajax/web/subdomain/step2.php');
+echo myvesta_open_form('/ajax/web/subdomain/router.php'); // send form to router.php
 echo myvesta_get_hidden_fields();
-echo myvesta_get_element('button_gray', '', 'create_subdomain_step1', __('Create subdomain'), null, 'width: 200px;', 'add');
+echo myvesta_get_element('button_gray', '', 'subdomain_create_step1', __('Create subdomain'), null, 'width: 200px;', 'add');
 echo myvesta_close_form();
 exit;
 ?>
 ```
 
-**Step 2**: Create web/ajax/web/subdomain/step2.php (router script)
+**Step 2**: Create web/ajax/web/subdomain/router.php (router script)
 
 ```php
 <?php
@@ -749,15 +751,15 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 // Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
-if (!empty($_POST['create_subdomain_step1'])) {
+if (!empty($_POST['subdomain_create_step1'])) {
     // Nested sub-script for creating a subdomain, step1
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/subdomain/create-step1.php");
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/subdomain/actions/create_step1.php");
     exit;
 }
 
-if (!empty($_POST['create_subdomain_step2'])) {
+if (!empty($_POST['subdomain_create_step2'])) {
     // Nested sub-script for creating a subdomain, step2
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/subdomain/create-step2.php");
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/subdomain/actions/create_step2.php");
     exit;
 }
 
@@ -766,7 +768,7 @@ exit;
 ?>
 ```
 
-**Step 2**: Create web/ajax/web/subdomain/create-step1.php with 'subdomain' field (step 1)
+**Step 2**: Create web/ajax/web/subdomain/actions/create_step1.php with 'subdomain' field (step 1)
 
 ```php
 <?php
@@ -778,17 +780,17 @@ $authentication_check_this_is_nested_script = true;
 $authentication_check_required_param['dataset']['domain'] = true;
 include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 
-echo myvesta_open_form('/ajax/web/subdomain/step2.php');
+echo myvesta_open_form('/ajax/web/subdomain/router.php'); // send form to router.php
 echo __('Create subdomain for domain').': <b>'.$domain.'</b><br /><br />';
 echo myvesta_get_hidden_fields();
 echo myvesta_get_element('input', __('Subdomain name:'), 'subdomain', '', null, 'width: 300px;');
-echo myvesta_get_element('button', '', 'create_subdomain_step2', __('Create subdomain'), null, 'width: 200px;', 'add');
+echo myvesta_get_element('button', '', 'subdomain_create_step2', __('Create subdomain'), null, 'width: 200px;', 'add');
 echo myvesta_close_form();
 exit;
 ?>
 ```
 
-**Step 2**: Create web/ajax/web/subdomain/create-step2.php with confirmation and action execution (step 2)
+**Step 2**: Create web/ajax/web/subdomain/actions/create_step2.php with confirmation and action execution (step 2)
 
 ```php
 <?php
@@ -812,10 +814,10 @@ if (empty($subdomain)) {
 
 // Ask for confirmation
 if (!isset($_POST['Yes']) && !isset($_POST['No'])) {
-    echo myvesta_open_form('/ajax/web/subdomain/step2.php');
+    echo myvesta_open_form('/ajax/web/subdomain/router.php'); // send form to router.php
     echo __('Create subdomain').': <b>'.$subdomain.'.'.$domain.'</b>?<br /><br />';
     echo myvesta_get_hidden_fields(array(
-        'create_subdomain_step2' => '1',  // action for step2.php router
+        'subdomain_create_step2' => '1',  // action for router.php
         'subdomain' => $subdomain         // repeating field from step 1
     ));
     echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
@@ -847,7 +849,7 @@ exit;
 
 ### Example 3: Long-Running Process with Real-Time Output
 
-**web/ajax/web/manage/wordpress/lock.php: execute with process spawning**
+**web/ajax/web/wordpress/actions/lock.php: execute with process spawning**
 
 ```php
 <?php
@@ -901,18 +903,18 @@ exit;
 
 ## File Structure Example
 
-For a complete feature like "Manage WordPress", organize files like this:
+For a complete feature like "WordPress tools", organize files like this:
 
 ```
-web/ajax/web/manage/
-├── step1.php              # Initial form with action buttons
-├── step2.php              # Action router
-└── wordpress/
+web/ajax/web/wordpress/
+├── index.php              # Initial form with action buttons
+├── router.php             # Action router
+└── actions/
     ├── install.php        # WordPress installation
     ├── lock.php           # WordPress locking
     ├── unlock.php         # WordPress unlocking
-    ├── clone-step1.php    # WordPress clonning step1
-    └── clone-step2.php    # WordPress clonning step2
+    ├── clone_step1.php    # WordPress clonning step1
+    └── clone_step2.php    # WordPress clonning step2
 ```
 
 ## Common Pitfalls
@@ -939,7 +941,7 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 ```
 
-### 2. Not Checking Authentication in nested sub-srcipts like [web/ajax/web/manage/wordpress/install.php](mdc:web/ajax/web/manage/wordpress/install.php)
+### 2. Not Checking Authentication in nested sub-srcipts like [web/ajax/web/wordpress/actions/install.php](mdc:web/ajax/web/wordpress/actions/install.php)
 **Wrong**:
 ```php
 
@@ -977,15 +979,17 @@ $exec_output = shell_exec($cmd);
 ### 4. Not Preserving Hidden Fields in Confirmation Dialogs
 **Wrong**:
 ```php
-echo myvesta_open_form('/ajax/web/manage/step2.php');
+echo myvesta_open_form('/ajax/web/wordpress/router.php');
 echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
 echo myvesta_close_form();
 ```
 
 **Correct**:
 ```php
-echo myvesta_open_form('/ajax/web/manage/step2.php');
-echo myvesta_get_hidden_fields(array('install_wordpress' => '1'));  // Preserve action
+echo myvesta_open_form('/ajax/web/wordpress/router.php'); // send form to router.php
+echo myvesta_get_hidden_fields(array(
+    'wordpress_install' => '1' // action for router.php
+    ));  // Preserve action
 echo myvesta_get_element('buttons_confirm', '', 'Yes/No', __('Yes').'/'.__('No'));
 echo myvesta_close_form();
 ```
@@ -1074,21 +1078,21 @@ When creating a new button action:
 - [ ] Dataset values correctly defined in list template
 - [ ] Button calls `more_button_click()` with correct index
 - [ ] CSRF token sent in all AJAX requests
-- [ ] step1.php defines required parameters
-- [ ] step1.php set `$authentication_check_this_is_nested_script = false;`
-- [ ] step1.php set `$authentication_check_required_param['dataset']['important_POST_field_or_variable'] = true;`
-- [ ] step1.php includes `include_authentication_check.php`
-- [ ] step1.php displays form with correct action URL
-- [ ] step1.php add hidden fields
-- [ ] step2.php defines required parameters
-- [ ] step2.php set `$authentication_check_this_is_nested_script = false;`
-- [ ] step2.php set `$authentication_check_required_param['dataset']['important_POST_field_or_variable'] = true;`
-- [ ] step2.php includes `include_authentication_check.php`
-- [ ] step2.php routes to correct action file
-- [ ] execute.php as nested sub-script set `$authentication_check_this_is_nested_script = true;`
-- [ ] execute.php set `$authentication_check_required_param['dataset']['important_POST_field_or_variable'] = true;`
-- [ ] execute.php includes `include_authentication_check.php`
-- [ ] execute.php runs shell commands like `$cmd = VESTA_CMD."v-spawn-ajax-process ".escapeshellarg($myvesta_logged_user)." /usr/local/vesta/bin/v-install-wordpress ".escapeshellarg($domain);`
+- [ ] index.php defines required parameters
+- [ ] index.php set `$authentication_check_this_is_nested_script = false;`
+- [ ] index.php set `$authentication_check_required_param['dataset']['important_POST_field_or_variable'] = true;`
+- [ ] index.php includes `include_authentication_check.php`
+- [ ] index.php displays form with correct action URL
+- [ ] index.php add hidden fields
+- [ ] router.php defines required parameters
+- [ ] router.php set `$authentication_check_this_is_nested_script = false;`
+- [ ] router.php set `$authentication_check_required_param['dataset']['important_POST_field_or_variable'] = true;`
+- [ ] router.php includes `include_authentication_check.php`
+- [ ] router.php routes to correct action file
+- [ ] actions/execute.php as nested sub-script set `$authentication_check_this_is_nested_script = true;`
+- [ ] actions/execute.php set `$authentication_check_required_param['dataset']['important_POST_field_or_variable'] = true;`
+- [ ] actions/execute.php includes `include_authentication_check.php`
+- [ ] actions/execute.php runs shell commands like `$cmd = VESTA_CMD."v-spawn-ajax-process ".escapeshellarg($myvesta_logged_user)." /usr/local/vesta/bin/v-install-wordpress ".escapeshellarg($domain);`
 - [ ] Using `$myvesta_logged_user` instead of `$user`
 - [ ] All scripts end with `exit;`
 - [ ] Always use `escapeshellarg($variable)` for all arguments to avoid shell injection
@@ -1103,15 +1107,14 @@ When creating a new button action:
 - Main PHP functions: [web/inc/main.php](mdc:web/inc/main.php)
 - Translation function `__()`: [web/inc/i18n.php](mdc:web/inc/i18n.php)
 - Command constants: `VESTA_CMD` defined in [web/inc/main.php](mdc:web/inc/main.php)
-- String manipulation: [func/string.php](mdc:func/string.php)
 
 ## Summary Workflow
 
 1. **User clicks button** → `more_button_click(index)` called
-2. **JavaScript sends AJAX request** → `dataset_values[index]` sent to `step1.php`
-3. **step1.php validates** → Shows form/buttons
-4. **User submits form** → `send_ajax_request()` posts to `step2.php`
-5. **step2.php routes** → Includes appropriate action file
+2. **JavaScript sends AJAX request** → `dataset_values[index]` sent to `index.php`
+3. **index.php validates** → Shows form/buttons
+4. **User submits form** → `send_ajax_request()` posts to `router.php`
+5. **router.php routes** → Includes appropriate action file
 6. **Action file executes** → May show confirmation or run command
 7. **Result displayed** → Success/error message or real-time output
 8. **User closes modal** → ESC key or close button

@@ -8,33 +8,33 @@ include($_SERVER['DOCUMENT_ROOT']."/ajax/include_authentication_check.php");
 // Form elements include
 include($_SERVER['DOCUMENT_ROOT']."/inc/form-elements.php");
 
-if (!empty($_POST['install_wordpress'])) {
+if (!empty($_POST['wordpress_install'])) {
     // Nested sub-script for WordPress installation
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/install.php");
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/wordpress/actions/install.php");
     exit;
 }
 
-if (!empty($_POST['lock_wordpress'])) {
+if (!empty($_POST['wordpress_lock'])) {
     // Nested sub-script for WordPress locking
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/lock.php");
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/wordpress/actions/lock.php");
     exit;
 }
 
-if (!empty($_POST['unlock_wordpress'])) {
+if (!empty($_POST['wordpress_unlock'])) {
     // Nested sub-script for WordPress unlocking
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/unlock.php");
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/wordpress/actions/unlock.php");
     exit;
 }
 
-if (!empty($_POST['clone_wordpress_step1'])) {
+if (!empty($_POST['wordpress_clone_step1'])) {
     // Nested sub-script for WordPress cloning
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/clone-step1.php");
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/wordpress/actions/clone_step1.php");
     exit;
 }
 
-if (!empty($_POST['clone_wordpress_step2'])) {
+if (!empty($_POST['wordpress_clone_step2'])) {
     // Nested sub-script for WordPress cloning
-    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/manage/wordpress/clone-step2.php");
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/wordpress/actions/clone_step2.php");
     exit;
 }
 

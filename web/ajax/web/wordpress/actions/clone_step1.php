@@ -17,7 +17,7 @@ if ($is_wordpress_installed == '0') {
     exit;
 }
 
-echo myvesta_open_form('/ajax/web/manage/step2.php');
+echo myvesta_open_form('/ajax/web/wordpress/router.php'); // send form to router.php
 echo myvesta_get_hidden_fields();
 //  Always use escapeshellarg for all arguments to avoid shell injection
 $cmd = VESTA_CMD."v-list-web-domains ".escapeshellarg($myvesta_logged_user) ." json";
@@ -39,6 +39,6 @@ foreach ($domains_output as $domain_key => $domain_data) {
 }
 echo myvesta_get_element('listbox', __('Select the domain to clone the WordPress to').':', 'domain2', $domains, $domain);
 
-echo myvesta_get_element('button', '', 'clone_wordpress_step2', __('Clone WordPress'), null, 'width: 200px;', 'add');
+echo myvesta_get_element('button', '', 'wordpress_clone_step2', __('Clone WordPress'), null, 'width: 200px;', 'add');
 echo myvesta_close_form();
 exit;
