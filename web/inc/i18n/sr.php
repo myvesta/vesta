@@ -781,5 +781,8 @@ $LANG['sr'] = array(
     'What\'s this?' => 'Šta je ovo?',
     'WordPress cloning output' => 'Rezultat kloniranja WordPressa',
     'Select the domain to clone the WordPress to' => 'Selektuj domen/poddomen na koji želiš da kloniraš WordPress',
-    'The domain to clone the WordPress to is the same as the domain to clone from' => 'Domen/poddomen na koji želiš da kloniraš WordPress je isti kao i domen/poddomen sa koga želiš da kloniraš WordPress'
+    'The domain to clone the WordPress to is the same as the domain to clone from' => 'Domen/poddomen na koji želiš da kloniraš WordPress je isti kao i domen/poddomen sa koga želiš da kloniraš WordPress',
+    'You need to create at least one domain/subdomain to clone the WordPress to' => 'Potrebno je da kreiraš bar jedan domen/poddomen da bi na njega mogao da kloniraš WordPress',
+    'Hint' => 'Sugestija',
+    'You can use this button to clone the WordPress to staging subdomain and later clone it back to the original domain' => 'Možeš da koristiš ovo dugme da kloniraš WordPress na staging poddomen i kasnije da kloniraš taj WordPress nazad na originalni domen'
 );

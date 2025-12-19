@@ -111,6 +111,7 @@ PROTOCOL='https'
 
 if [ ! -f "/home/$user/conf/web/ssl.$domain.ca" ]; then
     echo "== Trying to install LetsEncrypt for domain $domain"
+    echo "Please wait... It may take up to 60 seconds..."
     /usr/local/vesta/bin/v-add-letsencrypt-domain "$user" "$domain" "www.$domain" "yes"
 fi
 

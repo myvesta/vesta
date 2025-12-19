@@ -782,5 +782,8 @@ $LANG['en'] = array(
     'What\'s this?' => 'What\'s this?',
     'WordPress cloning output' => 'WordPress cloning output',
     'Select the domain to clone the WordPress to' => 'Select the domain/subdomain to clone the WordPress to',
-    'The domain to clone the WordPress to is the same as the domain to clone from' => 'The domain/subdomain to clone the WordPress to is the same as the domain/subdomain to clone from'
+    'The domain to clone the WordPress to is the same as the domain to clone from' => 'The domain/subdomain to clone the WordPress to is the same as the domain/subdomain to clone from',
+    'You need to create at least one domain/subdomain to clone the WordPress to' => 'You need to create at least one domain/subdomain to clone the WordPress to',
+    'Hint' => 'Hint',
+    'You can use this button to clone the WordPress to staging subdomain and later clone it back to the original domain' => 'You can use this button to clone the WordPress to staging subdomain and later clone it back to the original domain'
 );
