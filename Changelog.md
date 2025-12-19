@@ -1,3 +1,8 @@
+Version 0.9.9-0-15 [2025-12-19]
+==================================================
+* WordPress Install/Lock/Unlock/Clone/AddAdmin functionalities directly from the hosting panel
+* Many other minor bugfixes and improvements...
+
 Version 0.9.9-0-14 [2025-09-08]
 ==================================================
 * Improvement: Introducing a new command: v-change-phpmyadmin-url
