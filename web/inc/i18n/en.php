@@ -785,5 +785,12 @@ $LANG['en'] = array(
     'The domain to clone the WordPress to is the same as the domain to clone from' => 'The domain/subdomain to clone the WordPress to is the same as the domain/subdomain to clone from',
     'You need to create at least one domain/subdomain to clone the WordPress to' => 'You need to create at least one domain/subdomain to clone the WordPress to',
     'Hint' => 'Hint',
-    'You can use this button to clone the WordPress to staging subdomain and later clone it back to the original domain' => 'You can use this button to clone the WordPress to staging subdomain and later clone it back to the original domain'
+    'You can use this button to clone the WordPress to staging subdomain and later clone it back to the original domain' => 'You can use this button to clone the WordPress to staging subdomain and later clone it back to the original domain',
+    'Variable cannot contain single quote' => 'Variable cannot contain single quote',
+    'WordPress Admin Username' => 'WordPress Admin Username',
+    'WordPress Admin Password' => 'WordPress Admin Password',
+    'WordPress Admin Email' => 'WordPress Admin Email',
+    'Add WordPress Admin User' => 'Add WordPress Admin User',
+    'WordPress admin user added successfully' => 'WordPress admin user added successfully',
+    'Try to login to WordPress at' => 'Try to login to WordPress at'
 );

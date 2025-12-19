@@ -784,5 +784,12 @@ $LANG['sr'] = array(
     'The domain to clone the WordPress to is the same as the domain to clone from' => 'Domen/poddomen na koji želiš da kloniraš WordPress je isti kao i domen/poddomen sa koga želiš da kloniraš WordPress',
     'You need to create at least one domain/subdomain to clone the WordPress to' => 'Potrebno je da kreiraš bar jedan domen/poddomen da bi na njega mogao da kloniraš WordPress',
     'Hint' => 'Sugestija',
-    'You can use this button to clone the WordPress to staging subdomain and later clone it back to the original domain' => 'Možeš da koristiš ovo dugme da kloniraš WordPress na staging poddomen i kasnije da kloniraš taj WordPress nazad na originalni domen'
+    'You can use this button to clone the WordPress to staging subdomain and later clone it back to the original domain' => 'Možeš da koristiš ovo dugme da kloniraš WordPress na staging poddomen i kasnije da kloniraš taj WordPress nazad na originalni domen',
+    'Variable cannot contain single quote' => 'Varijabla ne sme da sadrži navodnike',
+    'WordPress Admin Username' => 'WordPress Admin Username',
+    'WordPress Admin Password' => 'WordPress Admin Password',
+    'WordPress Admin Email' => 'WordPress Admin Email',
+    'Add WordPress Admin User' => 'Kreiraj WordPress Admin nalog',
+    'WordPress admin user added successfully' => 'WordPress Admin nalog je kreiran uspešno',
+    'Try to login to WordPress at' => 'Pokušaj da se uloguješ na WordPress na adresi'
 );

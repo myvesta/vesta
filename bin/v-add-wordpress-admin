@@ -67,10 +67,18 @@ fi
 #                       Action                             #
 #----------------------------------------------------------#
 
-/usr/local/vesta/bin/v-run-wp-cli $domain user create $username $email --role=administrator --user_pass="$password" --skip-plugins --skip-themes;
+/usr/local/vesta/bin/v-run-wp-cli $domain user create $username $email --role=administrator --user_pass="$password" --skip-plugins --skip-themes 2>/dev/null
+return_code=$?
 
 #----------------------------------------------------------#
 #                       Vesta                              #
 #----------------------------------------------------------#
 
-exit 0;
+if [ $return_code -eq 0 ]; then
+    echo "WordPress admin user added successfully.";
+else
+    echo "WordPress admin user creation failed.";
+    grep -v "open_basedir" /home/$user/web/$domain/wp-cli-error.log
+fi
+
+exit $return_code;

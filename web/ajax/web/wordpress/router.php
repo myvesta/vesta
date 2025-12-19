@@ -38,5 +38,11 @@ if (!empty($_POST['wordpress_clone_step2'])) {
     exit;
 }
 
+if (!empty($_POST['wordpress_add_admin_user'])) {
+    // Nested sub-script for WordPress adding admin user
+    include ($_SERVER['DOCUMENT_ROOT']."/ajax/web/wordpress/actions/add_admin_user.php");
+    exit;
+}
+
 echo 'No action selected';
 exit;

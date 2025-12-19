@@ -55,9 +55,9 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
         else if ($element_name == 'button_gray') $myvesta_element = str_replace('confirm-div-button-gray-variable', $variable_name, $myvesta_element);
         else if ($element_name == 'checkbox') $myvesta_element = str_replace('confirm-div-content-checkbox-variable', $variable_name, $myvesta_element);
     }
+    if ($element_name == 'input') $myvesta_element = str_replace('value1', $variable_value, $myvesta_element);
     if ($variable_value != null) {
-        if ($element_name == 'input') $myvesta_element = str_replace('value1', $variable_value, $myvesta_element);
-        else if ($element_name == 'button') $myvesta_element = str_replace('OK', $variable_value, $myvesta_element);
+        if ($element_name == 'button') $myvesta_element = str_replace('OK', $variable_value, $myvesta_element);
         else if ($element_name == 'button_gray') $myvesta_element = str_replace('Cancel', $variable_value, $myvesta_element);
         else if ($element_name == 'textarea') $myvesta_element = str_replace('</textarea>', $variable_value.'</textarea>', $myvesta_element);
         else if ($element_name == 'listbox') {

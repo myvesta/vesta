@@ -1044,11 +1044,11 @@ Always ask for confirmation before:
 ### 4. Provide Informative Success/Error Messages
 ```php
 if ($return_var == 0) {
-    echo '<h2 style="color: #27c24c;">'.__('Success').'</h2>';
+    echo '<h2 style="color: #00b90a; font-weight: bold;">'.__('Success').'</h2>';
     echo '<p>'.__('WordPress has been successfully installed').'.</p>';
-    echo '<p><a href="http://'.$domain.'" target="_blank">'.__('Visit your website').'</a></p>';
+    echo '<p><a style="color: #007bff !important;" href="http://'.$domain.'" target="_blank">'.__('Visit your website').'</a></p>';
 } else {
-    echo '<h2 style="color: #ff6b6b;">'.__('Error').'</h2>';
+    echo '<h2 style="color: #ff6b6b; font-weight: bold;">'.__('Error').'</h2>';
     echo '<p>'.__('Installation failed').':</p>';
     echo '<pre>'.implode("\n", $output).'</pre>';
 }

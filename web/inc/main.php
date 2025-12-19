@@ -413,3 +413,9 @@ function is_it_mysql_or_mariadb() {
     if (isset($data['mariadb'])) $mysqltype='mariadb';
     return $mysqltype;
 }
+
+function die_if_variable_contains_single_quote($variable) {
+    if (strpos($variable, "'") !== false) {
+        die(__('Variable cannot contain single quote').': '.$variable);
+    }
+}
