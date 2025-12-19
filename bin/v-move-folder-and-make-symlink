@@ -84,17 +84,33 @@ if [ "$FROMFOLDER" = "/home/$USER" ] && [ -d "$FROMFOLDER/conf" ]; then
     # with slashes on the end of the path of the folder
 fi
 
-# rsync -a "$FROMFOLDER/" "$TOFOLDER/"
-# with slashes on the end of the path of both folders
-
 mv "$FROMFOLDER" "$TOFOLDER"
 if [ "$?" -ne 0 ]; then
-    echo "Error happened, aborting"
-    exit 1
+    echo "== Error happened while moving the folder, falling back to rsync"
+    rsync -a "$FROMFOLDER/" "$TOFOLDER/"
+    # with slashes on the end of the path of both folders
+    if [ "$?" -ne 0 ]; then
+        echo "== Error happened while using rsync, aborting"
+        exit 1
+    fi
+
+    echo "== Rsyncing once again"
+    rsync -a "$FROMFOLDER/" "$TOFOLDER/" > /dev/null 2>&1
+
+    if [ "$?" -ne 0 ]; then
+        echo "== Error happened while using rsync, aborting"
+        exit 1
+    fi
 fi
 
 rm -rf "$FROMFOLDER"
 # without slash on the end of the path of the folder
+if [ "$?" -ne 0 ]; then
+    echo "== Error happened while removing the original folder, aborting"
+    echo "== Creating symlink anyway from $TOFOLDER to $FROMFOLDER"
+    ln -s "$TOFOLDER" "$FROMFOLDER"
+    exit 1
+fi
 
 ln -s "$TOFOLDER" "$FROMFOLDER"
 # without slashes on the end of the path of both folders
