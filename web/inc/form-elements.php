@@ -7,7 +7,7 @@ $start_from = strpos($myvesta_element_buffer, '<div id="confirm-div"');
 $myvesta_element_buffer = substr($myvesta_element_buffer, $start_from);
 //echo $myvesta_element_buffer;
 
-function myvesta_get_element($element_name, $label=null, $variable_name=null, $variable_value=null, $selected_value=null, $style='', $replace_or_add_style='replace', $link_text=null, $link_url=null) {
+function myvesta_get_element($element_name, $label=null, $variable_name=null, $variable_value=null, $selected_value=null, $style='', $replace_or_add_style='replace', $link_text=null, $link_url=null, $disabled=false) {
     global $myvesta_element_buffer;
 
     $variable_name_yes = 'yes';
@@ -95,6 +95,8 @@ function myvesta_get_element($element_name, $label=null, $variable_name=null, $v
             $myvesta_element = str_replace('confirm-div-button-no', $variable_name_no, $myvesta_element);
         }
     }
+
+    if ($disabled) $myvesta_element = str_replace('data-element-style-begin="1"', 'disabled="disabled" data-element-style-begin="1"', $myvesta_element);
 
     if ($style != '') {
         if ($replace_or_add_style == 'replace') $myvesta_element = myvesta_str_replace_once_between_including_borders($myvesta_element, 'data-element-style-begin="1" style="', 'data-element-style-end="1"', 'style="'.$style.'"');
@@ -203,12 +205,7 @@ function myvesta_hide_floating_div() {
 }
 
 function myvesta_get_close_button() {
-    $myvesta_element = '<button id="close-floating-div-button" class="button cancel" style="margin-right: 10px; width: 110px;">'.__('Close').'</button>';
-    $myvesta_element .= '<script>
-        document.getElementById("close-floating-div-button").addEventListener("click", function() {
-            hideFloatingDiv();
-        });
-    </script>';
+    $myvesta_element = '<button id="close-floating-div-button" class="button cancel close-floating-div-button-class" style="margin-right: 10px; width: 110px;">'.__('Close').'</button>';
     return $myvesta_element;
 }
 

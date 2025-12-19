@@ -80,6 +80,11 @@ document.addEventListener('DOMContentLoaded', function () {
     $('#floating-center-div-right-close').on('click', function() {
         hideFloatingDiv();
     });
+    $(document).on('click', '.close-floating-div-button-class', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        hideFloatingDiv();
+    });
 
     $("#floating-center-div").on("submit", "#floating-center-div-form", function(e) {
         FloatingEvent = e;

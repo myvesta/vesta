@@ -17,8 +17,6 @@ if ($is_wordpress_installed == '0') {
     exit;
 }
 
-echo myvesta_open_form('/ajax/web/wordpress/router.php'); // send form to router.php
-echo myvesta_get_hidden_fields();
 //  Always use escapeshellarg for all arguments to avoid shell injection
 $cmd = VESTA_CMD."v-list-web-domains ".escapeshellarg($myvesta_logged_user) ." json";
 $output = '';
@@ -33,12 +31,22 @@ if ($return_var != 0) {
 $output = implode("\n", $output);
 $domains_output = json_decode($output, true);
 $domains = array();
+$count_domains = 0;
 foreach ($domains_output as $domain_key => $domain_data) {
     if ($domain_key == $domain) continue;
     $domains[$domain_key] = $domain_key;
+    $count_domains++;
 }
-echo myvesta_get_element('listbox', __('Select the domain to clone the WordPress to').':', 'domain2', $domains, $domain);
 
+if ($count_domains == 0) {
+    echo __('You need to create at least one domain/subdomain to clone the WordPress to').'.<br /><br />';
+    echo myvesta_get_close_button();
+    exit;
+}
+
+echo myvesta_open_form('/ajax/web/wordpress/router.php'); // send form to router.php
+echo myvesta_get_hidden_fields();
+echo myvesta_get_element('listbox', __('Select the domain to clone the WordPress to').':', 'domain2', $domains, $domain);
 echo myvesta_get_element('button', '', 'wordpress_clone_step2', __('Clone WordPress'), null, 'width: 200px;', 'add');
 echo myvesta_close_form();
 exit;
