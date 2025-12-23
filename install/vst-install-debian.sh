@@ -1952,7 +1952,7 @@ $VESTA/bin/v-add-cron-job 'admin' '20' '00' '*' '*' '*' "$command"
 command="sudo $VESTA/bin/v-update-sys-rrd"
 $VESTA/bin/v-add-cron-job 'admin' '*/5' '*' '*' '*' '*' "$command"
 command="sudo $VESTA/bin/v-fix-website-permissions-for-all-websites-only-php"
-$VESTA/bin/v-add-cron-job 'admin' '05' '03' '*' '*' '*' "$command"
+$VESTA/bin/v-add-cron-job 'admin' '05' '03' '*' '*' '*' "$command" '' 'yes' 'yes'
 command="sudo $VESTA/bin/v-df-snapshot-make"
 $VESTA/bin/v-add-cron-job 'admin' '05' '04' '*' '*' '*' "$command"
 command="sudo $VESTA/bin/v-df-snapshot-logs-cleaner"

@@ -19,7 +19,16 @@ month=$5
 wday=$6
 command=$(echo $7 |sed "s/'/%quote%/g")
 job=$8
-restart=$9
+
+restart='yes'
+if [ "$9" = 'no' ]; then
+    restart='no'
+fi
+
+suspended='no'
+if [ "${10}" = 'yes' ]; then
+    suspended='yes'
+fi
 
 # Includes
 source $VESTA/func/main.sh
@@ -54,7 +63,7 @@ date=$(echo "$time_n_date" |cut -f 2 -d \ )
 
 # Concatenating cron string
 str="JOB='$job' MIN='$min' HOUR='$hour' DAY='$day' MONTH='$month' WDAY='$wday'"
-str="$str CMD='$command' SUSPENDED='no' TIME='$time' DATE='$date'"
+str="$str CMD='$command' SUSPENDED='$suspended' TIME='$time' DATE='$date'"
 
 # Adding to crontab
 echo "$str" >> $VESTA/data/users/$user/cron.conf
@@ -77,8 +86,10 @@ sync_cron_jobs
 increase_user_value $user '$U_CRON_JOBS'
 
 # Restarting crond
-$BIN/v-restart-cron
-check_result $? "Cron restart failed" >/dev/null
+if [ "$restart" = "yes" ]; then
+    $BIN/v-restart-cron
+    check_result $? "Cron restart failed" >/dev/null
+fi
 
 # Logging
 log_history "added cron job $job"
