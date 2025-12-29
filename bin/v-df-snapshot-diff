@@ -13,16 +13,38 @@ declare -A FILE1
 declare -A FILE2
 declare -A FILED
 
-file1=$1
-file2=$2
-
-if [[ ! "$file1" =~ ^/usr/local/vesta/data/df/snapshot-.*\.txt$ ]]; then
-    file1="/usr/local/vesta/data/df/$file1"
+if [ $# -eq 0 ] || [ "$1" = "" ]; then
+    file1=$(/usr/local/vesta/bin/v-df-snapshot-get-latest-files 2)
+else
+    file1=$1
+    if [[ ! "$file1" =~ ^/usr/local/vesta/data/df/snapshot-.*\.txt$ ]]; then
+        if [ -f "/usr/local/vesta/data/df/$file1" ]; then
+            file1="/usr/local/vesta/data/df/$file1"
+        else
+            if [[ "$file1" =~ ^[0-9]+$ ]]; then
+                file1=$(/usr/local/vesta/bin/v-df-snapshot-get-latest-files $file1)
+            fi
+        fi
+    fi
+fi
+if [ $# -lt 2 ] || [ "$2" = "" ]; then
+    file2=$(/usr/local/vesta/bin/v-df-snapshot-get-latest-files 1)
+else
+    file2=$2
+    if [[ ! "$file2" =~ ^/usr/local/vesta/data/df/snapshot-.*\.txt$ ]]; then
+        if [ -f "/usr/local/vesta/data/df/$file2" ]; then
+            file2="/usr/local/vesta/data/df/$file2"
+        else
+            if [[ "$file2" =~ ^[0-9]+$ ]]; then
+                file2=$(/usr/local/vesta/bin/v-df-snapshot-get-latest-files $file2)
+            fi
+        fi
+    fi
 fi
 
-if [[ ! "$file2" =~ ^/usr/local/vesta/data/df/snapshot-.*\.txt$ ]]; then
-    file2="/usr/local/vesta/data/df/$file2"
-fi
+echo "Comparing file1: $file1"
+echo "Comparing file2: $file2"
+echo "--------------------------------"
 
 if [ ! -f "$file1" ]; then
     echo "File $file1 not found"
@@ -35,10 +57,20 @@ if [ ! -f "$file2" ]; then
 fi
 
 timestamp=$(date +%Y-%m-%d-%H-%M-%S)
-mkdir -p /usr/local/vesta/data/df-diff
-file0="/usr/local/vesta/data/df-diff/diff-$timestamp.txt"
-file0s="/usr/local/vesta/data/df-diff/diff-size-sorted-$timestamp.txt"
-file0f="/usr/local/vesta/data/df-diff/diff-folder-sorted-$timestamp.txt"
+folder="/usr/local/vesta/data/df-diff"
+
+# If root partition is full, use /dev/shm as temporary folder
+if [ $(df -m / | awk 'NR==2 {print $4}') -lt 5 ]; then
+    folder="/dev/shm/myvesta-df-diff"
+    if [ -d "$folder" ]; then
+        rm -rf $folder
+    fi
+fi
+
+mkdir -p $folder
+file0="$folder/diff-$timestamp.txt"
+file0s="$folder/diff-size-sorted-$timestamp.txt"
+file0f="$folder/diff-folder-sorted-$timestamp.txt"
 touch $file0
 
 # Let's load the first file and fill the array FILE1
@@ -86,6 +118,31 @@ done < "$file2"
 chmod 600 $file0 $file0s $file0f
 chown root:root $file0 $file0s $file0f
 
+if [ "$folder" = "/dev/shm/myvesta-df-diff" ]; then
+    mv $folder/diff-$timestamp.txt /usr/local/vesta/data/df-diff/diff-$timestamp.txt
+    if [ "$?" -eq 0 ]; then
+        echo "$folder/diff-$timestamp.txt moved to /usr/local/vesta/data/df-diff/diff-$timestamp.txt"
+        folder="/usr/local/vesta/data/df-diff"
+        file0="$folder/diff-$timestamp.txt"
+    else
+        echo "Error: Failed to move $folder/diff-$timestamp.txt to /usr/local/vesta/data/df-diff"
+    fi
+    mv $folder/diff-size-sorted-$timestamp.txt /usr/local/vesta/data/df-diff/diff-size-sorted-$timestamp.txt
+    if [ "$?" -eq 0 ]; then
+        echo "$folder/diff-size-sorted-$timestamp.txt moved to /usr/local/vesta/data/df-diff/diff-size-sorted-$timestamp.txt"
+        file0s="$folder/diff-size-sorted-$timestamp.txt"
+    else
+        echo "Error: Failed to move $folder/diff-size-sorted-$timestamp.txt to /usr/local/vesta/data/df-diff"
+    fi
+    mv $folder/diff-folder-sorted-$timestamp.txt /usr/local/vesta/data/df-diff/diff-folder-sorted-$timestamp.txt
+    if [ "$?" -eq 0 ]; then
+        echo "$folder/diff-folder-sorted-$timestamp.txt moved to /usr/local/vesta/data/df-diff/diff-folder-sorted-$timestamp.txt"
+        file0f="$folder/diff-folder-sorted-$timestamp.txt"
+    else
+        echo "Error: Failed to move $folder/diff-folder-sorted-$timestamp.txt to /usr/local/vesta/data/df-diff"
+    fi
+fi
+
 echo "Done."
 echo "You can do:"
 echo "mcview $file0"
@@ -98,5 +155,18 @@ echo "--------------------------------"
 echo "Here is the first 30 lines of the diff, sorted by folders (in MB):"
 head -n 30 $file0f
 echo "--------------------------------"
+
+if [ -d "/dev/shm/myvesta-df" ]; then
+    find $folder -type f -mtime +1 -delete
+    if [ -z "$(ls -A /dev/shm/myvesta-df)" ]; then
+        rm -rf /dev/shm/myvesta-df
+    fi
+fi
+if [ -d "/dev/shm/myvesta-df-diff" ]; then
+    find $folder -type f -mtime +0 -delete
+    if [ -z "$(ls -A /dev/shm/myvesta-df-diff)" ]; then
+        rm -rf /dev/shm/myvesta-df-diff
+    fi
+fi
 
 exit 0

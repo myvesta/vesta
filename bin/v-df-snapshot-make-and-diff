@@ -1,0 +1,16 @@
+#!/bin/bash
+# info: Make a snapshot of the disk usage and a diff between the two latest snapshots
+# options: NONE
+
+echo "--------------------------------"
+echo "Making a fresh snapshot of the disk usage:"
+echo "--------------------------------"
+/usr/local/vesta/bin/v-df-snapshot-make
+echo "--------------------------------"
+echo ""
+echo "Making a diff between the two latest snapshots:"
+echo "--------------------------------"
+/usr/local/vesta/bin/v-df-snapshot-diff
+echo "--------------------------------"
+
+exit 0

@@ -4,6 +4,11 @@
 
 folder="/usr/local/vesta/data/df"
 
+# If root partition is full, use /dev/shm as temporary folder
+if [ $(df -m / | awk 'NR==2 {print $4}') -lt 5 ]; then
+    folder="/dev/shm/myvesta-df"
+fi
+
 mkdir -p $folder
 timestamp=$(date +%Y-%m-%d-%H-%M-%S)
 
@@ -49,4 +54,33 @@ du --max-depth=1 -m -x /var/log >> $folder/snapshot-$timestamp.txt 2>/dev/null
 chmod 600 $folder/snapshot-$timestamp.txt
 chown root:root $folder/snapshot-$timestamp.txt
 
-exit 0
+return_code=0
+
+if [ "$folder" = "/dev/shm/myvesta-df" ]; then
+    mv $folder/snapshot-$timestamp.txt /usr/local/vesta/data/df/snapshot-$timestamp.txt
+    if [ "$?" -eq 0 ]; then
+        rm -f $folder/snapshot-$timestamp.txt
+        # echo "Snapshot moved to /usr/local/vesta/data/df and temporary folder deleted"
+    else
+        if [ -f "/usr/local/vesta/data/df/snapshot-$timestamp.txt" ]; then
+            rm -f /usr/local/vesta/data/df/snapshot-$timestamp.txt
+        fi
+        echo "Error: Failed to move snapshot to /usr/local/vesta/data/df and temporary folder NOT deleted"
+        return_code=1
+    fi
+fi
+
+if [ -d "/dev/shm/myvesta-df" ]; then
+    find $folder -type f -mtime +1 -delete
+    if [ -z "$(ls -A /dev/shm/myvesta-df)" ]; then
+        rm -rf /dev/shm/myvesta-df
+    fi
+fi
+if [ -d "/dev/shm/myvesta-df-diff" ]; then
+    find $folder -type f -mtime +0 -delete
+    if [ -z "$(ls -A /dev/shm/myvesta-df-diff)" ]; then
+        rm -rf /dev/shm/myvesta-df-diff
+    fi
+fi
+
+exit $return_code

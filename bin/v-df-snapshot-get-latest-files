@@ -1,0 +1,61 @@
+#!/bin/bash
+# info: Get the latest snapshot file
+# options: [POSITION (1 or 2)]
+
+if [ $# -eq 1 ]; then
+    number=$1
+else
+    number=1
+fi
+
+if [ $number -eq 0 ]; then
+    echo "Error: Position must be greater than 0"
+    exit 1
+fi
+
+if [ $number -gt 10 ]; then
+    echo "Error: Position must be less than 10"
+    exit 1
+fi
+
+all_files=()
+
+if [ -d "/dev/shm/myvesta-df" ]; then
+     latest_files=$(ls -t /dev/shm/myvesta-df/snapshot-*.txt 2>/dev/null | head -n 10)
+    for file in $latest_files; do
+        all_files+=("$file")
+    done
+fi
+
+if [ -d "/usr/local/vesta/data/df" ]; then
+    latest_files=$(ls -t /usr/local/vesta/data/df/snapshot-*.txt 2>/dev/null | head -n 10)
+    for file in $latest_files; do
+        all_files+=("$file")
+    done
+fi
+
+declare -A file_mtimes
+
+for f in "${all_files[@]}"; do
+    if [ -f "$f" ]; then
+        # Use nanoseconds for precision if stat supports it, else fallback
+        mtime=$(stat -c %Y "$f" 2>/dev/null)
+        if [[ -z "$mtime" ]]; then
+            # BSD/macOS/others fallback
+            mtime=$(stat -f %m "$f" 2>/dev/null)
+        fi
+        file_mtimes["$f"]=$mtime
+    fi
+done
+
+# Sort files by mtime descending
+latest_files=($(for f in "${!file_mtimes[@]}"; do
+    printf '%s\t%s\n' "${file_mtimes[$f]}" "$f"
+done | sort -r -n | awk -F"\t" '{print $2}'))
+
+# Now: latest_files[0] is the newest file, latest_files[1] is the next oldest, etc.
+
+((number--))
+echo ${latest_files[$number]}
+
+exit 0

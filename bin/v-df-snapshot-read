@@ -1,0 +1,66 @@
+#!/bin/bash
+# info: Read a snapshot of the disk usage
+# options: [FILE] [GREP]
+#
+# The function reads a snapshot of the disk usage.
+# If FILE is not provided, it will read the latest snapshot.
+# If GREP is provided, it will only read the directories that match the grep pattern.
+
+if [ $# -eq 0 ] || [ "$1" = "" ]; then
+    file=$(/usr/local/vesta/bin/v-df-snapshot-get-latest-files 1)
+else
+    file=$1
+    if [[ ! "$file" =~ ^/usr/local/vesta/data/df/snapshot-.*\.txt$ ]]; then
+        if [ -f "/usr/local/vesta/data/df/$file" ]; then
+            file="/usr/local/vesta/data/df/$file"
+        else
+            if [[ "$file" =~ ^[0-9]+$ ]]; then
+                file=$(/usr/local/vesta/bin/v-df-snapshot-get-latest-files $file)
+            fi
+        fi
+    fi
+fi
+echo "file: $file"
+
+grep=""
+if [ $# -ge 2 ]; then
+    grep=$2
+fi
+
+if [ ! -f "$file" ]; then
+    echo "File $file not found"
+    exit 1
+fi
+
+while IFS=$'\t' read SIZE DIRECTORY; do
+    [[ -z "$DIRECTORY" ]] && continue
+    [[ "$DIRECTORY" = "total" ]] && continue
+    if [ ! -z "$grep" ]; then
+        if [[ ! "$DIRECTORY" =~ "$grep" ]]; then
+            continue
+        fi
+    fi
+    if find "$DIRECTORY" -mindepth 1 -maxdepth 1 -type d | grep -q .; then
+        DIRECTORY="$DIRECTORY (with subfolders)"
+    fi
+    length=${#SIZE}
+    if [ $length -eq 1 ]; then
+        separator="       "
+    elif [ $length -eq 2 ]; then
+        separator="      "
+    elif [ $length -eq 3 ]; then
+        separator="     "
+    elif [ $length -eq 4 ]; then
+        separator="    "
+    elif [ $length -eq 5 ]; then
+        separator="   "
+    elif [ $length -eq 6 ]; then
+        separator="  "
+    else
+        separator=" "
+    fi
+
+    echo "$SIZE MB$separator$DIRECTORY"
+done < "$file"
+
+exit 0
