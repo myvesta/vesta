@@ -312,7 +312,7 @@ echo "SEARCH_FOR_CONFIGS_DATABASE_NAME     = $SEARCH_FOR_CONFIGS_DATABASE_NAME"
 echo "SEARCH_FOR_CONFIGS_DATABASE_USERNAME = $SEARCH_FOR_CONFIGS_DATABASE_USERNAME"
 echo "EXCLUDE_UPLOADS = $EXCLUDE_UPLOADS"
 echo "==============================================================================="
-if [ ! -z "$NO_PROMPT" ]; then
+if [ -z "$NO_PROMPT" ]; then
     read -p "=== Press Enter to continue ==="
 fi
 
@@ -404,14 +404,14 @@ fi
 
 echo "=== Replacing $FROM_DOMAIN to $TO_DOMAIN by searching in folder $TO_FOLDER"
 REGEXP_FROM_DOMAIN="${FROM_DOMAIN//\./\\.}"
-grep -rl "$REGEXP_FROM_DOMAIN" $TO_FOLDER | xargs sed -i "s#$REGEXP_FROM_DOMAIN#$TO_DOMAIN#g"
+grep -rl "$REGEXP_FROM_DOMAIN" $TO_FOLDER | xargs sed -i "s#$REGEXP_FROM_DOMAIN#$TO_DOMAIN#g" > /dev/null 2>&1
 if [ "$FROM_USER" != "$TO_USER" ]; then
     echo "=== Replacing /home/$FROM_USER/ to /home/$TO_USER/ by searching in folder $TO_FOLDER"
-    grep -rl "/home/$FROM_USER/" $TO_FOLDER | xargs sed -i "s#/home/$FROM_USER/#/home/$TO_USER/#g"
+    grep -rl "/home/$FROM_USER/" $TO_FOLDER | xargs sed -i "s#/home/$FROM_USER/#/home/$TO_USER/#g" > /dev/null 2>&1
 fi
 if [ ! -z "$SEARCH_FOR_CONFIGS_DATABASE_NAME" ]; then
     echo "=== Replacing ${FROM_DATABASE_NAME} to ${TO_DATABASE_NAME} by searching in folder $TO_FOLDER [SEARCH_FOR_CONFIGS_DATABASE_NAME]"
-    grep -rl "${FROM_DATABASE_NAME}" $TO_FOLDER | xargs sed -i "s#${FROM_DATABASE_NAME}#${TO_DATABASE_NAME}#g"
+    grep -rl "${FROM_DATABASE_NAME}" $TO_FOLDER | xargs sed -i "s#${FROM_DATABASE_NAME}#${TO_DATABASE_NAME}#g" > /dev/null 2>&1
 fi
 if [ ! -z "$SEARCH_FOR_CONFIGS_DATABASE_USERNAME" ]; then
     DO_SEARCH_FOR_CONFIGS_DATABASE_USERNAME=1;
@@ -420,7 +420,7 @@ if [ ! -z "$SEARCH_FOR_CONFIGS_DATABASE_USERNAME" ]; then
     fi
     if [ $DO_SEARCH_FOR_CONFIGS_DATABASE_USERNAME -eq 1 ]; then
         echo "=== Replacing ${FROM_DATABASE_USERNAME} to ${TO_DATABASE_USERNAME} by searching in folder $TO_FOLDER [SEARCH_FOR_CONFIGS_DATABASE_USERNAME]"
-        grep -rl "${FROM_DATABASE_USERNAME}" $TO_FOLDER | xargs sed -i "s#${FROM_DATABASE_USERNAME}#${TO_DATABASE_USERNAME}#g"
+        grep -rl "${FROM_DATABASE_USERNAME}" $TO_FOLDER | xargs sed -i "s#${FROM_DATABASE_USERNAME}#${TO_DATABASE_USERNAME}#g" > /dev/null 2>&1
     fi
 fi
 
