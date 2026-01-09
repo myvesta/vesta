@@ -36,6 +36,7 @@ fi
 #----------------------------------------------------------#
 
 log=$VESTA/log/backup.log
+last_log_error=$VESTA/log/last-backup-error.log
 
 # $BIN/v-check-vesta-license >/dev/null
 
@@ -72,6 +73,7 @@ for user in $(grep '@' /etc/passwd |cut -f1 -d:); do
             FINAL_STATUS='CONTAINS ERRORS !!!'
             FINAL_CODE=1
             echo -e "=== Backup failed for user '$user' with status $STATUS\n" >> $log
+            tail -n 5 $log > $last_log_error
         else
             echo -e "=== Backup successful for user '$user'\n" >> $log
         fi
