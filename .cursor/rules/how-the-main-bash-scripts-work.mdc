@@ -56,19 +56,19 @@ Usage: v-add-user USER PASSWORD EMAIL [PACKAGE] [FNAME] [LNAME]
       - `add_web_config "$PROXY_SYSTEM" "$PROXY_TEMPLATE.tpl"`
     - $WEB_SYSTEM has value 'apache2' (taken from the '/usr/local/vesta/conf/vesta.conf' file) and $WEB_TEMPLATE has value (for example) 'PHP-FPM-82' (taken from the '/usr/local/vesta/data/users/test/user.conf' file).
     - $PROXY_SYSTEM has value 'nginx' (taken from the '/usr/local/vesta/conf/vesta.conf' file) and $PROXY_TEMPLATE has value (for example) 'hosting' (taken from the '/usr/local/vesta/data/users/test/user.conf' file).
-    - The function 'add_web_config' is defined in 'func\domain.sh'
+    - The function `add_web_config` is defined in 'func\domain.sh'
     - Because the 'PHP-FPM-82' apache template is chosen, the function reads files 'PHP-FPM-82.tpl', 'PHP-FPM-82.stpl', and 'PHP-FPM-82.sh' files from the '/usr/local/vesta/data/templates/web/apache2' folder (in this project you can find it in 'example-of-linux-root-folder\usr\local\vesta\data\templates\web\apache2' folder).
     - The function 'add_web_config' parsed 'PHP-FPM-82.tpl' and 'PHP-FPM-82.stpl' files, and executed 'PHP-FPM-82.sh' file.
-    - Because the 'hosting' nginx template is chosen, the function reads the files 'hosting.tpl' and 'hosting.stpl files from the '/usr/local/vesta/data/templates/web/nginx' folder (in this project you can find it in 'example-of-linux-root-folder\usr\local\vesta\data\templates\web\apache2' folder).
-    - The function 'add_web_config' parsed 'hosting.tpl' and 'hosting.stpl' files.
+    - Because the 'hosting' nginx template is chosen, the function  `add_web_config` reads the files 'hosting.tpl' and 'hosting.stpl files from the '/usr/local/vesta/data/templates/web/nginx' folder (in this project you can find it in 'example-of-linux-root-folder\usr\local\vesta\data\templates\web\apache2' folder).
+    - The function `add_web_config` parsed 'hosting.tpl' and 'hosting.stpl' files.
     - 'PHP-FPM-82.sh' execution made a file '/etc/php/8.2/fpm/pool.d/wp.deb12.localhost.dev.conf' (in this project you can find that file in 'example-of-linux-root-folder\etc\php\8.2\fpm\pool.d\wp.deb12.localhost.dev.conf') and restarted the 'php8.2-fpm' service by executing `systemctl restart php8.2-fpm` to load new '/etc/php/8.2/fpm/pool.d/wp.deb12.localhost.dev.conf' file.
-    - As a result of function 'add_web_config', in the '/home/test/conf/web' folder (the 'example-of-linux-root-folder\home\test\conf\web' folder in this project), the script created the following files:
+    - As a result of the `add_web_config` function, in the '/home/test/conf/web' folder (the 'example-of-linux-root-folder\home\test\conf\web' folder in this project), the script created the following files:
       - wp.deb12.localhost.dev.apache2.conf
       - wp.deb12.localhost.dev.apache2.ssl.conf
       - wp.deb12.localhost.dev.nginx.conf
       - wp.deb12.localhost.dev.nginx.ssl.conf
     - These files contain virtualhost config files for Apache2 and nginx.
-    - The function 'add_web_config' also executed:
+    - The function `add_web_config` also executed:
       - `echo "Include $conf" >> /etc/$1/conf.d/vesta.conf`
       - `echo "include $conf;" >> /etc/$1/conf.d/vesta.conf`
     - As a result of these lines, virtualhost config files 'includes' are added to '/etc/apache2/conf.d/vesta.conf' and '/etc/nginx/conf.d/vesta.conf' (in this project you will find those two files in 'example-of-linux-root-folder\etc\apache2\conf.d\vesta.conf' and 'example-of-linux-root-folder\etc\nginx\conf.d\vesta.conf').

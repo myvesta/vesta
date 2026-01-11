@@ -156,15 +156,7 @@ if [ ! -z "$WEB_SYSTEM" ] && [ "$WEB" != '*' ]; then
 
         # backuping php-fpm conf file
         if [[ $TPL == "PHP-FPM-"* ]]; then
-            fpm_tpl_ver=${TPL:8:2}
-            fpm_ver="${TPL:8:1}.${TPL:9:1}"
-            fpm_folder="$fpm_ver/fpm/pool.d"
-            fpm_path="$fpm_ver/fpm/pool.d/$domain.conf"
-            if [[ $TPL == *"-ioncube" ]]; then
-                fpm_folder="$fpm_ver/fpm/pool.d-ioncube"
-                fpm_path="$fpm_ver/fpm/pool.d-ioncube/$domain.conf"
-            fi
-            fpm_original_path="/etc/php/$fpm_path"
+            get_fpm_paths_from_template "$domain" "$WEB_SYSTEM" "$TPL"
             fpm_dest_path="$tmpdir/web/$domain/php/$fpm_path"
             fpm_dest_folder="$tmpdir/web/$domain/php/$fpm_folder"
             if [ -f "$fpm_original_path" ]; then

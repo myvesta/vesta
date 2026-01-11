@@ -237,6 +237,50 @@ add_web_config() {
 
     if [[ "$2" =~ ^PHP-FPM ]]; then
         ensure_poold_folders_not_empty
+        fix_group_ownership_for_pool_d_config_file "$user" "$domain" "$1" "$2"
+    fi
+}
+
+fix_group_ownership_for_pool_d_config_file() {
+    local user=$1
+    local domain=$2
+    local web_system=$3
+    local template=$4
+    local hostname=$(hostname)
+
+    if [[ "$template" == "PHP-FPM-"* ]] && [ "$domain" = "$hostname" ]; then
+        get_fpm_paths_from_template "$domain" "$web_system" "$template"
+        if [ ! -z "$fpm_original_path" ] && [ -f "$fpm_original_path" ]; then
+            sed -i "/^group =/c\group = www-data" $fpm_original_path
+            if [ $fpm_ioncube -eq 0 ]; then
+                systemctl reset-failed php$fpm_ver-fpm
+                systemctl restart php$fpm_ver-fpm
+            fi
+            if [ $fpm_ioncube -eq 1 ]; then
+                systemctl reset-failed php$fpm_ver-fpm-ioncube
+                systemctl restart php$fpm_ver-fpm-ioncube
+            fi
+        fi
+    fi
+}
+
+get_fpm_paths_from_template() {
+    local domain=$1
+    local web_system=$2
+    local template=$3
+    
+    if [[ $template == "PHP-FPM-"* ]]; then
+        fpm_tpl_ver=${template:8:2}
+        fpm_ver="${template:8:1}.${template:9:1}"
+        fpm_folder="$fpm_ver/fpm/pool.d"
+        fpm_path="$fpm_ver/fpm/pool.d/$domain.conf"
+        fpm_ioncube=0;
+        if [[ $template == *"-ioncube" ]]; then
+            fpm_ioncube=1;
+            fpm_folder="$fpm_ver/fpm/pool.d-ioncube"
+            fpm_path="$fpm_ver/fpm/pool.d-ioncube/$domain.conf"
+        fi
+        fpm_original_path="/etc/php/$fpm_path"
     fi
 }
 
