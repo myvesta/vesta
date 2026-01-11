@@ -224,6 +224,12 @@ add_web_config() {
         eval "$VESTA_WEB_CONF_CHANGE_TRIGGER $user $domain $1 'add'"
     fi
 
+    # Delete the pool.d config file of the previously selected PHP FPM version
+    if [[ "$template" == "PHP-FPM-"* ]]; then
+        get_fpm_paths_from_template "$domain" "$web_system" "$template"
+        delete_pool_d_config_file_except "$domain" "$fpm_original_path"
+    fi
+
     trigger="${2/%.tpl/.sh}"
     if [[ "$2" =~ stpl$ ]]; then
         trigger="${2/%.stpl/.sh}"
@@ -237,7 +243,12 @@ add_web_config() {
 
     if [[ "$2" =~ ^PHP-FPM ]]; then
         ensure_poold_folders_not_empty
-        fix_group_ownership_for_pool_d_config_file "$user" "$domain" "$1" "$2"
+
+        # Fix group=www-data in pool.d config file if domain is the same as hostname
+        local hostname=$(hostname)
+        if [ "$domain" = "$hostname" ]; then
+            fix_group_ownership_for_pool_d_config_file "$user" "$domain" "$1" "$2"
+        fi
     fi
 }
 
@@ -246,9 +257,8 @@ fix_group_ownership_for_pool_d_config_file() {
     local domain=$2
     local web_system=$3
     local template=$4
-    local hostname=$(hostname)
 
-    if [[ "$template" == "PHP-FPM-"* ]] && [ "$domain" = "$hostname" ]; then
+    if [[ "$template" == "PHP-FPM-"* ]]; then
         get_fpm_paths_from_template "$domain" "$web_system" "$template"
         if [ ! -z "$fpm_original_path" ] && [ -f "$fpm_original_path" ]; then
             sed -i "/^group =/c\group = www-data" $fpm_original_path
@@ -659,6 +669,11 @@ get_domain_values() {
 
 # Ensure that pool.d folders are not empty
 ensure_poold_folders_not_empty () {
+    local D='';
+    local BD='';
+    local POOLD='';
+    local ls='';
+    
     for D in /etc/php/*; do
         if [ -d "${D}" ]; then
             BD=$(basename ${D})
@@ -677,6 +692,44 @@ ensure_poold_folders_not_empty () {
                         fi
                     fi
                 # fi
+            fi
+        fi
+    done
+}
+
+# Delete the pool.d config file of the previously selected PHP FPM version
+delete_pool_d_config_file_except() {
+    local domain=$1
+    local except=$2
+    local D='';
+    local BD='';
+    local POOLD='';
+    local file='';
+    local service_name='';
+    for D in /etc/php/*; do
+        if [ -d "${D}" ]; then
+            BD=$(basename ${D})
+            POOLD="${D}/fpm/pool.d"
+            if [ -d "$POOLD" ]; then
+                file="/etc/php/$BD/fpm/pool.d/$domain.conf"
+                if [ -f "$file" ] && [ "$file" != "$except" ]; then
+                    rm $file
+                    ensure_poold_folders_not_empty
+                    service_name="php${BD}-fpm"
+                    systemctl reset-failed $service_name
+                    systemctl restart $service_name
+                fi
+            fi
+            POOLD="${D}/fpm/pool.d-ioncube"
+            if [ -d "$POOLD" ]; then
+                file="/etc/php/$BD/fpm/pool.d-ioncube/$domain.conf"
+                if [ -f "$file" ] && [ "$file" != "$except" ]; then
+                    rm $file
+                    ensure_poold_folders_not_empty
+                    service_name="php${BD}-fpm-ioncube"
+                    systemctl reset-failed $service_name
+                    systemctl restart $service_name
+                fi
             fi
         fi
     done
