@@ -374,6 +374,10 @@ if (!empty($_POST['save'])) {
         $l_aliases = str_replace("\n", ',', $v_aliases);
         exec (VESTA_CMD."v-add-letsencrypt-domain ".$user." ".$v_domain." ".escapeshellarg($l_aliases)." no", $output, $return_var);
         check_return_code($return_var,$output);
+        if (!empty($_SESSION['error_msg'])) {
+            $_SESSION['error_msg'] = str_replace(" ", "&nbsp;", $_SESSION['error_msg']);
+            $LE_ERROR=true;
+        }
         unset($output);
         $v_letsencrypt = 'yes';
         $v_ssl = 'yes';

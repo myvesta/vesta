@@ -41,6 +41,11 @@ encode_base64() {
     cat |base64 |tr '+/' '-_' |tr -d '\r\n='
 }
 
+simple_curl() {
+    curl --location --user-agent "myVesta" --insecure --retry 5 --retry-connrefused --silent "$1" --output "/dev/stdout"
+}
+simple_answer='';
+
 # Let's Encrypt v2 curl function
 query_le_v2() {
 
@@ -313,6 +318,8 @@ for auth in $authz; do
                     break
                 fi                
             fi
+            simple_answer=$(simple_curl "$url")
+            echo "[$(date)] : simple_answer=$simple_answer" >> /usr/local/vesta/log/letsencrypt.log
             i=$((i + 1))
             if ((i > 30)); then
                 break
@@ -321,7 +328,11 @@ for auth in $authz; do
         done
         if [[ "$status" -ne 200 ]]; then
             echo "[$(date)] : EXIT=Let's Encrypt validation status $status" >> /usr/local/vesta/log/letsencrypt.log
-            check_result $E_CONNECT "Let's Encrypt validation status $status"
+            final_error_message="Let's Encrypt validation status $status"
+            if [ ! -z "$simple_answer" ]; then
+                final_error_message+=$'\n\n'"$simple_answer"
+            fi
+            check_result $E_CONNECT "$final_error_message"
         fi
 
         i=$((i + 1))

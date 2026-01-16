@@ -57,6 +57,10 @@ log_event() {
     else
         LOG_TIME="$date $time $(basename $0)"
     fi
+    if ! [[ "$1" =~ ^-?[0-9]+$ ]]; then
+        echo "$LOG_TIME $2 [Error $1]" >> $VESTA/log/error.log
+        return
+    fi
     if [ "$1" -eq 0 ]; then
         echo "$LOG_TIME $2" >> $VESTA/log/system.log
     else

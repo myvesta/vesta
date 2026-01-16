@@ -52,6 +52,9 @@ elseif (!empty($_SESSION['error_msg'])):
         $('#dialog:ui-dialog').dialog('destroy');
         $('#dialog-message').dialog({
           modal: true,
+          <?php if (isset($LE_ERROR)): ?>
+          width: 800,
+          <?php endif; ?>
           buttons: {
             Ok: function() {
               $(this).dialog('close');
@@ -67,7 +70,11 @@ elseif (!empty($_SESSION['error_msg'])):
       });
     </script>
     <div id="dialog-message" title="">
+      <?php if (isset($LE_ERROR)): ?>
+      <p><?=$_SESSION['error_msg']?></p>
+      <?php else: ?>
       <p><?=htmlentities($_SESSION['error_msg'])?></p>
+      <?php endif; ?>
     </div>
   </div>
 <?php
