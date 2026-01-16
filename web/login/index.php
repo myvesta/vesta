@@ -1,7 +1,5 @@
 <?php
 
-if ($_SERVER['REQUEST_METHOD']=='HEAD') exit; // Prevent recreation of token by shitty browser add-ons
-
 define('NO_AUTH_REQUIRED',true);
 
 
@@ -166,9 +164,17 @@ if (empty($_SESSION['language'])) {
     }
 }
 
-// Generate CSRF token
-$token = bin2hex(file_get_contents('/dev/urandom', false, null, 0, 16));
-$_SESSION['token'] = $token;
+$generate_token = true;
+if (isset($_SESSION['token']) && isset($_SESSION['token_time']) && $_SESSION['token_time'] > time() - 5) {
+    $generate_token = false;
+}
+
+if ($generate_token) {
+    // Generate CSRF token
+    $token = bin2hex(file_get_contents('/dev/urandom', false, null, 0, 16));
+    $_SESSION['token'] = $token;
+    $_SESSION['token_time'] = time();
+}
 
 require_once($_SERVER['DOCUMENT_ROOT'].'/inc/i18n/'.$_SESSION['language'].'.php');
 require_once('../templates/header.html');
