@@ -602,20 +602,48 @@ is_alias_format_valid() {
     done
 }
 
-# IP format validator
+# IP format validator (supports IPv4 and IPv6)
 is_ip_format_valid() {
     object_name=${2-ip}
-    ip_regex='([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
-    ip_clean=$(echo "${1%/*}")
-    if ! [[ $ip_clean =~ ^$ip_regex\.$ip_regex\.$ip_regex\.$ip_regex$ ]]; then
-        check_result $E_INVALID "invalid $object_name format :: $1"
-    fi
-    if [ $1 != "$ip_clean" ]; then
-        ip_cidr="$ip_clean/"
-        ip_cidr=$(echo "${1#$ip_cidr}")
-        if [[ "$ip_cidr" -gt 32 ]] || [[ "$ip_cidr" =~ [:alnum:] ]]; then
-            check_result $E_INVALID "invalid $object_name format :: $1"
+    ip_input="$1"
+    ip_clean="${ip_input%/*}"
+    cidr="${ip_input#*/}"
+
+    ipv4_regex='^([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}$'
+    ipv6_regex_full='^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$'
+    ipv6_regex_short='^(([0-9a-fA-F]{1,4}:){1,7}|:):(([0-9a-fA-F]{1,4}:){1,7}|:)|^([0-9a-fA-F]{1,4}:){1,7}:$'
+
+    valid_ip=0
+    valid_cidr=1
+
+    ip_is_ipv6=0
+
+    # Check for IPv4
+    if [[ "$ip_clean" =~ $ipv4_regex ]]; then
+        valid_ip=1
+        if [[ "$ip_input" == *"/"* ]]; then
+            if ! [[ "$cidr" =~ ^[0-9]+$ ]] || [[ "$cidr" -lt 0 ]] || [[ "$cidr" -gt 32 ]]; then
+                valid_cidr=0
+            fi
         fi
+    fi
+
+    # Check for IPv6
+    if [[ "$valid_ip" -eq 0 ]]; then
+        # Check full form or compressed
+        if [[ "$ip_clean" =~ $ipv6_regex_full ]] || [[ "$ip_clean" =~ $ipv6_regex_short ]]; then
+            valid_ip=2
+            ip_is_ipv6=1
+            if [[ "$ip_input" == *"/"* ]]; then
+                if ! [[ "$cidr" =~ ^[0-9]+$ ]] || [[ "$cidr" -lt 0 ]] || [[ "$cidr" -gt 128 ]]; then
+                    valid_cidr=0
+                fi
+            fi
+        fi
+    fi
+
+    if [[ "$valid_ip" -eq 0 ]] || [[ "$valid_cidr" -eq 0 ]]; then
+        check_result $E_INVALID "invalid $object_name format :: $ip_input"
     fi
 }
 
