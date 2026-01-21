@@ -37,7 +37,15 @@ is_system_enabled "$FIREWALL_SYSTEM" 'FIREWALL_SYSTEM'
 #                       Action                             #
 #----------------------------------------------------------#
 
-if [ $ip_is_ipv6 -eq 0 ]; then
+skip_iptables_ban=0;
+if [ $ip_is_ipv6 -eq 1 ]; then
+    skip_iptables_ban=1;
+fi
+if [ ! -z "$WEB_FAIL2BAN_ONLY_NGINX" ]; then
+    skip_iptables_ban=1;
+fi
+
+if [ $skip_iptables_ban -eq 0 ]; then
     # Checking ip in banlist
     conf="$VESTA/data/firewall/banlist.conf"
     check_ip=$(grep "IP='$ip' CHAIN='$chain'" $conf 2>/dev/null)
