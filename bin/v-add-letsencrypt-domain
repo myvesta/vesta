@@ -318,8 +318,10 @@ for auth in $authz; do
                     break
                 fi                
             fi
-            simple_answer=$(simple_curl "$url")
-            echo "[$(date)] : simple_answer=$simple_answer" >> /usr/local/vesta/log/letsencrypt.log
+            if [ $i -eq 1 ] || [ $i -eq 10 ] || [ $i -eq 30 ]; then
+                simple_answer=$(simple_curl "$url")
+                echo "[$(date)] : simple_answer=$simple_answer" >> /usr/local/vesta/log/letsencrypt.log
+            fi
             i=$((i + 1))
             if ((i > 30)); then
                 break
