@@ -65,6 +65,9 @@ if [ "$queue" = "disk" ]; then
     else
         echo "0" > /usr/local/vesta/data/df/backup-size.txt
     fi
+    if [ -e "/root/myvesta-custom-df-count" ]; then
+        /root/myvesta-custom-df-count
+    fi
 fi
 
 #----------------------------------------------------------#
