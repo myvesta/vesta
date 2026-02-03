@@ -93,6 +93,7 @@ myhelp() {
     echo "inst v                = install myVesta"
     echo "inst p                = install multi-php"
     echo "inst pgw              = install php-gate"
+    echo "inst web-fail2ban     = install web-fail2ban"
     echo "inst r                = install new Roundcube"
     echo "inst memcached        = install memcached"
     echo "inst redis            = install Redis"
@@ -624,6 +625,14 @@ do
         wget -nv https://c.myvestacp.com/tools/phpgate/install-phpgate.sh -O /root/install-phpgate.sh
         chmod u+x /root/install-phpgate.sh
         /root/install-phpgate.sh
+    fi
+
+    if [ "$answer" = 'inst web-fail2ban' ] || [ "$answer" = 'INST WEB-FAIL2BAN' ]; then
+        echo "============================="
+        echo "== Installing web-fail2ban"
+        wget -nv http://dl.myvestacp.com/add-web-fail2ban.sh -O /root/add-web-fail2ban.sh
+        chmod u+x /root/add-web-fail2ban.sh
+        /root/add-web-fail2ban.sh
     fi
 
     if [ "$answer" = 'inst memcache' ] || [ "$answer" = 'inst memcached' ] || [ "$answer" = 'INST MEMCACHE' ] || [ "$answer" = 'INST MEMCACHED' ]; then
