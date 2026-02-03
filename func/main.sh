@@ -1306,3 +1306,14 @@ return_ok_if_user_is_unsuspended() {
     fi
     return $OK
 }
+
+# Function to recursively list all child PIDs of a given PID
+list_child_pids() {
+    local parent_pid=$1
+    local children
+    children=$(pgrep -P $parent_pid)
+    for child in $children; do
+        echo $child
+        list_child_pids $child
+    done
+}

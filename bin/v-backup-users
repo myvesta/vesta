@@ -4,14 +4,6 @@
 #
 # The function backups all system users.
 
-scriptname="v-backup-users"
-for pid in $(pidof -x "$scriptname"); do
-    if [ $pid != $$ ]; then
-        echo "[$(date)] : $scriptname : Process is already running with PID $pid"
-        exit 1
-    fi
-done
-
 #----------------------------------------------------------#
 #                    Variable&Function                     #
 #----------------------------------------------------------#
@@ -23,6 +15,30 @@ source /etc/profile
 # Includes
 source $VESTA/func/main.sh
 source $VESTA/conf/vesta.conf
+
+scriptname="v-backup-users"
+for pid in $(pidof -x "$scriptname"); do
+    if [ $pid != $$ ]; then
+        echo "[$(date)] : $scriptname : Process is already running with PID $pid"
+        active_seconds=$(ps -p $pid -o etimes=)
+        active_days=$(( active_seconds / 86400 ))
+        active_days_rounded=$(printf "%.0f" "$active_days")
+        if [ $active_days_rounded -gt 10 ]; then
+            echo "[$(date)] : $scriptname : Process is running for more than 10 days, killing it (active $active_days_rounded days)"
+            all_children=$(list_child_pids $pid)
+            for child_pid in $all_children; do
+                echo "[$(date)] : $scriptname : Killing child process $child_pid"
+                kill -9 $child_pid
+            done
+            echo "[$(date)] : $scriptname : Killing parent process $pid"
+            kill -9 $pid
+        else
+            echo "[$(date)] : $scriptname : Process is already running with PID $pid (active $active_days_rounded days)"
+            exit 1
+        fi
+    fi
+done
+
 
 ALLOW_MYSQL_REPAIR=1
 
