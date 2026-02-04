@@ -19,19 +19,19 @@ source $VESTA/conf/vesta.conf
 scriptname="v-backup-users"
 for pid in $(pidof -x "$scriptname"); do
     if [ $pid != $$ ]; then
-        echo "[$(date)] : $scriptname : Process is already running with PID $pid"
         active_seconds=$(ps -p $pid -o etimes=)
         active_days=$(( active_seconds / 86400 ))
         active_days_rounded=$(printf "%.0f" "$active_days")
         if [ $active_days_rounded -gt 10 ]; then
             echo "[$(date)] : $scriptname : Process is running for more than 10 days, killing it (active $active_days_rounded days)"
             all_children=$(list_child_pids $pid)
+            pid_list=""
             for child_pid in $all_children; do
-                echo "[$(date)] : $scriptname : Killing child process $child_pid"
-                kill -9 $child_pid
+                pid_list="$pid_list $child_pid"
             done
-            echo "[$(date)] : $scriptname : Killing parent process $pid"
-            kill -9 $pid
+            pid_list="$pid_list $pid"
+            echo "[$(date)] : $scriptname : Killing processes: $pid_list"
+            kill -9 $pid_list
         else
             echo "[$(date)] : $scriptname : Process is already running with PID $pid (active $active_days_rounded days)"
             exit 1
