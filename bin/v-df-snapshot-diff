@@ -122,22 +122,21 @@ if [ "$folder" = "/dev/shm/myvesta-df-diff" ]; then
     mv $folder/diff-$timestamp.txt /usr/local/vesta/data/df-diff/diff-$timestamp.txt
     if [ "$?" -eq 0 ]; then
         echo "$folder/diff-$timestamp.txt moved to /usr/local/vesta/data/df-diff/diff-$timestamp.txt"
-        folder="/usr/local/vesta/data/df-diff"
-        file0="$folder/diff-$timestamp.txt"
+        file0="/usr/local/vesta/data/df-diff/diff-$timestamp.txt"
     else
         echo "Error: Failed to move $folder/diff-$timestamp.txt to /usr/local/vesta/data/df-diff"
     fi
     mv $folder/diff-size-sorted-$timestamp.txt /usr/local/vesta/data/df-diff/diff-size-sorted-$timestamp.txt
     if [ "$?" -eq 0 ]; then
         echo "$folder/diff-size-sorted-$timestamp.txt moved to /usr/local/vesta/data/df-diff/diff-size-sorted-$timestamp.txt"
-        file0s="$folder/diff-size-sorted-$timestamp.txt"
+        file0s="/usr/local/vesta/data/df-diff/diff-size-sorted-$timestamp.txt"
     else
         echo "Error: Failed to move $folder/diff-size-sorted-$timestamp.txt to /usr/local/vesta/data/df-diff"
     fi
     mv $folder/diff-folder-sorted-$timestamp.txt /usr/local/vesta/data/df-diff/diff-folder-sorted-$timestamp.txt
     if [ "$?" -eq 0 ]; then
         echo "$folder/diff-folder-sorted-$timestamp.txt moved to /usr/local/vesta/data/df-diff/diff-folder-sorted-$timestamp.txt"
-        file0f="$folder/diff-folder-sorted-$timestamp.txt"
+        file0f="/usr/local/vesta/data/df-diff/diff-folder-sorted-$timestamp.txt"
     else
         echo "Error: Failed to move $folder/diff-folder-sorted-$timestamp.txt to /usr/local/vesta/data/df-diff"
     fi
@@ -157,13 +156,13 @@ head -n 30 $file0f
 echo "--------------------------------"
 
 if [ -d "/dev/shm/myvesta-df" ]; then
-    find $folder -type f -mtime +1 -delete
+    find /dev/shm/myvesta-df -type f -mtime +1 -delete
     if [ -z "$(ls -A /dev/shm/myvesta-df)" ]; then
         rm -rf /dev/shm/myvesta-df
     fi
 fi
 if [ -d "/dev/shm/myvesta-df-diff" ]; then
-    find $folder -type f -mtime +0 -delete
+    find /dev/shm/myvesta-df-diff -type f -mtime +0 -delete
     if [ -z "$(ls -A /dev/shm/myvesta-df-diff)" ]; then
         rm -rf /dev/shm/myvesta-df-diff
     fi
