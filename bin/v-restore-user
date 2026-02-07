@@ -79,6 +79,7 @@ EOF
 
 # FTP backup download function
 ftp_download() {
+    echo "Downloading ftp backup $1"
     source $VESTA/conf/ftp.backup.conf
     if [ -z "$PORT" ]; then
         PORT='21'
@@ -149,6 +150,7 @@ EOF
 
 # SFTP backup download function
 sftp_download() {
+    echo "Downloading sftp backup $1"
     source $VESTA/conf/sftp.backup.conf
     if [ -z "$PORT" ]; then
         PORT='22'
@@ -164,6 +166,7 @@ sftp_download() {
 
 # Google backup download function
 google_download() {
+    echo "Downloading google backup $1"
     source $VESTA/conf/google.backup.conf
     gsutil="$VESTA/3rdparty/gsutil/gsutil"
     export BOTO_CONFIG="$VESTA/conf/.google.backup.boto"
@@ -188,17 +191,21 @@ is_backup_available "$user" "$backup"
 #                       Action                             #
 #----------------------------------------------------------#
 
+downloaded=''
 # Checking local backup
 if [ ! -e "$BACKUP/$backup" ]; then
     if [[ "$BACKUP_SYSTEM" =~ "google" ]]; then
+        cd $BACKUP
         google_download $backup
         downloaded='yes'
     fi
     if [[ "$BACKUP_SYSTEM" =~ "sftp" ]] && [ -z "$downloaded" ]; then
+        cd $BACKUP # The bug was here for 10 years
         sftp_download $backup
         downloaded='yes'
     fi
     if [[ "$BACKUP_SYSTEM" =~ "ftp" ]] && [ -z "$downloaded" ]; then
+        cd $BACKUP # The bug was here for 10 years
         ftp_download $backup
         downloaded='yes'
     fi
@@ -812,6 +819,13 @@ cat $tmpdir/restore.log |$SENDMAIL -s "$subj" $email $notify
 
 # Deleting temporary data
 rm -rf $tmpdir
+
+if [ "$downloaded" = 'yes' ]; then
+    if [ -f $BACKUP/$backup ]; then
+        echo "Deleting backup file $BACKUP/$backup"
+        rm -rf $BACKUP/$backup
+    fi
+fi
 
 # Cleaning restore queue
 sed -i "/v-restore-user $user /d" $VESTA/data/queue/backup.pipe
