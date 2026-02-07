@@ -195,19 +195,25 @@ downloaded=''
 # Checking local backup
 if [ ! -e "$BACKUP/$backup" ]; then
     if [[ "$BACKUP_SYSTEM" =~ "google" ]]; then
-        cd $BACKUP
-        google_download $backup
-        downloaded='yes'
+        if [ ! -f "$BACKUP/$backup" ]; then
+            cd $BACKUP
+            google_download $backup
+            downloaded='yes'
+        fi
     fi
     if [[ "$BACKUP_SYSTEM" =~ "sftp" ]] && [ -z "$downloaded" ]; then
-        cd $BACKUP # The bug was here for 10 years
-        sftp_download $backup
-        downloaded='yes'
+        if [ ! -f "$BACKUP/$backup" ]; then
+            cd $BACKUP
+            sftp_download $backup
+            downloaded='yes'
+        fi
     fi
     if [[ "$BACKUP_SYSTEM" =~ "ftp" ]] && [ -z "$downloaded" ]; then
-        cd $BACKUP # The bug was here for 10 years
-        ftp_download $backup
-        downloaded='yes'
+        if [ ! -f "$BACKUP/$backup" ]; then
+            cd $BACKUP
+            ftp_download $backup
+            downloaded='yes'
+        fi
     fi
     if [ -z "$downloaded" ]; then
         check_result $E_NOTEXIST "backup $backup doesn't exist"
@@ -821,7 +827,7 @@ cat $tmpdir/restore.log |$SENDMAIL -s "$subj" $email $notify
 rm -rf $tmpdir
 
 if [ "$downloaded" = 'yes' ]; then
-    if [ -f $BACKUP/$backup ]; then
+    if [ -f "$BACKUP/$backup" ]; then
         echo "Deleting backup file $BACKUP/$backup"
         rm -rf $BACKUP/$backup
     fi
