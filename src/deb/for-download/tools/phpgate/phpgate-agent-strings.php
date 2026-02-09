@@ -67,7 +67,7 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
         "Bytespider" => -1,
         "Barkrowler" => -1,
         "SentiBot" => -1,
-        "Awario" => -1,
+        "AwarioBot" => -1,
         "cert-manager/v" => -1,
         "Mail.RU_Bot" => -1,
         "RSiteAuditor" => -1,
@@ -76,7 +76,8 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
         "Ruby" => -1,
         "ImagesiftBot" => -1,
         "Scrapy" => -1,
-        "SeznamBot" => -1
+        "SeznamBot" => -1,
+        "DataForSeoBot" => -1
     );
         // "GuzzleHttp" => -1,
         // "Dalvik" => 3,
