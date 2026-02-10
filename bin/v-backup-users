@@ -101,12 +101,13 @@ done
 if [ $FINAL_CODE -eq 1 ]; then
     touch /usr/local/vesta/data/df/backup-error.txt
     if [ -f /usr/local/vesta/data/df/backup-success.txt ]; then
-        rm /usr/local/vesta/data/df/backup-success.txt
+        rm /usr/local/vesta/data/df/backup-success.txt >/dev/null 2>&1
     fi
 else
     touch /usr/local/vesta/data/df/backup-success.txt
     if [ -f /usr/local/vesta/data/df/backup-error.txt ]; then
-        rm /usr/local/vesta/data/df/backup-error.txt
+        rm /usr/local/vesta/data/df/backup-error.txt >/dev/null 2>&1
+        rm $last_log_error >/dev/null 2>&1
     fi
 fi
 
