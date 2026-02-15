@@ -78,6 +78,11 @@ fi
 #                       Action                             #
 #----------------------------------------------------------#
 
+# If FROMFOLDER is not absolute path, make it absolute
+if [[ ! "$FROMFOLDER" = "/"* ]]; then
+    FROMFOLDER=$(cd "$FROMFOLDER"; pwd)
+fi
+
 if [ "$FROMFOLDER" = "/home/$USER" ] && [ -d "$FROMFOLDER/conf" ]; then
     # if we are moving myVesta home folder, we must remove immutable attribute from conf/ files
     chattr -R -i "$FROMFOLDER/conf/" > /dev/null 2>&1
