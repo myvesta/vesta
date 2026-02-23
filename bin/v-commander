@@ -251,6 +251,10 @@ do
             echo "============================="
             echo "== renewing sury.org gpg key"
             wget -nv -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+            if ! grep -q 'signed-by' /etc/apt/sources.list.d/php.list; then
+                wget -nv https://packages.sury.org/php/apt.gpg -O /usr/share/keyrings/debsuryorg-archive-keyring.gpg
+                sed -i "s|deb h|deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] h|g" /etc/apt/sources.list.d/php.list
+            fi
         else
             echo "== sury.org repository is not installed"
         fi
