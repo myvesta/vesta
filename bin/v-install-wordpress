@@ -52,6 +52,10 @@ is_object_unsuspended 'user' 'USER' "$user"
 # take --parameters
 source /usr/local/vesta/func/handle_parameters.sh
 
+if [ -f "/usr/local/vesta/conf/mysql8_installed" ]; then
+    MAX_DBUSER_LEN=32
+fi
+
 if [ -z "$database" ]; then
     if [ ! -z "$MAX_DBUSER_LEN" ] && [ "$MAX_DBUSER_LEN" -ge 80  ]; then
         database=$(echo "$domain" | sed 's#\.#_#g')
