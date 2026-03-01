@@ -1,3 +1,26 @@
+Version 0.9.9-0-16 [2026-03-01]
+==================================================
+* Improvement: Fix for 'invalid token' error in login form
+* Bugfix: Download the backup file from remote FTP/SFTP if the backup is not locally available
+* Improvement: Show full LetsEncrypt error in the hosting panel
+* Improvement: Enhance the v-backup-users script to manage long-running processes by terminating those active for over 10 days
+* Improvement: Keep 'group = www-data' in FPM pool.d conf for $HOSTNAME vhost
+* Bugfix: Fix GPG key handling for sury.org repository in v-commander
+* Bugfix: v-move-folder-and-make-symlink: If FROMFOLDER is not an absolute path, make it absolute
+* Improvement: Update v-backup-user to resolve symbolic link handling for backup location and ensure accurate disk space validation
+* Improvement: phpgate-agent-strings.php update
+* Bugfix: Fix backup download logic in v-restore-user to prevent unnecessary downloads if the backup file already exists
+* Bugfix: Refactor file path handling in v-df-snapshot-diff
+* Improvement: Add installation script for web-fail2ban in v-commander
+* Improvement: Support for $WEB_FAIL2BAN_ONLY_NGINX configuration
+* Improvement: Support for IPv6 for fail2ban-web filters
+* Improvement: Add last log error for backup failures in v-backup-users
+* Improvement: Delete the pool.d config file of the previously selected PHP FPM version
+* Improvement: v-install-wordpress: Fix check for $NO_PROMPT and suppress output for grep | sed
+* Bugfix: v-install-wordpress: Use MAX_DBUSER_LEN=32 if MySQL 8 installed
+* Enhance v-df-snapshot-diff and v-df-snapshot-make scripts to use /dev/shm for temporary storage when the root partition is low on space
+* Improvement (as temporary solution): Suspend 'v-fix-website-permissions-for-all-websites-only-php' cron during myVesta install
+
 Version 0.9.9-0-15 [2025-12-19]
 ==================================================
 * WordPress Install/Lock/Unlock/Clone/AddAdmin functionalities directly from the hosting panel
