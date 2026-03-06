@@ -78,38 +78,52 @@ BLACKLIST_ENTRY_SUB="*.$DOMAIN"
 #                SpamAssassin Whitelist                    #
 #----------------------------------------------------------#
 
-echo "Updating $SPAMASSASSIN_FILE..."
+if [ -f "$SPAMASSASSIN_FILE" ]; then
+    echo "Updating $SPAMASSASSIN_FILE..."
 
-# Check if the domain is already blacklisted
-if check_blacklist_exists "$DOMAIN" "$SPAMASSASSIN_FILE"; then
-    echo "Cannot whitelist $DOMAIN. It is already blacklisted."
-    exit 1
-fi
+    # Check if the domain is already blacklisted
+    if check_blacklist_exists "$DOMAIN" "$SPAMASSASSIN_FILE"; then
+        echo "Cannot whitelist $DOMAIN. It is already blacklisted."
+        exit 1
+    fi
 
-# Add the main entry
-if ! check_whitelist_exists "$WHITELIST_ENTRY_MAIN" "$SPAMASSASSIN_FILE"; then
-    add_whitelist_to_file "$WHITELIST_ENTRY_MAIN" "$SPAMASSASSIN_FILE"
-    echo "Added whitelist_from $WHITELIST_ENTRY_MAIN to $SPAMASSASSIN_FILE."
-    SPAMASSASSIN_CHANGED=true
-else
-    echo "whitelist_from $WHITELIST_ENTRY_MAIN already exists in $SPAMASSASSIN_FILE."
-fi
-
-# Add the subdomain entry if needed
-if [ "$SUBDOMAIN" == "YES" ]; then
-    if ! check_whitelist_exists "$WHITELIST_ENTRY_SUB" "$SPAMASSASSIN_FILE"; then
-        add_whitelist_to_file "$WHITELIST_ENTRY_SUB" "$SPAMASSASSIN_FILE"
-        echo "Added whitelist_from $WHITELIST_ENTRY_SUB to $SPAMASSASSIN_FILE."
+    # Add the main entry
+    if ! check_whitelist_exists "$WHITELIST_ENTRY_MAIN" "$SPAMASSASSIN_FILE"; then
+        add_whitelist_to_file "$WHITELIST_ENTRY_MAIN" "$SPAMASSASSIN_FILE"
+        echo "Added whitelist_from $WHITELIST_ENTRY_MAIN to $SPAMASSASSIN_FILE."
         SPAMASSASSIN_CHANGED=true
     else
-        echo "whitelist_from $WHITELIST_ENTRY_SUB already exists in $SPAMASSASSIN_FILE."
+        echo "whitelist_from $WHITELIST_ENTRY_MAIN already exists in $SPAMASSASSIN_FILE."
     fi
-fi
 
-# Restart SpamAssassin only if changes were made
-if [ "$SPAMASSASSIN_CHANGED" == "true" ]; then
-    systemctl restart "$SPAMD_SERVICE"
-    echo "SpamAssassin service ($SPAMD_SERVICE) restarted."
+    # Add the subdomain entry if needed
+    if [ "$SUBDOMAIN" == "YES" ]; then
+        if ! check_whitelist_exists "$WHITELIST_ENTRY_SUB" "$SPAMASSASSIN_FILE"; then
+            add_whitelist_to_file "$WHITELIST_ENTRY_SUB" "$SPAMASSASSIN_FILE"
+            echo "Added whitelist_from $WHITELIST_ENTRY_SUB to $SPAMASSASSIN_FILE."
+            SPAMASSASSIN_CHANGED=true
+        else
+            echo "whitelist_from $WHITELIST_ENTRY_SUB already exists in $SPAMASSASSIN_FILE."
+        fi
+    fi
+
+    # Restart SpamAssassin only if changes were made
+    if [ "$SPAMASSASSIN_CHANGED" == "true" ]; then
+        spamassassin_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'spamassassin\|spamd' | grep -c 'running')
+        if [ $spamassassin_running -eq 1 ]; then
+            echo "== Restarting SpamAssassin"
+            systemctl restart "$SPAMD_SERVICE"
+            if [ $? -eq 0 ]; then
+                echo "SpamAssassin service ($SPAMD_SERVICE) restarted."
+            else
+                echo "Failed to restart SpamAssassin service ($SPAMD_SERVICE)."
+                exit 1
+            fi
+        else
+            echo "WARNING: SpamAssassin service ($SPAMD_SERVICE) is not running."
+            exit 1
+        fi
+    fi
 fi
 
 #----------------------------------------------------------#
