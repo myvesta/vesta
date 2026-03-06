@@ -79,31 +79,31 @@ BLACKLIST_ENTRY_SUB="*.$DOMAIN"
 #----------------------------------------------------------#
 
 if [ -f "$SPAMASSASSIN_FILE" ]; then
-    echo "Updating $SPAMASSASSIN_FILE..."
+    echo "== Updating $SPAMASSASSIN_FILE"
 
     # Check if the domain is already blacklisted
     if check_blacklist_exists "$DOMAIN" "$SPAMASSASSIN_FILE"; then
-        echo "Cannot whitelist $DOMAIN. It is already blacklisted."
+        echo "== WARNING: Cannot whitelist '$DOMAIN'. It is already blacklisted."
         exit 1
     fi
 
     # Add the main entry
     if ! check_whitelist_exists "$WHITELIST_ENTRY_MAIN" "$SPAMASSASSIN_FILE"; then
         add_whitelist_to_file "$WHITELIST_ENTRY_MAIN" "$SPAMASSASSIN_FILE"
-        echo "Added whitelist_from $WHITELIST_ENTRY_MAIN to $SPAMASSASSIN_FILE."
+        echo "== Added '$WHITELIST_ENTRY_MAIN' to $SPAMASSASSIN_FILE"
         SPAMASSASSIN_CHANGED=true
     else
-        echo "whitelist_from $WHITELIST_ENTRY_MAIN already exists in $SPAMASSASSIN_FILE."
+        echo "== WARNING: '$WHITELIST_ENTRY_MAIN' already exists in $SPAMASSASSIN_FILE"
     fi
 
     # Add the subdomain entry if needed
     if [ "$SUBDOMAIN" == "YES" ]; then
         if ! check_whitelist_exists "$WHITELIST_ENTRY_SUB" "$SPAMASSASSIN_FILE"; then
             add_whitelist_to_file "$WHITELIST_ENTRY_SUB" "$SPAMASSASSIN_FILE"
-            echo "Added whitelist_from $WHITELIST_ENTRY_SUB to $SPAMASSASSIN_FILE."
+            echo "== Added '$WHITELIST_ENTRY_SUB' to $SPAMASSASSIN_FILE"
             SPAMASSASSIN_CHANGED=true
         else
-            echo "whitelist_from $WHITELIST_ENTRY_SUB already exists in $SPAMASSASSIN_FILE."
+            echo "== WARNING: '$WHITELIST_ENTRY_SUB' already exists in $SPAMASSASSIN_FILE"
         fi
     fi
 
@@ -114,13 +114,13 @@ if [ -f "$SPAMASSASSIN_FILE" ]; then
             echo "== Restarting SpamAssassin"
             systemctl restart "$SPAMD_SERVICE"
             if [ $? -eq 0 ]; then
-                echo "SpamAssassin service ($SPAMD_SERVICE) restarted."
+                echo "== SpamAssassin service ($SPAMD_SERVICE) restarted successfully"
             else
-                echo "Failed to restart SpamAssassin service ($SPAMD_SERVICE)."
+                echo "== ERROR: Failed to restart SpamAssassin service ($SPAMD_SERVICE) !!!!!!!!!!!!!!!!!!"
                 exit 1
             fi
         else
-            echo "WARNING: SpamAssassin service ($SPAMD_SERVICE) is not running."
+            echo "== WARNING: SpamAssassin service ($SPAMD_SERVICE) is not running"
             exit 1
         fi
     fi
