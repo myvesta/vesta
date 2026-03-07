@@ -165,7 +165,6 @@ do
         HAS_PARAMETERS=0
     fi
 
-
     if [ "$answer" = 'a' ] || [ "$answer" = 'A' ]; then
         timestamp=$(date +%Y%m%d_%H%M%S)
         backup="/etc/exim4/exim4.conf.template-backup-$timestamp"
@@ -205,8 +204,6 @@ do
         systemctl restart exim4
         echo "Email rate limit activated."
     fi
-
-
 
     if [ "$answer" = 'u' ] || [ "$answer" = 'U' ]; then
         apt_update
@@ -327,6 +324,14 @@ do
     if [ "$answer" = 'update-spamassassin-rules' ] || [ "$answer" = 'UPDATE-SPAMASSASSIN-RULES' ]; then
         echo "============================="
         echo "== updating SpamAssassin rules"
+
+        if [ ! -f "/etc/spamassassin/local.cf" ]; then
+            echo "== ERROR: SpamAssassin is not installed"
+            continue;
+        fi
+
+        spamassassin_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'spamassassin\|spamd' | grep -c 'running')
+
         if [ "$release" -lt 12 ]; then
             spamassassin_command='spamassassin'
             /usr/local/vesta/bin/v-commander 'fix-debian-backports' 'freexian'
@@ -334,6 +339,7 @@ do
         else
             spamassassin_command='spamd'
         fi
+
         echo "== Fixing sury.org repository and renewing nginx gpg key"
         /usr/local/vesta/bin/v-commander 's' 'n'
         press_enter "=== Press enter to continue ==="
@@ -343,7 +349,7 @@ do
         ret=$?
         if [ $ret -ne 0 ]; then
             echo "== ERROR: Command returned error, aborting."
-            exit 1;
+            continue;
         fi
         press_enter "=== Press enter to continue ==="
 
@@ -352,7 +358,7 @@ do
         ret=$?
         if [ $ret -ne 0 ]; then
             echo "== ERROR: Command returned $ret - aborting."
-            exit 1;
+            continue;
         fi
         press_enter "=== Press enter to continue ==="
 
@@ -369,7 +375,7 @@ do
         ret=$?
         if [ $ret -gt 1 ]; then
             echo "== ERROR: Command returned $ret - aborting."
-            exit 1;
+            continue;
         fi
         press_enter "=== Press enter to continue ==="
 
@@ -378,32 +384,38 @@ do
         ret=$?
         if [ $ret -ne 0 ]; then
             echo "== ERROR: Command returned $ret - aborting."
-            exit 1;
+            continue;
         fi
         press_enter "=== Press enter to continue ==="
 
-        echo "== Running: $spamassassin_command"
-        systemctl restart $spamassassin_command
-        ret=$?
-        if [ $ret -ne 0 ]; then
-            echo "********* ERROR: SpamAssassin not restarted successfully, ret = $ret"
-            exit 1;
+        if [ $spamassassin_running -eq 1 ]; then
+            echo "== Running: $spamassassin_command"
+            systemctl restart $spamassassin_command
+            ret=$?
+            if [ $ret -ne 0 ]; then
+                echo "********* ERROR: SpamAssassin not restarted successfully, ret = $ret"
+                continue;
+            else
+                echo "== SpamAssassin restarted successfully"
+            fi
+            press_enter "=== Press enter to continue ==="
         else
-            echo "== SpamAssassin restarted successfully"
+            echo "== SpamAssassin was not active, so we will not restart it"
         fi
-        press_enter "=== Press enter to continue ==="
 
         echo "== SpamAssassin rules updated successfully."
 
-        sleep 5
-        echo "== Showing last 50 lines of /var/log/syslog =="
-        grep 'spam' /var/log/syslog | tail -n 50
-        press_enter "=== Press enter to continue ==="
-        echo ''
-        echo '------------'
-        echo 'Maybe you want to monitor SpamAssassin by running:'
-        echo 'tail -f /var/log/syslog | grep spam'
-        echo '------------'
+        if [ $spamassassin_running -eq 1 ]; then
+            sleep 5
+            echo "== Showing last 50 lines of /var/log/syslog =="
+            grep 'spam' /var/log/syslog | tail -n 50
+            press_enter "=== Press enter to continue ==="
+            echo ''
+            echo '------------'
+            echo 'Maybe you want to monitor SpamAssassin by running:'
+            echo 'tail -f /var/log/syslog | grep spam'
+            echo '------------'
+        fi
     fi
 
     if [ "$answer" = 'e def' ] || [ "$answer" = 'E DEF' ]; then
@@ -436,6 +448,9 @@ do
         a2dismod php8.0
         a2dismod php8.1
         a2dismod php8.2
+        a2dismod php8.3
+        a2dismod php8.4
+        a2dismod php8.5
         a2dismod mpm_prefork
         a2enmod mpm_event
         systemctl restart apache2
@@ -552,7 +567,6 @@ do
             php -v | grep '^PHP'
         fi
     fi
-
 
     if [ "$answer" = 'v' ] || [ "$answer" = 'V' ]; then
         echo "============================="
