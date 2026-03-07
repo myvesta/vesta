@@ -389,7 +389,7 @@ do
         press_enter "=== Press enter to continue ==="
 
         if [ $spamassassin_running -eq 1 ]; then
-            echo "== Running: $spamassassin_command"
+            echo "== Running: systemctl restart $spamassassin_command"
             systemctl restart $spamassassin_command
             ret=$?
             if [ $ret -ne 0 ]; then
@@ -397,6 +397,7 @@ do
                 continue;
             else
                 echo "== SpamAssassin restarted successfully"
+                systemctl status $spamassassin_command
             fi
             press_enter "=== Press enter to continue ==="
         else
