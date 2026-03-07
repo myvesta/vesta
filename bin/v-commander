@@ -380,6 +380,7 @@ do
         fi
         press_enter "=== Press enter to continue ==="
 
+        rm -rf /var/lib/spamassassin/compiled/*
         echo "== Running: sa-compile"
         sa-compile
         ret=$?
@@ -417,8 +418,8 @@ do
         echo "== SpamAssassin rules updated successfully."
 
         if [ $spamassassin_running -eq 1 ]; then
-            echo "== Sleeping for 5 seconds"
-            sleep 5
+            # echo "== Sleeping for 5 seconds"
+            sleep 1
             echo "== Showing last 50 lines of /var/log/syslog =="
             grep 'spam' /var/log/syslog | tail -n 50
             press_enter "=== Press enter to continue ==="
