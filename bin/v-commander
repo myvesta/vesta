@@ -371,8 +371,8 @@ do
         echo "== copy /etc/spamassassin to /root/spamassassin-etc-backup-$timestamp"
         cp -r /etc/spamassassin /root/spamassassin-etc-backup-$timestamp
 
-        echo "== Running: sa-update"
-        sa-update
+        echo "== Running: sa-update --verbose"
+        sa-update --verbose
         ret=$?
         if [ $ret -gt 1 ]; then
             echo "== ERROR: Command returned $ret - aborting."
