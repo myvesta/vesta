@@ -126,6 +126,11 @@ apt_update() {
     apt_updated=1
 }
 
+press_enter() {
+    echo "$1"
+    read -p ""
+}
+
 COUNTER=0
 HAS_PARAMETERS=0
 
@@ -325,10 +330,13 @@ do
         if [ "$release" -lt 12 ]; then
             spamassassin_command='spamassassin'
             /usr/local/vesta/bin/v-commander 'fix-debian-backports' 'freexian'
+            press_enter "=== Press enter to continue ==="
         else
             spamassassin_command='spamd'
         fi
+        echo "== Fixing sury.org repository and renewing nginx gpg key"
         /usr/local/vesta/bin/v-commander 's' 'n'
+        press_enter "=== Press enter to continue ==="
 
         echo "== Running: apt-get update"
         apt-get update
@@ -337,6 +345,7 @@ do
             echo "== ERROR: Command returned error, aborting."
             exit 1;
         fi
+        press_enter "=== Press enter to continue ==="
 
         echo "== Running: apt-get install $spamassassin_command sa-compile re2c make gcc"
         apt-get -y install $spamassassin_command sa-compile re2c make gcc
@@ -345,6 +354,7 @@ do
             echo "== ERROR: Command returned $ret - aborting."
             exit 1;
         fi
+        press_enter "=== Press enter to continue ==="
 
         timestamp=$(date +%Y%m%d_%H%M%S)
 
@@ -361,6 +371,7 @@ do
             echo "== ERROR: Command returned $ret - aborting."
             exit 1;
         fi
+        press_enter "=== Press enter to continue ==="
 
         echo "== Running: sa-compile"
         sa-compile
@@ -369,6 +380,7 @@ do
             echo "== ERROR: Command returned $ret - aborting."
             exit 1;
         fi
+        press_enter "=== Press enter to continue ==="
 
         echo "== Running: $spamassassin_command"
         systemctl restart $spamassassin_command
@@ -379,11 +391,14 @@ do
         else
             echo "== SpamAssassin restarted successfully"
         fi
+        press_enter "=== Press enter to continue ==="
 
         echo "== SpamAssassin rules updated successfully."
 
         sleep 5
+        echo "== Showing last 50 lines of /var/log/syslog =="
         grep 'spam' /var/log/syslog | tail -n 50
+        press_enter "=== Press enter to continue ==="
         echo ''
         echo '------------'
         echo 'Maybe you want to monitor SpamAssassin by running:'
