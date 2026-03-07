@@ -284,9 +284,10 @@ do
     if [ "$answer" = 'freexian' ] || [ "$answer" = 'FREEXIAN' ]; then
         if [ "$release" -lt 11 ]; then
             echo "== Downloading freexian-archive-keyring_2022.06.08_all.deb"
-            wget -nv https://deb.freexian.com/extended-lts/pool/main/f/freexian-archive-keyring/freexian-archive-keyring_2022.06.08_all.deb
+            wget -nv https://deb.freexian.com/extended-lts/pool/main/f/freexian-archive-keyring/freexian-archive-keyring_2022.06.08_all.deb -O freexian-archive-keyring_2022.06.08_all.deb
             sudo dpkg -i freexian-archive-keyring_2022.06.08_all.deb
-            backup="/root/sources.list.old.$codename"
+            timestamp=$(date +%Y%m%d_%H%M%S)
+            backup="/root/sources.list.old.$codename.$timestamp"
             if grep -q 'debian\.org' /etc/apt/sources.list; then
                 if [ ! -f "$backup" ]; then
                     echo "== Moving /etc/apt/sources.list to $backup"
@@ -295,7 +296,7 @@ do
                 echo "== Adding 'deb http://deb.freexian.com/extended-lts $codename main contrib non-free' to /etc/apt/sources.list"
                 echo "deb http://deb.freexian.com/extended-lts $codename main contrib non-free" > /etc/apt/sources.list
                 if ls /etc/apt/sources.list.d/hetzner* 1>/dev/null 2>&1; then
-                rm /etc/apt/sources.list.d/hetzner*
+                    rm /etc/apt/sources.list.d/hetzner*
                 fi
             fi
         else
