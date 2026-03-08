@@ -354,8 +354,18 @@ do
         fi
         press_enter "=== Press enter to continue ==="
 
-        echo "== Running: apt-get install $spamassassin_command sa-compile re2c make gcc"
-        apt-get -y install $spamassassin_command sa-compile re2c make gcc
+        echo "== Running: apt-get install $spamassassin_command sa-compile re2c make gcc libmail-spamassassin-perl"
+        apt-get -y install $spamassassin_command sa-compile re2c make gcc libmail-spamassassin-perl
+        ret=$?
+        if [ $ret -ne 0 ]; then
+            echo "== ERROR: Command returned $ret - aborting."
+            continue;
+        fi
+        press_enter "=== Press enter to continue ==="
+        
+        echo "== Running: apt-get -y install $(dpkg -l | awk '/^ii  perl/ {print $2}')"
+        apt-get -y install $(dpkg -l | awk '/^ii  perl/ {print $2}')
+        
         ret=$?
         if [ $ret -ne 0 ]; then
             echo "== ERROR: Command returned $ret - aborting."
