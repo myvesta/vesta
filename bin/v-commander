@@ -371,6 +371,11 @@ do
         echo "== copy /etc/spamassassin to /root/spamassassin-etc-backup-$timestamp"
         cp -r /etc/spamassassin /root/spamassassin-etc-backup-$timestamp
 
+        if [ $spamassassin_running -eq 1 ]; then
+            echo "== Stopping $spamassassin_command"
+            systemctl stop $spamassassin_command
+        fi
+
         echo "== Running: sa-update --verbose"
         sa-update --verbose
         ret=$?
@@ -380,12 +385,15 @@ do
         fi
         press_enter "=== Press enter to continue ==="
 
+        echo "== Removing compiled files from /var/lib/spamassassin/compiled/*"
         rm -rf /var/lib/spamassassin/compiled/*
+
         echo "== Running: sa-compile"
         sa-compile
         ret=$?
         if [ $ret -ne 0 ]; then
             echo "== ERROR: Command returned $ret - aborting."
+            press_enter "=== Press enter to continue ==="
             continue;
         fi
         press_enter "=== Press enter to continue ==="
