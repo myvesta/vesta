@@ -386,11 +386,15 @@ do
         sa-update --verbose
         ret=$?
         echo "== sa-update returned: $ret"
+        if [ $ret -eq 1 ]; then
+            echo "== No updates available"
+            continue;
+        fi
         if [ $ret -gt 1 ]; then
             echo "== ERROR: Command returned $ret - aborting."
             press_enter "=== Press enter to continue ==="
             continue;
-        fi
+        fi        
 
         echo "== Removing compiled files from /var/lib/spamassassin/compiled/*"
         rm -rf /var/lib/spamassassin/compiled/*
