@@ -288,7 +288,7 @@ do
             sudo dpkg -i freexian-archive-keyring_2022.06.08_all.deb
             timestamp=$(date +%Y%m%d_%H%M%S)
             backup="/root/sources.list.old.$codename.$timestamp"
-            if grep -q 'debian\.org' /etc/apt/sources.list; then
+            if ! grep -q 'freexian\.com' /etc/apt/sources.list; then
                 if [ ! -f "$backup" ]; then
                     echo "== Moving /etc/apt/sources.list to $backup"
                     mv /etc/apt/sources.list $backup
