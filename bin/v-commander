@@ -386,7 +386,8 @@ do
         sa-update --verbose
         ret=$?
         echo "== sa-update returned: $ret"
-        if [ $ret -eq 1 ]; then
+        skip_compile_if_no_updates=1
+        if [ $skip_compile_if_no_updates -eq 1 ] && [ $ret -eq 1 ]; then
             echo "== No updates available"
             continue;
         fi
