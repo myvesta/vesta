@@ -312,7 +312,7 @@ do
             if grep -q 'deb\.debian\.org\/debian bullseye-backports' /etc/apt/sources.list; then
                 fix_backports=1
                 echo "== Replacing 'deb http://deb.debian.org/debian bullseye-backports' to 'deb http://archive.debian.org/debian bullseye-backports' in /etc/apt/sources.list"
-                v-sed 'deb http://deb.debian.org/debian bullseye-backports' 'deb http://archive.debian.org/debian bullseye-backports' /etc/apt/sources.list
+                v-sed ' http://deb.debian.org/debian bullseye-backports' ' http://archive.debian.org/debian bullseye-backports' /etc/apt/sources.list
             fi
         fi
         if [ "$fix_backports" -eq 1 ]; then
