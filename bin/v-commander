@@ -336,42 +336,38 @@ do
         if [ "$release" -lt 12 ]; then
             spamassassin_command='spamassassin'
             /usr/local/vesta/bin/v-commander 'fix-debian-backports' 'freexian'
-            press_enter "=== Press enter to continue ==="
         else
             spamassassin_command='spamd'
         fi
 
-        echo "== Fixing sury.org repository and renewing nginx gpg key"
-        /usr/local/vesta/bin/v-commander 's' 'n'
-        press_enter "=== Press enter to continue ==="
-
+        if [ -f "/etc/apt/trusted.gpg.d/php.gpg" ] || [ -f "/etc/apt/sources.list.d/nginx.list" ]; then
+            echo "== Fixing sury.org repository and renewing nginx gpg key"
+            /usr/local/vesta/bin/v-commander 's' 'n'
+        fi
+ 
         echo "== Running: apt-get update"
         apt-get update
         ret=$?
+        echo "== apt-get update returned: $ret"
         if [ $ret -ne 0 ]; then
-            echo "== ERROR: Command returned error, aborting."
-            continue;
+            press_enter "=== Press enter to continue ==="
         fi
-        press_enter "=== Press enter to continue ==="
 
         echo "== Running: apt-get install $spamassassin_command sa-compile re2c make gcc libmail-spamassassin-perl"
         apt-get -y install $spamassassin_command sa-compile re2c make gcc libmail-spamassassin-perl
         ret=$?
+        echo "== apt-get install $spamassassin_command sa-compile re2c make gcc libmail-spamassassin-perl returned: $ret"
         if [ $ret -ne 0 ]; then
-            echo "== ERROR: Command returned $ret - aborting."
-            continue;
+            press_enter "=== Press enter to continue ==="
         fi
-        press_enter "=== Press enter to continue ==="
         
         echo "== Running: apt-get -y install $(dpkg -l | awk '/^ii  perl/ {print $2}')"
-        apt-get -y install $(dpkg -l | awk '/^ii  perl/ {print $2}')
-        
+        apt-get -y install $(dpkg -l | awk '/^ii  perl/ {print $2}')        
         ret=$?
+        echo "== apt-get -y install $(dpkg -l | awk '/^ii  perl/ {print $2}') returned: $ret"
         if [ $ret -ne 0 ]; then
-            echo "== ERROR: Command returned $ret - aborting."
-            continue;
+            press_enter "=== Press enter to continue ==="
         fi
-        press_enter "=== Press enter to continue ==="
 
         timestamp=$(date +%Y%m%d_%H%M%S)
 
@@ -389,11 +385,12 @@ do
         echo "== Running: sa-update --verbose"
         sa-update --verbose
         ret=$?
+        echo "== sa-update returned: $ret"
         if [ $ret -gt 1 ]; then
             echo "== ERROR: Command returned $ret - aborting."
+            press_enter "=== Press enter to continue ==="
             continue;
         fi
-        press_enter "=== Press enter to continue ==="
 
         echo "== Removing compiled files from /var/lib/spamassassin/compiled/*"
         rm -rf /var/lib/spamassassin/compiled/*
@@ -401,34 +398,38 @@ do
         echo "== Running: sa-compile"
         sa-compile
         ret=$?
+        echo "== sa-compile returned: $ret"
         if [ $ret -ne 0 ]; then
             echo "== ERROR: Command returned $ret - aborting."
             press_enter "=== Press enter to continue ==="
             continue;
         fi
-        press_enter "=== Press enter to continue ==="
 
         echo "== Checking: spamassassin --lint"
         spamassassin --lint
-        if [ $? -ne 0 ]; then
+        ret=$?
+        echo "== spamassassin --lint returned: $ret"
+        if [ $ret -ne 0 ]; then
             echo "== ERROR: SpamAssassin lint failed, please check the rules."
+            press_enter "=== Press enter to continue ==="
         else
             echo "== SpamAssassin lint passed OK"
         fi
-        press_enter "=== Press enter to continue ==="
 
         if [ $spamassassin_running -eq 1 ]; then
             echo "== Running: systemctl restart $spamassassin_command"
             systemctl restart $spamassassin_command
             ret=$?
+            echo "== systemctl restart $spamassassin_command returned: $ret"
             if [ $ret -ne 0 ]; then
                 echo "********* ERROR: SpamAssassin not restarted successfully, ret = $ret"
-                continue;
+                press_enter "=== Press enter to continue ==="
             else
                 echo "== SpamAssassin restarted successfully"
                 systemctl status $spamassassin_command
+                ret=$?
+                echo "== systemctl status $spamassassin_command returned: $ret"
             fi
-            press_enter "=== Press enter to continue ==="
         else
             echo "== SpamAssassin was not active, so we will not restart it"
         fi
@@ -440,7 +441,6 @@ do
             sleep 1
             echo "== Showing last 50 lines of /var/log/syslog =="
             grep 'spam' /var/log/syslog | tail -n 50
-            press_enter "=== Press enter to continue ==="
             echo ''
             echo '------------'
             echo 'Maybe you want to monitor SpamAssassin by running:'
