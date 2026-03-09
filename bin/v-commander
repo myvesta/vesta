@@ -410,6 +410,10 @@ do
         echo "== Removing compiled files from /var/lib/spamassassin/compiled/*"
         rm -rf /var/lib/spamassassin/compiled/*
 
+        echo "== Running: spamassassin --version"
+        spamassassin --version
+        echo ""
+
         echo "== Running: sa-compile"
         sa-compile
         ret=$?
