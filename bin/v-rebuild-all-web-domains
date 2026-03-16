@@ -1,0 +1,21 @@
+#!/bin/bash
+# info: rebuild all web domains
+# options: NONE
+#
+# The function rebuilds all web configuration files.
+
+if [ -z "$VESTA" ]; then
+    export VESTA="/usr/local/vesta"
+fi
+
+for user in $(grep '@' /etc/passwd |cut -f1 -d:); do
+    if [ ! -f "/usr/local/vesta/data/users/$user/user.conf" ]; then
+        continue;
+    fi
+    /usr/local/vesta/bin/v-rebuild-web-domains $user 'no'
+done
+
+systemctl restart nginx
+systemctl restart apache2
+
+exit 0
