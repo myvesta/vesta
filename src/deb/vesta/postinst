@@ -93,9 +93,10 @@ if [ -f "/root/.bash_profile" ]; then
     fi
 fi
 
+spamassassin_modified=0
+
 # Adding myVesta rules to SpamAssassin
 if [ -d "/etc/spamassassin" ]; then
-    spamassassin_modified=0
     if [ ! -f "/etc/spamassassin/myvesta.cf" ]; then
         touch /etc/spamassassin/myvesta.cf
     fi
@@ -107,23 +108,49 @@ if [ -d "/etc/spamassassin" ]; then
     fi
     if ! grep -q 'SPF_FAIL' /etc/spamassassin/myvesta.cf; then
         echo "== Adding SPF_FAIL myVesta rules to SpamAssassin"
-    cat <<EOF >> /etc/spamassassin/myvesta.cf
+        cat <<EOF >> /etc/spamassassin/myvesta.cf
 score SPF_FAIL 3.0
 score SPF_SOFTFAIL 4.0
 score SPF_NONE 4.0
 EOF
         spamassassin_modified=1
     fi
+fi
 
-    if [ $spamassassin_modified -eq 1 ]; then
-        spamassassin_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'spamassassin\|spamd' | grep -c 'running')
-        if [ $spamassassin_running -eq 1 ]; then
-            echo "== Restarting SpamAssassin"
-            if [ "$release" -lt 12 ]; then
-                    systemctl restart spamassassin.service
-                else
-                    systemctl restart spamd.service
-            fi
+
+# Turning off Validity rules to SpamAssassin
+if [ -d "/etc/spamassassin" ]; then
+    if [ ! -f "/etc/spamassassin/validity.cf" ]; then
+        echo "== Turning off Validity rules to SpamAssassin"
+        cat <<EOF > /etc/spamassassin/validity.cf
+########################################################################
+# Disable Validity DNSBL (SenderScore / BondedSender / Habeas)
+# Reason: queries are blocked -> produce false positives (_BLOCKED)
+########################################################################
+
+dns_query_restriction deny sa-trusted.bondedsender.org
+dns_query_restriction deny sa-accredit.habeas.com
+dns_query_restriction deny bl.score.senderscore.com
+
+########################################################################
+# Optional: force score to 0 just in case rules still trigger
+########################################################################
+
+score RCVD_IN_VALIDITY_SAFE_BLOCKED 0.0
+score RCVD_IN_VALIDITY_RPBL_BLOCKED 0.0
+EOF
+        spamassassin_modified=1
+    fi
+fi
+
+if [ $spamassassin_modified -eq 1 ]; then
+    spamassassin_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'spamassassin\|spamd' | grep -c 'running')
+    if [ $spamassassin_running -eq 1 ]; then
+        echo "== Restarting SpamAssassin"
+        if [ "$release" -lt 12 ]; then
+                systemctl restart spamassassin.service
+            else
+                systemctl restart spamd.service
         fi
     fi
 fi

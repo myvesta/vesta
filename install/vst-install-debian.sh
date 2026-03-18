@@ -1639,6 +1639,26 @@ score SPF_SOFTFAIL 4.0
 score SPF_NONE 4.0
 EOF
 
+    echo "== Turning off Validity rules to SpamAssassin"
+    cat <<EOF > /etc/spamassassin/validity.cf
+########################################################################
+# Disable Validity DNSBL (SenderScore / BondedSender / Habeas)
+# Reason: queries are blocked -> produce false positives (_BLOCKED)
+########################################################################
+
+dns_query_restriction deny sa-trusted.bondedsender.org
+dns_query_restriction deny sa-accredit.habeas.com
+dns_query_restriction deny bl.score.senderscore.com
+
+########################################################################
+# Optional: force score to 0 just in case rules still trigger
+########################################################################
+
+score RCVD_IN_VALIDITY_SAFE_BLOCKED 0.0
+score RCVD_IN_VALIDITY_RPBL_BLOCKED 0.0
+EOF
+
+    echo "== Adding Barracuda RBL to SpamAssassin"
     wget -nv -O /etc/spamassassin/barracuda.cf http://c.myvestacp.com/tools/spamassassin/barracuda.cf
     ensure_startup $currentservice
     systemctl restart $currentservice
