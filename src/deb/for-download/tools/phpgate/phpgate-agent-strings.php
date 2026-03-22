@@ -5,7 +5,7 @@ function phpgate_bot_detected($agent_string, $block_after) {
         phpgate_cut_request();
     }
     if ($block_after > 0) {
-        phpgate_count_limit_bot($agent_string, $block_after);
+        phpgate_count_limit_bot($agent_string, 1, $block_after);
     }
 
 }

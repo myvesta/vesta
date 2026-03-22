@@ -58,7 +58,7 @@ function phpgate_add_banned($arr) {
 
 // callback function to remove expired banned IPs from array
 function phpgate_remove_expired_banned($arr) {
-    global $phpgate_ip, $phpgate_ban_time;
+    global $phpgate_ban_time;
     $unixtime=time();
 
     if ($arr===null) return array();
@@ -135,28 +135,58 @@ if ($phpgate_the_same_ip==false) {
     if (isset($phpgate_extend_ban_time)==false) $phpgate_extend_ban_time=true;
     if (isset($phpgate_max_retry)==false) $phpgate_max_retry=5;
     if (isset($phpgate_find_time)==false) $phpgate_find_time=600;
+    if (isset($phpgate_ban_msg)==false) $phpgate_ban_msg="Bot traffic detected - your IP is banned.<br /><br />\nClick <b><script>document.write('<a href=\"".$_SERVER['PHP_SELF']."?'+'remove'+'_me_from_blacklist=1\">here</a>')</script></b> to remove you from blacklist.";
     // $phpgate_debug=false;
-    if (!class_exists('Memcached')) return;
+    if (!class_exists('Memcached')) {
+        if (false) {
+            class Memcached {
+                public const GET_EXTENDED = 1;
+                public const RES_SUCCESS = 0;
+                public const RES_NOTFOUND = 1;
+                public const RES_TIMEOUT = 2;
+                public const RES_CONNECTION_FAILURE = 3;
+                public const RES_CONNECTION_BIND_FAILURE = 4;
+                public const RES_DATA_EXISTS = 5;
+                public const RES_NOTSTORED = 6;
+                public const RES_DELTA_BADVAL = 7;
+                public function addServer($host, $port) {
+                    return true;
+                }
+                public function get($key) {
+                    return null;
+                }
+                public function getResultCode() {
+                    return 0;
+                }
+                public function add($key, $value, $ttl) {
+                    return true;
+                }
+                public function set($key, $value, $ttl) {
+                    return true;
+                }
+                public function cas($cas, $key, $value, $ttl) {
+                    return true;
+                }
+                public function delete($key) {
+                    return true;
+                }
+            }
+        }
+        return;
+    }
     $phpgate_memcached = new Memcached();
     $phpgate_memcached->addServer('localhost', 11211);
 
     if (isset($phpgate_ip)==false) $phpgate_ip=$_SERVER['REMOTE_ADDR'];
-    if (isset($phpgate_key)==false) $phpgate_key='phpgate_ip_'.$phpgate_ip;
+    if (isset($phpgate_counter_key)==false) $phpgate_counter_key='phpgate_ip_'.$phpgate_ip;
 
-    if (isset($phpgate_banned_key)==false) {
-        $phpgate_ip_last_dot=strrpos($phpgate_ip, '.');
-        if ($phpgate_ip_last_dot==false) {
-            $phpgate_ip_last_dot=strrpos($phpgate_ip, ':');
-            $phpgate_ip=substr($phpgate_ip, 0, $phpgate_ip_last_dot);
-            $phpgate_ip=str_replace(':0:0:0', '', $phpgate_ip);
-            $phpgate_ip_last_dot=strrpos($phpgate_ip, ':');
-        }
-        $phpgate_banned_key='phpgate_banned_'.substr($phpgate_ip, 0, $phpgate_ip_last_dot);
-    }
+    if (isset($phpgate_banned_key)==false) $phpgate_banned_key=phpgate_convert_ip_to_key($phpgate_ip); // convert IP to banned key which is the C class of the IPv4 address (first 3 octets)
 
     if (isset($_GET['remove_me_from_blacklist'])==false) {
         // *************************** main phpgate processing - log suspicious request or block request if IP is already banned ***************************
         $phpgate_global_banned=$phpgate_memcached->get($phpgate_banned_key);
+        // $phpgate_global_banned is an array of IP addresses that are banned, got from memcached by key $phpgate_banned_key that is something like 'phpgate_banned_192.168.1' or 'phpgate_banned_chatgpt'
+ 
         if (isset($phpgate_global_banned[$phpgate_ip])) {
             // IP is found in ban list
             if ($phpgate_global_banned[$phpgate_ip] < time()-$phpgate_ban_time) {
@@ -168,17 +198,17 @@ if ($phpgate_the_same_ip==false) {
                     phpgate_memcached_safe_update($phpgate_banned_key, 'phpgate_add_banned', $phpgate_ban_time);
                 }
                 // block request
-                phpgate_cut_request("Too many wrong login attempts - or - bot traffic detected - your IP is banned.<br />\nClick <script>document.write('<a href=\"".$_SERVER['PHP_SELF']."?'+'remove'+'_me_from_blacklist=1\">here</a>')</script> to remove you from blacklist.");
+                phpgate_cut_request(phpgate_make_html_page('Bot traffic detected', $phpgate_ban_msg));
             }
         }
 
         if ($phpgate_should_count==true) {
             // alter the number of suspicious hits
-            phpgate_memcached_safe_update($phpgate_key, 'phpgate_update_timings', $phpgate_find_time);
+            phpgate_memcached_safe_update($phpgate_counter_key, 'phpgate_update_timings', $phpgate_find_time);
             
             /*
             if ($phpgate_debug) {
-                echo "final: "; print_r($phpgate_memcached->get($phpgate_key)); echo "<br />\n";
+                echo "final: "; print_r($phpgate_memcached->get($phpgate_counter_key)); echo "<br />\n";
                 echo "count: ".$phpgate_current_ip_counter."<br />\n";
             }
             */
@@ -186,14 +216,14 @@ if ($phpgate_the_same_ip==false) {
             if ($phpgate_current_ip_counter>$phpgate_max_retry) {
                 // maximum number of suspicious hits reached (five hits found, sixth is just happening), ban IP, add 24 hours to time_counter, block request
                 phpgate_memcached_safe_update($phpgate_banned_key, 'phpgate_add_banned', $phpgate_ban_time);
-                phpgate_cut_request("Too many wrong login attempts - or - bot traffic detected - your IP is banned now.<br />\nClick <script>document.write('<a href=\"".$_SERVER['PHP_SELF']."?'+'remove'+'_me_from_blacklist=1\">here</a>')</script> to remove you from blacklist.");
+                phpgate_cut_request(phpgate_make_html_page('Bot traffic detected', $phpgate_ban_msg));
                 // phpgate_log_post_request('ban');
             }
         }
     } else {
         // *** $_GET['remove_me_from_blacklist'] - manual removing from blacklist ***
         phpgate_memcached_safe_update($phpgate_banned_key, 'phpgate_unban_banned', $phpgate_ban_time);
-        $phpgate_memcached->delete($phpgate_key);
+        $phpgate_memcached->delete($phpgate_counter_key);
         // phpgate_log_post_request('unban');
         // if ($phpgate_debug) echo "unbanned<br />\n";
     }
