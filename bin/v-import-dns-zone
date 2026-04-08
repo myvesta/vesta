@@ -1,0 +1,570 @@
+#!/bin/bash
+# info: import DNS records from bind zone file into myVesta domain
+# options: DOMAIN PATH_TO_BIND_FILE YES/NO(dry run)
+#
+# Example:
+# v-import-dns-zone mycity-hosting.rs /root/mycity-hosting.rs.db YES - Dry run
+# v-import-dns-zone mycity-hosting.rs /root/mycity-hosting.rs.db NO - Apply changes
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+whoami=$(whoami)
+if [ "$whoami" != "root" ]; then
+    echo "You must be root to execute this script"
+    exit 1
+fi
+
+source /etc/profile
+
+VESTA_BIN="/usr/local/vesta/bin"
+
+domain=$1
+zone_file=$2
+dry_run=$3
+
+# Includes
+source /usr/local/vesta/func/main.sh
+source /usr/local/vesta/func/domain.sh
+
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+
+check_args '3' "$#" 'DOMAIN PATH_TO_BIND_FILE YES/NO(dry run)'
+is_format_valid 'domain'
+
+if [ ! -f "$zone_file" ]; then
+    echo "Zone file does not exist: $zone_file"
+    exit 1
+fi
+
+case "$dry_run" in
+    YES|NO) ;;
+    *)
+        echo "Third argument must be YES or NO"
+        exit 1
+        ;;
+esac
+
+user=$($VESTA_BIN/v-search-domain-owner "$domain")
+
+if [ -z "$user" ]; then
+    echo "Error: domain $domain doesn't exist"
+    exit 1
+fi
+
+if [ ! -f "/usr/local/vesta/data/users/$user/user.conf" ]; then
+    echo "Error: user $user doesn't exist"
+    exit 1
+fi
+
+if grep -q "^SUSPENDED='yes'" "/usr/local/vesta/data/users/$user/user.conf"; then
+    echo "Error: user $user is suspended"
+    exit 1
+fi
+
+USER_DNS_DIR="/usr/local/vesta/data/users/$user/dns"
+CONF_FILE="$USER_DNS_DIR/$domain.conf"
+DB_FILE="/home/$user/conf/dns/$domain.db"
+
+if [ ! -d "$USER_DNS_DIR" ]; then
+    echo "DNS directory does not exist: $USER_DNS_DIR"
+    exit 1
+fi
+
+if [ ! -f "$CONF_FILE" ]; then
+    echo "DNS config file does not exist: $CONF_FILE"
+    exit 1
+fi
+
+TMP_WORK="/tmp/v-import-dns-zone.$$"
+TMP_LINES="$TMP_WORK.lines"
+TMP_PARSED="$TMP_WORK.parsed"
+
+mkdir -p "$TMP_WORK" || exit 1
+
+cleanup() {
+    rm -rf "$TMP_WORK"
+}
+trap cleanup EXIT
+
+declare -A EXISTING_IDS
+declare -A EXISTING_KEYS
+declare -A DESIRED_KEYS
+
+add_count=0
+delete_count=0
+
+#----------------------------------------------------------#
+#                       Helpers                            #
+#----------------------------------------------------------#
+
+trim() {
+    local var="$*"
+    var="${var#"${var%%[![:space:]]*}"}"
+    var="${var%"${var##*[![:space:]]}"}"
+    printf '%s' "$var"
+}
+
+normalize_name() {
+    local name="$1"
+    local origin_nodot="${origin%.}"
+
+    if [ -z "$name" ] || [ "$name" = "@" ]; then
+        echo "@"
+        return
+    fi
+
+    name="${name%.}"
+
+    if [ "$name" = "$origin_nodot" ]; then
+        echo "@"
+        return
+    fi
+
+    case "$name" in
+        *."$origin_nodot")
+            echo "${name%.$origin_nodot}"
+            ;;
+        *)
+            echo "$name"
+            ;;
+    esac
+}
+
+make_fqdn_if_needed() {
+    local value="$1"
+
+    if [ "$value" = "@" ]; then
+        echo "$origin"
+        return
+    fi
+
+    case "$value" in
+        *.)
+            echo "$value"
+            ;;
+        *)
+            echo "$value."
+            ;;
+    esac
+}
+
+strip_outer_quotes() {
+    local value="$1"
+    value="${value#\"}"
+    value="${value%\"}"
+    printf '%s' "$value"
+}
+
+build_key() {
+    printf '%s^%s^%s^%s' "$1" "$2" "$3" "$4"
+}
+
+show_current_state() {
+    local state_title="$1"
+
+    echo
+    echo "$state_title"
+    echo "User: $user"
+    echo "Domain: $domain"
+    echo
+
+    echo "$VESTA_BIN/v-list-dns-records $user $domain"
+    $VESTA_BIN/v-list-dns-records "$user" "$domain" 2>/dev/null || echo "Unable to display v-list-dns-records output"
+    echo
+
+    echo "$VESTA_BIN/v-get-dns-config $domain"
+    $VESTA_BIN/v-get-dns-config "$domain" 2>/dev/null || echo "Unable to display v-get-dns-config output"
+    echo
+}
+
+show_parsed_records() {
+    echo "Parsed records:"
+    echo "RECORD^TYPE^PRIORITY^VALUE"
+    echo "------^----^--------^-----"
+    column -t -s '^' "$TMP_PARSED"
+    echo
+}
+
+load_existing_records() {
+    local line key value_unescaped
+
+    EXISTING_IDS=()
+    EXISTING_KEYS=()
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        [ -z "$line" ] && continue
+
+        unset ID RECORD TYPE PRIORITY VALUE SUSPENDED TIME DATE
+        eval "$line"
+
+        value_unescaped="${VALUE//%quote%/\'}"
+        key=$(build_key "$RECORD" "$TYPE" "$PRIORITY" "$value_unescaped")
+
+        EXISTING_IDS["$key"]="$ID"
+        EXISTING_KEYS["$key"]=1
+    done < "$CONF_FILE"
+}
+
+load_desired_records() {
+    local record type priority value key
+
+    DESIRED_KEYS=()
+
+    while IFS='^' read -r record type priority value || [ -n "$record" ]; do
+        [ -z "$record" ] && continue
+        key=$(build_key "$record" "$type" "$priority" "$value")
+        DESIRED_KEYS["$key"]=1
+    done < "$TMP_PARSED"
+}
+
+calculate_diff_counts() {
+    local record type priority value key
+
+    add_count=0
+    delete_count=0
+
+    while IFS='^' read -r record type priority value || [ -n "$record" ]; do
+        [ -z "$record" ] && continue
+        key=$(build_key "$record" "$type" "$priority" "$value")
+        if [ -z "${EXISTING_KEYS[$key]+x}" ]; then
+            add_count=$((add_count + 1))
+        fi
+    done < "$TMP_PARSED"
+
+    for key in "${!EXISTING_KEYS[@]}"; do
+        if [ -z "${DESIRED_KEYS[$key]+x}" ]; then
+            delete_count=$((delete_count + 1))
+        fi
+    done
+}
+
+show_diff_summary() {
+    echo "Planned changes:"
+    echo "To add: $add_count"
+    echo "To delete: $delete_count"
+    echo
+}
+
+#----------------------------------------------------------#
+#          Convert zone file to logical single lines       #
+#----------------------------------------------------------#
+
+origin="$domain."
+paren_level=0
+buffer=""
+
+> "$TMP_LINES"
+
+while IFS= read -r raw_line || [ -n "$raw_line" ]; do
+    line="$raw_line"
+
+    clean=""
+    in_quotes=0
+    prev_char=""
+    i=1
+    len=${#line}
+    while [ $i -le $len ]; do
+        ch=$(printf '%s' "$line" | cut -c "$i")
+        if [ "$ch" = '"' ] && [ "$prev_char" != '\' ]; then
+            if [ $in_quotes -eq 0 ]; then
+                in_quotes=1
+            else
+                in_quotes=0
+            fi
+        fi
+
+        if [ "$ch" = ";" ] && [ $in_quotes -eq 0 ]; then
+            break
+        fi
+
+        clean="${clean}${ch}"
+        prev_char="$ch"
+        i=$((i + 1))
+    done
+
+    clean=$(trim "$clean")
+    [ -z "$clean" ] && continue
+
+    case "$clean" in
+        \$ORIGIN*)
+            new_origin=$(trim "${clean#\$ORIGIN}")
+            new_origin="${new_origin%.}."
+            origin="$new_origin"
+            continue
+            ;;
+        \$TTL*)
+            continue
+            ;;
+    esac
+
+    opens=$(printf '%s' "$clean" | tr -cd '(' | wc -c)
+    closes=$(printf '%s' "$clean" | tr -cd ')' | wc -c)
+
+    if [ -z "$buffer" ]; then
+        buffer="$clean"
+    else
+        buffer="$buffer $clean"
+    fi
+
+    paren_level=$((paren_level + opens - closes))
+
+    if [ $paren_level -le 0 ]; then
+        logical=$(printf '%s\n' "$buffer" | sed 's/[()]//g' | tr -s ' ')
+        logical=$(trim "$logical")
+        [ -n "$logical" ] && echo "$logical" >> "$TMP_LINES"
+        buffer=""
+        paren_level=0
+    fi
+done < "$zone_file"
+
+if [ -n "$buffer" ]; then
+    logical=$(printf '%s\n' "$buffer" | sed 's/[()]//g' | tr -s ' ')
+    logical=$(trim "$logical")
+    [ -n "$logical" ] && echo "$logical" >> "$TMP_LINES"
+fi
+
+#----------------------------------------------------------#
+#                     Parse records                        #
+#----------------------------------------------------------#
+
+last_owner="@"
+> "$TMP_PARSED"
+
+while IFS= read -r line || [ -n "$line" ]; do
+    [ -z "$line" ] && continue
+
+    case "$line" in
+        \$ORIGIN*|\$TTL*)
+            continue
+            ;;
+    esac
+
+    upper=$(printf '%s\n' "$line" | tr '[:lower:]' '[:upper:]')
+
+    case "$upper" in
+        *" SOA "*|SOA\ *)
+            continue
+            ;;
+    esac
+
+    tokens=()
+    token=""
+    in_quotes=0
+    prev_char=""
+    i=1
+    len=${#line}
+
+    while [ $i -le $len ]; do
+        ch=$(printf '%s' "$line" | cut -c "$i")
+
+        if [ "$ch" = '"' ] && [ "$prev_char" != '\' ]; then
+            token="${token}${ch}"
+            if [ $in_quotes -eq 0 ]; then
+                in_quotes=1
+            else
+                in_quotes=0
+            fi
+            prev_char="$ch"
+            i=$((i + 1))
+            continue
+        fi
+
+        if [ "$ch" = " " ] || [ "$ch" = $'\t' ]; then
+            if [ $in_quotes -eq 0 ]; then
+                if [ -n "$token" ]; then
+                    tokens+=("$token")
+                    token=""
+                fi
+                prev_char="$ch"
+                i=$((i + 1))
+                continue
+            fi
+        fi
+
+        token="${token}${ch}"
+        prev_char="$ch"
+        i=$((i + 1))
+    done
+
+    [ -n "$token" ] && tokens+=("$token")
+    [ ${#tokens[@]} -eq 0 ] && continue
+
+    type_idx=-1
+    rtype=""
+
+    for idx in "${!tokens[@]}"; do
+        tok_upper=$(printf '%s\n' "${tokens[$idx]}" | tr '[:lower:]' '[:upper:]')
+        case "$tok_upper" in
+            A|AAAA|NS|MX|CNAME|TXT)
+                type_idx=$idx
+                rtype=$tok_upper
+                break
+                ;;
+        esac
+    done
+
+    [ $type_idx -lt 0 ] && continue
+
+    owner=""
+    for ((j=0; j<type_idx; j++)); do
+        tok="${tokens[$j]}"
+        tok_upper=$(printf '%s\n' "$tok" | tr '[:lower:]' '[:upper:]')
+
+        case "$tok_upper" in
+            IN|CH|HS)
+                continue
+                ;;
+        esac
+
+        if printf '%s\n' "$tok" | grep -Eq '^[0-9]+$'; then
+            continue
+        fi
+
+        owner="$tok"
+        break
+    done
+
+    if [ -z "$owner" ]; then
+        owner="$last_owner"
+    else
+        last_owner="$owner"
+    fi
+
+    record=$(normalize_name "$owner")
+    priority=""
+    value=""
+
+    case "$rtype" in
+        A|AAAA)
+            value="${tokens[$((type_idx + 1))]}"
+            ;;
+        NS|CNAME)
+            value="${tokens[$((type_idx + 1))]}"
+            value=$(make_fqdn_if_needed "$value")
+            ;;
+        MX)
+            priority="${tokens[$((type_idx + 1))]}"
+            value="${tokens[$((type_idx + 2))]}"
+            value=$(make_fqdn_if_needed "$value")
+            ;;
+        TXT)
+            value=""
+            for ((j=type_idx + 1; j<${#tokens[@]}; j++)); do
+                part="${tokens[$j]}"
+                part="${part#\"}"
+                part="${part%\"}"
+                value="${value}${part}"
+            done
+            value="\"$value\""
+            ;;
+    esac
+
+    if [ -n "$record" ] && [ -n "$rtype" ] && [ -n "$value" ]; then
+        printf '%s^%s^%s^%s\n' "$record" "$rtype" "$priority" "$value" >> "$TMP_PARSED"
+    fi
+done < "$TMP_LINES"
+
+if [ ! -s "$TMP_PARSED" ]; then
+    echo "No supported DNS records were parsed from: $zone_file"
+    exit 1
+fi
+
+#----------------------------------------------------------#
+#                   Load existing/desire                   #
+#----------------------------------------------------------#
+
+load_existing_records
+load_desired_records
+calculate_diff_counts
+
+#----------------------------------------------------------#
+#                   Dry run output                         #
+#----------------------------------------------------------#
+
+if [ "$dry_run" = "YES" ]; then
+    echo "User: $user"
+    echo "Domain: $domain"
+    echo "Source file: $zone_file"
+    echo
+    echo "Dry run mode, nothing will be changed"
+
+    show_current_state "Current DNS state before import"
+    show_parsed_records
+    show_diff_summary
+    exit 0
+fi
+
+#----------------------------------------------------------#
+#               Show current state before import           #
+#----------------------------------------------------------#
+
+show_current_state "Current DNS state before import"
+show_parsed_records
+show_diff_summary
+
+BACKUP_SUFFIX=$(date +%Y%m%d_%H%M%S)
+
+if [ -f "$CONF_FILE" ]; then
+    cp -a "$CONF_FILE" "${CONF_FILE}.bak_${BACKUP_SUFFIX}"
+fi
+
+if [ -f "$DB_FILE" ]; then
+    cp -a "$DB_FILE" "${DB_FILE}.bak_${BACKUP_SUFFIX}"
+fi
+
+#----------------------------------------------------------#
+#                 Add missing records first                #
+#----------------------------------------------------------#
+
+while IFS='^' read -r record type priority value || [ -n "$record" ]; do
+    [ -z "$record" ] && continue
+
+    key=$(build_key "$record" "$type" "$priority" "$value")
+
+    if [ -z "${EXISTING_KEYS[$key]+x}" ]; then
+        add_value=$(strip_outer_quotes "$value")
+
+        case "$type" in
+            MX)
+                $VESTA_BIN/v-add-dns-record "$user" "$domain" "$record" "$type" "$add_value" "$priority" "" "no"
+                check_result $? "failed to add $type record $record for $domain"
+                ;;
+            *)
+                $VESTA_BIN/v-add-dns-record "$user" "$domain" "$record" "$type" "$add_value" "" "" "no"
+                check_result $? "failed to add $type record $record for $domain"
+                ;;
+        esac
+    fi
+done < "$TMP_PARSED"
+
+#----------------------------------------------------------#
+#              Delete records that are not needed          #
+#----------------------------------------------------------#
+
+for key in "${!EXISTING_KEYS[@]}"; do
+    if [ -z "${DESIRED_KEYS[$key]+x}" ]; then
+        id="${EXISTING_IDS[$key]}"
+        $VESTA_BIN/v-delete-dns-record "$user" "$domain" "$id" "no"
+        check_result $? "failed to delete dns record ID=$id for $domain"
+    fi
+done
+
+#----------------------------------------------------------#
+#                 Final rebuild and output                 #
+#----------------------------------------------------------#
+
+$VESTA_BIN/v-rebuild-dns-domain "$user" "$domain"
+check_result $? "failed to rebuild DNS zone for $domain"
+
+echo
+echo "DNS zone imported successfully"
+echo "User: $user"
+echo "Domain: $domain"
+echo "Source file: $zone_file"
+echo "Conf file: $CONF_FILE"
+
+show_current_state "Current DNS state after import"
