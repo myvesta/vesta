@@ -20,6 +20,7 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
         "ChatGPT" => 3,
         "GPTBot" => 3,
         "OAI-SearchBot" => 3,
+        "facebookexternalhit" => 3, // Facebook share preview
         "facebookexternal" => 3,
         "facebot" => 1,
         "facebookcatalog" => 1,

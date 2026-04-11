@@ -86,7 +86,7 @@ if (isset($_SERVER['SERVER_ADDR']) && isset($_SERVER['REMOTE_ADDR'])) {
 if (file_exists('/usr/share/phpgate/phpgate-conf.php')==true) include_once('/usr/share/phpgate/phpgate-conf.php');
 if (isset($_REQUEST['wc-api'])==true && $_REQUEST['wc-api']=='wc_allsecureexchange') $phpgate_skip_agent_string_check=true;
 
-if (isset($phpgate_skip_agent_string_check)==false && file_exists('/usr/share/phpgate/phpgate-agent-strings.php')==true) include_once('/usr/share/phpgate/phpgate-agent-strings.php');
+if (isset($_GET['sharing'])==false && isset($phpgate_skip_agent_string_check)==false && file_exists('/usr/share/phpgate/phpgate-agent-strings.php')==true) include_once('/usr/share/phpgate/phpgate-agent-strings.php');
 
 if (isset($phpgate_skip_xmlrpc_block)==false && substr($_SERVER['PHP_SELF'], -10)=='xmlrpc.php') phpgate_cut_request();
 if (isset($phpgate_skip_wp_trackback_block)==false && substr($_SERVER['PHP_SELF'], -16)=='wp-trackback.php') phpgate_cut_request();
