@@ -1,0 +1,801 @@
+#!/bin/bash
+# info: move emails between mailboxes using doveadm, with date filters, dry-run, folder sync and pre/post checks
+# usage:
+#   v-move-mails-doveadm SRC_EMAIL DST_EMAIL --before YYYY-MM-DD [options]
+#   v-move-mails-doveadm SRC_EMAIL DST_EMAIL --since YYYY-MM-DD [options]
+#   v-move-mails-doveadm SRC_EMAIL DST_EMAIL --from YYYY-MM-DD --to YYYY-MM-DD [options]
+#   v-move-mails-doveadm SRC_EMAIL DST_EMAIL --all [options]
+
+export LC_ALL=C.UTF-8
+export LANG=C.UTF-8
+
+: "${VESTA:=/usr/local/vesta}"
+
+source "$VESTA/func/main.sh"
+source "$VESTA/conf/vesta.conf"
+
+PROG="$(basename "$0")"
+LOCK_FILE="/var/lock/${PROG}.lock"
+
+src_email="$1"
+dst_email="$2"
+shift 2 2>/dev/null || true
+
+ORIGINAL_ARGS=("$@")
+
+mode=""
+before_date=""
+since_date=""
+from_date=""
+to_date=""
+to_date_plus_one=""
+dry_run="no"
+assume_yes="no"
+create_missing_folders="yes"
+
+declare -a include_mailboxes
+declare -a exclude_mailboxes
+declare -a FINAL_MAILBOXES
+
+declare -a PRECHECK_ROWS
+declare -a POSTCHECK_ROWS
+declare -a MISSING_MAILBOXES
+
+run_ts="$(date +%Y%m%d_%H%M%S)"
+
+safe_name() {
+    echo "$1" | sed 's/[^A-Za-z0-9._-]/_/g'
+}
+
+SRC_SAFE="$(safe_name "$src_email")"
+DST_SAFE="$(safe_name "$dst_email")"
+RUN_DIR="/root/${PROG}-${run_ts}-${SRC_SAFE}-to-${DST_SAFE}"
+REPORT_FILE="$RUN_DIR/report.txt"
+MOVE_LOG="$RUN_DIR/move.log"
+FULL_COMMAND="$(printf '%q ' "$0" "$src_email" "$dst_email" "${ORIGINAL_ARGS[@]}")"
+
+total_to_move=0
+created_any_folder="no"
+
+SOURCE_MAILBOXES_RAW=""
+DEST_MAILBOXES_BEFORE_RAW=""
+DEST_MAILBOXES_AFTER_RAW=""
+SOURCE_STATUS_BEFORE_RAW=""
+DEST_STATUS_BEFORE_RAW=""
+SOURCE_STATUS_AFTER_RAW=""
+DEST_STATUS_AFTER_RAW=""
+FINAL_RESULT="UNKNOWN"
+
+log() {
+    echo "$@"
+}
+
+report() {
+    echo "$@" >> "$REPORT_FILE"
+}
+
+log_report() {
+    echo "$@"
+    echo "$@" >> "$REPORT_FILE"
+}
+
+err() {
+    echo "ERROR: $*" >&2
+    [ -n "$REPORT_FILE" ] && echo "ERROR: $*" >> "$REPORT_FILE" 2>/dev/null
+    exit 1
+}
+
+usage() {
+    cat <<EOF
+Usage:
+  $PROG SRC_EMAIL DST_EMAIL --before YYYY-MM-DD [--dry-run] [--yes]
+  $PROG SRC_EMAIL DST_EMAIL --since YYYY-MM-DD [--dry-run] [--yes]
+  $PROG SRC_EMAIL DST_EMAIL --from YYYY-MM-DD --to YYYY-MM-DD [--dry-run] [--yes]
+  $PROG SRC_EMAIL DST_EMAIL --all [--dry-run] [--yes]
+
+Examples:
+  $PROG source@example.test archive@example.test --before 2025-04-20 --dry-run
+  $PROG source@example.test archive@example.test --before 2025-04-20 --yes
+  $PROG source@example.test archive@example.test --since 2026-01-01 --dry-run
+  $PROG source@example.test archive@example.test --from 2025-01-01 --to 2025-12-31 --yes
+  $PROG source@example.test archive@example.test --all --dry-run
+  $PROG source@example.test archive@example.test --before 2025-04-20 --mailbox "INBOX" --mailbox "Sent" --dry-run
+  $PROG source@example.test archive@example.test --before 2025-04-20 --exclude-mailbox "Spam" --exclude-mailbox "Trash" --dry-run
+  $PROG source@example.test archive@example.test --before 2025-04-20 --create-missing-folders=no --dry-run
+
+Notes:
+  --before YYYY-MM-DD              move messages older than the given date
+  --since YYYY-MM-DD               move messages from the given date and newer
+  --from/--to                      move messages within the specified date range
+  --all                            move all messages from all folders
+  --dry-run                        do not move messages and do not create folders, only validate and print the plan
+  --yes                            skip the interactive confirmation prompt
+  --mailbox "NAME"                 process only the specified mailbox, may be used multiple times
+  --exclude-mailbox "NAME"         exclude the specified mailbox, may be used multiple times
+  --create-missing-folders=yes|no  create missing destination folders before moving, default: yes
+
+Additional examples:
+  Only INBOX and Sent:
+    $PROG source@example.test archive@example.test --before 2025-04-20 --mailbox "INBOX" --mailbox "Sent" --yes
+
+  All folders except Spam and Trash:
+    $PROG source@example.test archive@example.test --before 2025-04-20 --exclude-mailbox "Spam" --exclude-mailbox "Trash" --yes
+
+  Refuse to run if a destination folder is missing:
+    $PROG source@example.test archive@example.test --before 2025-04-20 --create-missing-folders=no --yes
+EOF
+    exit 1
+}
+
+check_root() {
+    [ "$EUID" -ne 0 ] && err "This command must be run as root."
+}
+
+require_cmd() {
+    command -v "$1" >/dev/null 2>&1 || err "Required command not found: $1"
+}
+
+validate_email() {
+    local email="$1"
+    [[ "$email" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || err "Invalid email address: $email"
+}
+
+validate_date() {
+    local d="$1"
+    [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || err "Invalid date format: $d (expected YYYY-MM-DD)"
+    date -d "$d" "+%F" >/dev/null 2>&1 || err "Invalid date value: $d"
+}
+
+validate_yes_no() {
+    local v="$1"
+    [[ "$v" = "yes" || "$v" = "no" ]] || err "Value must be yes or no, got: $v"
+}
+
+next_day() {
+    date -d "$1 +1 day" "+%F"
+}
+
+acquire_lock() {
+    if ! ( set -o noclobber; echo "$$" > "$LOCK_FILE" ) 2>/dev/null; then
+        err "Another instance appears to be running. Lock file exists: $LOCK_FILE"
+    fi
+}
+
+cleanup() {
+    rm -f "$LOCK_FILE"
+}
+trap cleanup EXIT
+
+array_contains_exact() {
+    local needle="$1"
+    shift
+    local item
+    for item in "$@"; do
+        [ "$item" = "$needle" ] && return 0
+    done
+    return 1
+}
+
+parse_args() {
+    [ -n "$src_email" ] || usage
+    [ -n "$dst_email" ] || usage
+
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --before)
+                [ -z "$mode" ] || err "Use only one filter mode: --before, --since, --from/--to or --all"
+                before_date="$2"
+                [ -n "$before_date" ] || err "Missing value for --before"
+                mode="before"
+                shift 2
+                ;;
+            --since)
+                [ -z "$mode" ] || err "Use only one filter mode: --before, --since, --from/--to or --all"
+                since_date="$2"
+                [ -n "$since_date" ] || err "Missing value for --since"
+                mode="since"
+                shift 2
+                ;;
+            --from)
+                [ -z "$mode" ] || err "Use only one filter mode: --before, --since, --from/--to or --all"
+                from_date="$2"
+                [ -n "$from_date" ] || err "Missing value for --from"
+                mode="range"
+                shift 2
+                ;;
+            --to)
+                to_date="$2"
+                [ -n "$to_date" ] || err "Missing value for --to"
+                shift 2
+                ;;
+            --all)
+                [ -z "$mode" ] || err "Use only one filter mode: --before, --since, --from/--to or --all"
+                mode="all"
+                shift
+                ;;
+            --dry-run)
+                dry_run="yes"
+                shift
+                ;;
+            --yes)
+                assume_yes="yes"
+                shift
+                ;;
+            --mailbox)
+                [ -n "$2" ] || err "Missing value for --mailbox"
+                include_mailboxes+=("$2")
+                shift 2
+                ;;
+            --exclude-mailbox)
+                [ -n "$2" ] || err "Missing value for --exclude-mailbox"
+                exclude_mailboxes+=("$2")
+                shift 2
+                ;;
+            --create-missing-folders)
+                [ -n "$2" ] || err "Missing value for --create-missing-folders"
+                create_missing_folders="$2"
+                shift 2
+                ;;
+            -h|--help)
+                usage
+                ;;
+            *)
+                err "Unknown argument: $1"
+                ;;
+        esac
+    done
+
+    [ "$src_email" != "$dst_email" ] || err "Source and destination email must be different."
+    validate_email "$src_email"
+    validate_email "$dst_email"
+    validate_yes_no "$create_missing_folders"
+
+    [ -n "$mode" ] || err "You must provide one filter mode: --before, --since, --from/--to or --all"
+
+    case "$mode" in
+        before)
+            validate_date "$before_date"
+            ;;
+        since)
+            validate_date "$since_date"
+            ;;
+        range)
+            [ -n "$from_date" ] || err "--from is required for range mode"
+            [ -n "$to_date" ] || err "--to is required for range mode"
+            validate_date "$from_date"
+            validate_date "$to_date"
+            if [ "$(date -d "$from_date" +%s)" -gt "$(date -d "$to_date" +%s)" ]; then
+                err "--from date cannot be greater than --to date"
+            fi
+            to_date_plus_one="$(next_day "$to_date")"
+            ;;
+        all)
+            ;;
+    esac
+}
+
+find_mailbox_meta() {
+    local email="$1"
+    local account domain user maildir
+    account="${email%@*}"
+    domain="${email#*@}"
+
+    local users
+    users="$(v-list-users plain 2>/dev/null | awk '{print $1}')"
+
+    for user in $users; do
+        if v-list-mail-domains "$user" plain 2>/dev/null | awk '{print $1}' | grep -Fxq "$domain"; then
+            if v-list-mail-accounts "$user" "$domain" plain 2>/dev/null | awk '{print $1}' | grep -Fxq "$account"; then
+                maildir="/home/$user/mail/$domain/$account"
+                echo "$user|$domain|$account|$maildir"
+                return 0
+            fi
+        fi
+    done
+
+    return 1
+}
+
+get_maildir_uid_gid() {
+    local path="$1"
+    [ -e "$path" ] || return 1
+    stat -c '%u|%g' "$path" 2>/dev/null || return 1
+}
+
+supports_doveadm_verbose() {
+    doveadm -v help >/dev/null 2>&1
+}
+
+run_doveadm_move() {
+    local dst_email_local="$1"
+    local dst_box="$2"
+    local src_email_local="$3"
+    shift 3
+
+    if supports_doveadm_verbose; then
+        doveadm -v move -u "$dst_email_local" "$dst_box" user "$src_email_local" "$@"
+    else
+        doveadm move -u "$dst_email_local" "$dst_box" user "$src_email_local" "$@"
+    fi
+}
+
+mailbox_messages() {
+    local email="$1"
+    local box="$2"
+    local out count
+
+    out="$(doveadm mailbox status -u "$email" messages "$box" 2>/dev/null)" || {
+        echo "0"
+        return 0
+    }
+
+    count="$(echo "$out" | awk -F'messages=' '{print $2}' | tr -d '[:space:]')"
+    [ -n "$count" ] || count="0"
+    echo "$count"
+}
+
+build_query_array() {
+    local box="$1"
+
+    case "$mode" in
+        before)
+            QUERY=(mailbox "$box" BEFORE "$before_date")
+            ;;
+        since)
+            QUERY=(mailbox "$box" SINCE "$since_date")
+            ;;
+        range)
+            QUERY=(mailbox "$box" SINCE "$from_date" BEFORE "$to_date_plus_one")
+            ;;
+        all)
+            QUERY=(mailbox "$box" ALL)
+            ;;
+        *)
+            err "Internal error, unsupported mode: $mode"
+            ;;
+    esac
+}
+
+count_matches() {
+    local email="$1"
+    local box="$2"
+
+    build_query_array "$box"
+    doveadm search -u "$email" "${QUERY[@]}" 2>/dev/null | wc -l
+}
+
+query_human() {
+    case "$mode" in
+        before) echo "BEFORE $before_date" ;;
+        since) echo "SINCE $since_date" ;;
+        range) echo "SINCE $from_date BEFORE $to_date_plus_one (original to-date: $to_date)" ;;
+        all) echo "ALL" ;;
+    esac
+}
+
+load_mailbox_lists() {
+    SOURCE_MAILBOXES_RAW="$(doveadm mailbox list -u "$src_email")" || err "Failed to read mailbox list for $src_email"
+    DEST_MAILBOXES_BEFORE_RAW="$(doveadm mailbox list -u "$dst_email")" || err "Failed to read mailbox list for $dst_email"
+}
+
+build_final_mailbox_list() {
+    local box
+
+    FINAL_MAILBOXES=()
+
+    if [ "${#include_mailboxes[@]}" -gt 0 ]; then
+        for box in "${include_mailboxes[@]}"; do
+            if ! printf '%s\n' "$SOURCE_MAILBOXES_RAW" | grep -Fxq "$box"; then
+                err "Requested mailbox does not exist on source: $box"
+            fi
+            if ! array_contains_exact "$box" "${FINAL_MAILBOXES[@]}"; then
+                FINAL_MAILBOXES+=("$box")
+            fi
+        done
+    else
+        while IFS= read -r box; do
+            [ -n "$box" ] || continue
+            if ! array_contains_exact "$box" "${FINAL_MAILBOXES[@]}"; then
+                FINAL_MAILBOXES+=("$box")
+            fi
+        done <<< "$SOURCE_MAILBOXES_RAW"
+    fi
+
+    if [ "${#exclude_mailboxes[@]}" -gt 0 ]; then
+        local filtered=()
+        for box in "${FINAL_MAILBOXES[@]}"; do
+            if array_contains_exact "$box" "${exclude_mailboxes[@]}"; then
+                continue
+            fi
+            filtered+=("$box")
+        done
+        FINAL_MAILBOXES=("${filtered[@]}")
+    fi
+
+    [ "${#FINAL_MAILBOXES[@]}" -gt 0 ] || err "No mailboxes left to process after applying include/exclude filters."
+}
+
+sync_destination_mailboxes() {
+    local box
+
+    MISSING_MAILBOXES=()
+
+    for box in "${FINAL_MAILBOXES[@]}"; do
+        if ! printf '%s\n' "$DEST_MAILBOXES_BEFORE_RAW" | grep -Fxq "$box"; then
+            MISSING_MAILBOXES+=("$box")
+
+            if [ "$dry_run" = "yes" ]; then
+                log_report "DRY-RUN: destination mailbox missing and would be created: $box"
+            else
+                if [ "$create_missing_folders" = "yes" ]; then
+                    log_report "Creating missing destination mailbox: $box"
+                    doveadm mailbox create -u "$dst_email" "$box" || err "Failed to create destination mailbox: $box"
+                    created_any_folder="yes"
+                else
+                    err "Destination mailbox missing and --create-missing-folders=no was specified: $box"
+                fi
+            fi
+        fi
+    done
+
+    if [ "$dry_run" = "no" ] && [ "$created_any_folder" = "yes" ]; then
+        DEST_MAILBOXES_AFTER_RAW="$(doveadm mailbox list -u "$dst_email")" || err "Failed to refresh destination mailbox list"
+    else
+        DEST_MAILBOXES_AFTER_RAW="$DEST_MAILBOXES_BEFORE_RAW"
+    fi
+}
+
+load_status_before() {
+    SOURCE_STATUS_BEFORE_RAW="$(doveadm mailbox status -u "$src_email" messages "*")" || err "Failed to read source status before"
+    DEST_STATUS_BEFORE_RAW="$(doveadm mailbox status -u "$dst_email" messages "*")" || err "Failed to read destination status before"
+}
+
+load_status_after() {
+    SOURCE_STATUS_AFTER_RAW="$(doveadm mailbox status -u "$src_email" messages "*")" || err "Failed to read source status after"
+    DEST_STATUS_AFTER_RAW="$(doveadm mailbox status -u "$dst_email" messages "*")" || err "Failed to read destination status after"
+}
+
+generate_pre_counts() {
+    local src_total src_match dst_total expected_src_after expected_dst_after
+    local line box
+
+    PRECHECK_ROWS=()
+    total_to_move=0
+
+    log_report ""
+    log_report "Pre-check by mailbox"
+    log_report "Filter: $(query_human)"
+    log_report "------------------------------------------------------------"
+
+    for box in "${FINAL_MAILBOXES[@]}"; do
+        src_total="$(mailbox_messages "$src_email" "$box")"
+        src_match="$(count_matches "$src_email" "$box")"
+        dst_total="$(mailbox_messages "$dst_email" "$box")"
+
+        expected_src_after=$((src_total - src_match))
+        expected_dst_after=$((dst_total + src_match))
+        total_to_move=$((total_to_move + src_match))
+
+        line="$(printf "%s\t%s\t%s\t%s\t%s\t%s" \
+            "$box" "$src_total" "$src_match" "$dst_total" "$expected_src_after" "$expected_dst_after")"
+        PRECHECK_ROWS+=("$line")
+
+        log_report "$(printf "%-30s src=%-8s match=%-8s dst=%-8s expected_src=%-8s expected_dst=%-8s" \
+            "$box" "$src_total" "$src_match" "$dst_total" "$expected_src_after" "$expected_dst_after")"
+    done
+
+    log_report "------------------------------------------------------------"
+    log_report "Total messages matching filter on source: $total_to_move"
+}
+
+confirmation_prompt() {
+    [ "$dry_run" = "yes" ] && return 0
+    [ "$assume_yes" = "yes" ] && return 0
+
+    log_report ""
+    log_report "Source email            : $src_email"
+    log_report "Destination email       : $dst_email"
+    log_report "Filter                  : $(query_human)"
+    log_report "Create missing folders  : $create_missing_folders"
+    log_report "Run directory           : $RUN_DIR"
+    log_report ""
+
+    read -r -p "Continue with MOVE? (yes/no): " confirm
+    echo "Continue with MOVE? (yes/no): $confirm" >> "$REPORT_FILE"
+    [ "$confirm" = "yes" ] || err "Aborted by user."
+}
+
+move_mailboxes() {
+    local row box src_total src_match dst_total expected_src_after expected_dst_after
+
+    : > "$MOVE_LOG"
+
+    for row in "${PRECHECK_ROWS[@]}"; do
+        IFS=$'\t' read -r box src_total src_match dst_total expected_src_after expected_dst_after <<< "$row"
+
+        if [ "$src_match" -eq 0 ]; then
+            log_report "Skipping mailbox with 0 matching messages: $box"
+            continue
+        fi
+
+        build_query_array "$box"
+
+        log_report ""
+        log_report "Moving mailbox: $box"
+        log_report "Messages to move: $src_match"
+
+        {
+            echo "===== $(date '+%F %T') | mailbox=$box | match=$src_match ====="
+            if supports_doveadm_verbose; then
+                echo "CMD: doveadm -v move -u \"$dst_email\" \"$box\" user \"$src_email\" ${QUERY[*]}"
+            else
+                echo "CMD: doveadm move -u \"$dst_email\" \"$box\" user \"$src_email\" ${QUERY[*]}"
+            fi
+            run_doveadm_move "$dst_email" "$box" "$src_email" "${QUERY[@]}"
+            echo
+        } >> "$MOVE_LOG" 2>&1 || err "Move failed for mailbox: $box. Check log: $MOVE_LOG"
+    done
+}
+
+generate_post_checks() {
+    local row box src_total src_match dst_total expected_src_after expected_dst_after
+    local actual_src_after actual_dst_after remaining_matching_on_source status line
+
+    POSTCHECK_ROWS=()
+
+    log_report ""
+    log_report "Post-check by mailbox"
+    log_report "------------------------------------------------------------"
+
+    for row in "${PRECHECK_ROWS[@]}"; do
+        IFS=$'\t' read -r box src_total src_match dst_total expected_src_after expected_dst_after <<< "$row"
+
+        actual_src_after="$(mailbox_messages "$src_email" "$box")"
+        actual_dst_after="$(mailbox_messages "$dst_email" "$box")"
+        remaining_matching_on_source="$(count_matches "$src_email" "$box")"
+
+        status="OK"
+
+        if [ "$remaining_matching_on_source" -ne 0 ]; then
+            status="WARN_LEFTOVER_MATCHES"
+        elif [ "$actual_dst_after" -ne "$expected_dst_after" ]; then
+            status="WARN_DST_COUNT_MISMATCH"
+        elif [ "$actual_src_after" -ne "$expected_src_after" ]; then
+            status="WARN_SRC_COUNT_MISMATCH"
+        fi
+
+        line="$(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s" \
+            "$box" \
+            "$expected_src_after" "$actual_src_after" \
+            "$expected_dst_after" "$actual_dst_after" \
+            "$remaining_matching_on_source" \
+            "$status")"
+        POSTCHECK_ROWS+=("$line")
+
+        log_report "$(printf "%-30s expected_src=%-8s actual_src=%-8s expected_dst=%-8s actual_dst=%-8s remaining=%-8s status=%s" \
+            "$box" \
+            "$expected_src_after" "$actual_src_after" \
+            "$expected_dst_after" "$actual_dst_after" \
+            "$remaining_matching_on_source" \
+            "$status")"
+    done
+
+    log_report "------------------------------------------------------------"
+}
+
+print_report_header() {
+    report "Program: $PROG"
+    report "Timestamp: $run_ts"
+    report "Command: $FULL_COMMAND"
+    report "Source email: $src_email"
+    report "Destination email: $dst_email"
+    report "Mode: $mode"
+    report "Query: $(query_human)"
+    report "Dry-run: $dry_run"
+    report "Create missing folders: $create_missing_folders"
+    report ""
+}
+
+write_report_summary() {
+    local box row
+    report ""
+    report "===== Summary ====="
+    report "Run directory: $RUN_DIR"
+    report "Command: $FULL_COMMAND"
+    report "Source user/maildir      : $src_user / $src_maildir"
+    report "Destination user/maildir : $dst_user / $dst_maildir"
+    report "UID/GID                  : $src_uid_gid"
+    report "Selected mailboxes count : ${#FINAL_MAILBOXES[@]}"
+    if supports_doveadm_verbose; then
+        report "doveadm verbose mode     : supported"
+    else
+        report "doveadm verbose mode     : not supported"
+    fi
+    report "Folders created          : $created_any_folder"
+    report "Total messages matched   : $total_to_move"
+    report "Final result             : $FINAL_RESULT"
+    report ""
+
+    report "===== Selected mailboxes ====="
+    for box in "${FINAL_MAILBOXES[@]}"; do
+        report "$box"
+    done
+    report ""
+
+    report "===== Included mailboxes ====="
+    if [ "${#include_mailboxes[@]}" -eq 0 ]; then
+        report "(none, using all source mailboxes)"
+    else
+        for box in "${include_mailboxes[@]}"; do
+            report "$box"
+        done
+    fi
+    report ""
+
+    report "===== Excluded mailboxes ====="
+    if [ "${#exclude_mailboxes[@]}" -eq 0 ]; then
+        report "(none)"
+    else
+        for box in "${exclude_mailboxes[@]}"; do
+            report "$box"
+        done
+    fi
+    report ""
+
+    report "===== Missing destination mailboxes ====="
+    if [ "${#MISSING_MAILBOXES[@]}" -eq 0 ]; then
+        report "(none)"
+    else
+        for box in "${MISSING_MAILBOXES[@]}"; do
+            report "$box"
+        done
+    fi
+    report ""
+
+    report "===== Source mailboxes ====="
+    printf '%s\n' "$SOURCE_MAILBOXES_RAW" >> "$REPORT_FILE"
+    report ""
+
+    report "===== Destination mailboxes before ====="
+    printf '%s\n' "$DEST_MAILBOXES_BEFORE_RAW" >> "$REPORT_FILE"
+    report ""
+
+    report "===== Destination mailboxes after ====="
+    printf '%s\n' "$DEST_MAILBOXES_AFTER_RAW" >> "$REPORT_FILE"
+    report ""
+
+    report "===== Source status before ====="
+    printf '%s\n' "$SOURCE_STATUS_BEFORE_RAW" >> "$REPORT_FILE"
+    report ""
+
+    report "===== Destination status before ====="
+    printf '%s\n' "$DEST_STATUS_BEFORE_RAW" >> "$REPORT_FILE"
+    report ""
+
+    if [ "$dry_run" = "no" ]; then
+        report "===== Source status after ====="
+        printf '%s\n' "$SOURCE_STATUS_AFTER_RAW" >> "$REPORT_FILE"
+        report ""
+
+        report "===== Destination status after ====="
+        printf '%s\n' "$DEST_STATUS_AFTER_RAW" >> "$REPORT_FILE"
+        report ""
+    fi
+
+    report "===== Pre-check raw rows ====="
+    if [ "${#PRECHECK_ROWS[@]}" -eq 0 ]; then
+        report "(none)"
+    else
+        for row in "${PRECHECK_ROWS[@]}"; do
+            printf '%s\n' "$row" >> "$REPORT_FILE"
+        done
+    fi
+    report ""
+
+    if [ "$dry_run" = "no" ]; then
+        report "===== Post-check raw rows ====="
+        if [ "${#POSTCHECK_ROWS[@]}" -eq 0 ]; then
+            report "(none)"
+        else
+            for row in "${POSTCHECK_ROWS[@]}"; do
+                printf '%s\n' "$row" >> "$REPORT_FILE"
+            done
+        fi
+        report ""
+    fi
+
+    report "===== Move log file ====="
+    report "$MOVE_LOG"
+    report ""
+}
+
+main() {
+    check_root
+    require_cmd doveadm
+    require_cmd awk
+    require_cmd grep
+    require_cmd sed
+    require_cmd date
+    require_cmd wc
+    require_cmd stat
+
+    acquire_lock
+    parse_args "$@"
+
+    mkdir -p "$RUN_DIR" || err "Cannot create run directory: $RUN_DIR"
+    : > "$REPORT_FILE"
+    : > "$MOVE_LOG"
+
+    print_report_header
+
+    src_meta="$(find_mailbox_meta "$src_email")" || err "Source mailbox not found in myVesta: $src_email"
+    dst_meta="$(find_mailbox_meta "$dst_email")" || err "Destination mailbox not found in myVesta: $dst_email"
+
+    IFS='|' read -r src_user src_domain src_account src_maildir <<< "$src_meta"
+    IFS='|' read -r dst_user dst_domain dst_account dst_maildir <<< "$dst_meta"
+
+    [ -d "$src_maildir" ] || err "Source maildir does not exist: $src_maildir"
+    [ -d "$dst_maildir" ] || err "Destination maildir does not exist: $dst_maildir"
+
+    src_uid_gid="$(get_maildir_uid_gid "$src_maildir")" || err "Could not read UID/GID from source maildir: $src_maildir"
+    dst_uid_gid="$(get_maildir_uid_gid "$dst_maildir")" || err "Could not read UID/GID from destination maildir: $dst_maildir"
+
+    if [ "$src_uid_gid" != "$dst_uid_gid" ]; then
+        err "Source and destination mailbox do not share the same UID/GID. doveadm cross-user move may fail. Source=$src_uid_gid, Destination=$dst_uid_gid"
+    fi
+
+    load_mailbox_lists
+    build_final_mailbox_list
+    load_status_before
+    sync_destination_mailboxes
+    generate_pre_counts
+
+    log_report ""
+    log_report "Run directory: $RUN_DIR"
+    log_report "Source user/maildir      : $src_user / $src_maildir"
+    log_report "Destination user/maildir : $dst_user / $dst_maildir"
+    log_report "UID/GID                  : $src_uid_gid"
+    log_report "Selected mailboxes count : ${#FINAL_MAILBOXES[@]}"
+    log_report "Create missing folders   : $create_missing_folders"
+    if supports_doveadm_verbose; then
+        log_report "doveadm verbose mode     : supported"
+    else
+        log_report "doveadm verbose mode     : not supported"
+    fi
+    log_report ""
+
+    if [ "$dry_run" = "yes" ]; then
+        FINAL_RESULT="DRY-RUN ONLY"
+        log_report "DRY-RUN completed. No folders were created and no messages were moved."
+        log_report "Check files in: $RUN_DIR"
+        write_report_summary
+        log_event "$OK" "Dry-run mail move check: $src_email -> $dst_email ($(query_human))"
+        exit 0
+    fi
+
+    confirmation_prompt
+    move_mailboxes
+    load_status_after
+    generate_post_checks
+
+    FINAL_RESULT="OK"
+    local post_row post_status
+    for post_row in "${POSTCHECK_ROWS[@]}"; do
+        IFS=$'\t' read -r _ _ _ _ _ _ post_status <<< "$post_row"
+        if [ "$post_status" != "OK" ]; then
+            FINAL_RESULT="WARN"
+            break
+        fi
+    done
+
+    log_report "Saved move log to: $MOVE_LOG"
+    log_report ""
+    log_report "MOVE completed. Check files in: $RUN_DIR"
+
+    write_report_summary
+    log_event "$OK" "Moved mails with doveadm: $src_email -> $dst_email ($(query_human))"
+
+    exit 0
+}
+
+main "$@"
