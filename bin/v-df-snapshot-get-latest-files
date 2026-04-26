@@ -8,27 +8,32 @@ else
     number=1
 fi
 
+if ! [[ "$number" =~ ^[0-9]+$ ]]; then
+    echo "Error: Position must be a number"
+    exit 1
+fi
+
 if [ $number -eq 0 ]; then
     echo "Error: Position must be greater than 0"
     exit 1
 fi
 
-if [ $number -gt 10 ]; then
-    echo "Error: Position must be less than 10"
-    exit 1
-fi
+#if [ $number -gt 31 ]; then
+#    echo "Error: Position must be less than 31"
+#    exit 1
+#fi
 
 all_files=()
 
 if [ -d "/dev/shm/myvesta-df" ]; then
-     latest_files=$(ls -t /dev/shm/myvesta-df/snapshot-*.txt 2>/dev/null | head -n 10)
+     latest_files=$(ls -t /dev/shm/myvesta-df/snapshot-*.txt 2>/dev/null)
     for file in $latest_files; do
         all_files+=("$file")
     done
 fi
 
 if [ -d "/usr/local/vesta/data/df" ]; then
-    latest_files=$(ls -t /usr/local/vesta/data/df/snapshot-*.txt 2>/dev/null | head -n 10)
+    latest_files=$(ls -t /usr/local/vesta/data/df/snapshot-*.txt 2>/dev/null)
     for file in $latest_files; do
         all_files+=("$file")
     done
@@ -56,6 +61,10 @@ done | sort -r -n | awk -F"\t" '{print $2}'))
 # Now: latest_files[0] is the newest file, latest_files[1] is the next oldest, etc.
 
 ((number--))
-echo ${latest_files[$number]}
+file=${latest_files[$number]}
+if [ -z "$file" ]; then
+    exit 1
+fi
+echo $file
 
 exit 0

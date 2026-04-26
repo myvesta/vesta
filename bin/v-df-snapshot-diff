@@ -22,7 +22,12 @@ else
             file1="/usr/local/vesta/data/df/$file1"
         else
             if [[ "$file1" =~ ^[0-9]+$ ]]; then
-                file1=$(/usr/local/vesta/bin/v-df-snapshot-get-latest-files $file1)
+                position=$file1
+                file1=$(/usr/local/vesta/bin/v-df-snapshot-get-latest-files $position)
+                if [ -z "$file1" ]; then
+                    echo "Error: No snapshot found for position $position"
+                    exit 1
+                fi
             fi
         fi
     fi
@@ -36,7 +41,12 @@ else
             file2="/usr/local/vesta/data/df/$file2"
         else
             if [[ "$file2" =~ ^[0-9]+$ ]]; then
-                file2=$(/usr/local/vesta/bin/v-df-snapshot-get-latest-files $file2)
+                position=$file2
+                file2=$(/usr/local/vesta/bin/v-df-snapshot-get-latest-files $position)
+                if [ -z "$file2" ]; then
+                    echo "Error: No snapshot found for position $position"
+                    exit 1
+                fi
             fi
         fi
     fi
