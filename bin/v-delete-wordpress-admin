@@ -1,0 +1,98 @@
+#!/bin/bash
+# info: Delete a WordPress admin user from a specific domain
+# options: DOMAIN USERNAME_OR_EMAIL [REASSIGN_TO_USER_OR_ID]
+
+whoami=$(whoami)
+if [ "$whoami" != "root" ]; then
+    echo "You must be root to execute this script"
+    exit 1
+fi
+
+if [ "$#" -lt 2 ]; then
+    echo "Usage: v-delete-wordpress-admin [DOMAIN] [USERNAME_OR_EMAIL] [REASSIGN_TO_USER_OR_ID]"
+    exit 1
+fi
+
+source /etc/profile
+export PATH="/usr/local/vesta/bin:$PATH"
+
+SILENT_MODE=1
+
+domain="$1"
+target_user="$2"
+reassign_to="$3"
+
+user=$(/usr/local/vesta/bin/v-search-domain-owner "$domain")
+USER=$user
+
+source /usr/local/vesta/func/main.sh
+source /usr/local/vesta/func/domain.sh
+
+if [ -z "$user" ]; then
+    check_result $E_NOTEXIST "domain $domain doesn't exist"
+fi
+
+check_args '2' "$#" 'DOMAIN USERNAME_OR_EMAIL [REASSIGN_TO_USER_OR_ID]'
+is_format_valid 'domain'
+is_object_valid 'user' 'USER' "$user"
+is_object_unsuspended 'user' 'USER' "$user"
+
+wp_path="/home/$user/web/$domain/public_html"
+
+if [ ! -d "$wp_path" ]; then
+    echo "Domain public_html doesn't exist"
+    exit 1
+fi
+
+if [ ! -f "$wp_path/wp-config.php" ]; then
+    echo "Please install WordPress first."
+    exit 1
+fi
+
+target_id=$(/usr/local/vesta/bin/v-run-wp-cli "$domain" user get "$target_user" --field=ID --skip-plugins --skip-themes 2>/dev/null)
+
+if [ -z "$target_id" ]; then
+    echo "WordPress user $target_user does not exist."
+    exit 1
+fi
+
+target_roles=$(/usr/local/vesta/bin/v-run-wp-cli "$domain" user get "$target_id" --field=roles --skip-plugins --skip-themes 2>/dev/null)
+
+if [[ "$target_roles" != *"administrator"* ]]; then
+    echo "User $target_user is not an administrator."
+    exit 1
+fi
+
+admin_ids=$(/usr/local/vesta/bin/v-run-wp-cli "$domain" user list --role=administrator --field=ID --skip-plugins --skip-themes 2>/dev/null)
+admin_count=$(echo "$admin_ids" | grep -c '^[0-9]')
+
+if [ "$admin_count" -le 1 ]; then
+    echo "Cannot delete the last WordPress administrator."
+    exit 1
+fi
+
+if [ -n "$reassign_to" ]; then
+    reassign_id=$(/usr/local/vesta/bin/v-run-wp-cli "$domain" user get "$reassign_to" --field=ID --skip-plugins --skip-themes 2>/dev/null)
+
+    if [ -z "$reassign_id" ]; then
+        echo "Reassign user $reassign_to does not exist."
+        exit 1
+    fi
+else
+    reassign_id=$(echo "$admin_ids" | awk -v id="$target_id" '$1 != id {print $1; exit}')
+fi
+
+echo "Deleting WordPress admin user $target_user from $domain"
+echo "Reassigning content to user ID $reassign_id"
+
+/usr/local/vesta/bin/v-run-wp-cli "$domain" user delete "$target_id" --reassign="$reassign_id" --skip-plugins --skip-themes 2>/dev/null
+return_code=$?
+
+if [ $return_code -eq 0 ]; then
+    echo "WordPress admin user deleted successfully."
+else
+    echo "WordPress admin user deletion failed."
+    grep -v "open_basedir" "/home/$user/web/$domain/wp-cli-error.log" 2>/dev/null
+fi
+
+exit $return_code
