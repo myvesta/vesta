@@ -1,0 +1,105 @@
+#!/bin/bash
+# info: List WordPress administrator users for a specific domain
+# options: DOMAIN [--json] [--count]
+
+#----------------------------------------------------------#
+#                    variables and checks                  #
+#----------------------------------------------------------#
+
+if [ "$(whoami)" != "root" ]; then
+    echo "You must be root to run this command."
+    exit 1
+fi
+
+export PATH="/usr/local/vesta/bin:$PATH"
+source /etc/profile
+
+domain="$1"
+output_format="table"
+count_only=false
+
+if [ -z "$domain" ]; then
+    echo "Usage: v-list-wordpress-admins DOMAIN [--json] [--count]"
+    exit 1
+fi
+
+shift
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --json)
+            output_format="json"
+            ;;
+        --count)
+            count_only=true
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: v-list-wordpress-admins DOMAIN [--json] [--count]"
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+user=$(/usr/local/vesta/bin/v-search-domain-owner "$domain")
+
+if [ -z "$user" ]; then
+    echo "Domain $domain does not exist."
+    exit 1
+fi
+
+wp_path="/home/$user/web/$domain/public_html"
+
+if [ ! -d "$wp_path" ]; then
+    echo "Domain public_html does not exist."
+    exit 1
+fi
+
+if [ ! -f "$wp_path/wp-config.php" ]; then
+    echo "WordPress is not installed on $domain."
+    exit 1
+fi
+
+#----------------------------------------------------------#
+#                       action                             #
+#----------------------------------------------------------#
+
+if [ "$count_only" = true ]; then
+    /usr/local/vesta/bin/v-run-wp-cli "$domain" user list \
+        --role=administrator \
+        --field=ID \
+        --skip-plugins \
+        --skip-themes 2>/dev/null | grep -c '^[0-9]'
+    exit $?
+fi
+
+if [ "$output_format" = "json" ]; then
+    /usr/local/vesta/bin/v-run-wp-cli "$domain" user list \
+        --role=administrator \
+        --fields=ID,user_login,user_email,display_name,user_registered,roles \
+        --format=json \
+        --skip-plugins \
+        --skip-themes 2>/dev/null
+else
+    echo
+    echo "WordPress administrators for $domain"
+    echo "Owner: $user"
+    echo
+
+    /usr/local/vesta/bin/v-run-wp-cli "$domain" user list \
+        --role=administrator \
+        --fields=ID,user_login,user_email,display_name,user_registered,roles \
+        --skip-plugins \
+        --skip-themes 2>/dev/null
+fi
+
+return_code=$?
+
+if [ $return_code -ne 0 ]; then
+    echo
+    echo "Failed to list WordPress administrators."
+    grep -v "open_basedir" "/home/$user/web/$domain/wp-cli-error.log" 2>/dev/null
+fi
+
+exit $return_code
