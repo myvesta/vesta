@@ -1,0 +1,315 @@
+#!/bin/bash
+# info: search and inspect emails for a single full email address using doveadm
+# usage: v-search-mails-doveadm EMAIL [options]
+
+export LC_ALL=C.UTF-8
+export LANG=C.UTF-8
+
+: "${VESTA:=/usr/local/vesta}"
+
+source "$VESTA/func/main.sh"
+source "$VESTA/conf/vesta.conf"
+
+PROG="$(basename "$0")"
+
+email="$1"
+shift 1 2>/dev/null || true
+
+ORIGINAL_ARGS=("$@")
+
+mailbox=""
+from_filter=""
+to_filter=""
+subject_filter=""
+text_filter=""
+before_date=""
+since_date=""
+limit=""
+uids_only="no"
+preview="no"
+body="no"
+
+usage() {
+    cat <<EOF
+Usage:
+  $PROG EMAIL [options]
+
+Arguments:
+  EMAIL                    full email address, for example info@example.com
+
+Options:
+  --mailbox "NAME"         search only in the specified mailbox
+  --from "TEXT"            match From header text
+  --to "TEXT"              match To header text
+  --subject "TEXT"         match Subject header text
+  --text "TEXT"            full text search
+  --before YYYY-MM-DD      only messages before this date
+  --since YYYY-MM-DD       only messages since this date
+  --limit N                show only the first N results after filtering
+  --uids-only              show only mailbox and UID
+  --preview                include body preview
+  --body                   include full body field
+  -h, --help               show this help message
+
+Examples:
+  $PROG info@example.com
+  $PROG info@example.com --mailbox "INBOX"
+  $PROG info@example.com --subject "invoice"
+  $PROG info@example.com --from "client@example.com" --before 2025-04-20
+  $PROG info@example.com --text "urgent" --preview
+  $PROG info@example.com --mailbox "Sent" --uids-only
+  $PROG info@example.com --mailbox "INBOX" --since 2026-01-01 --limit 20
+
+Notes:
+  - The command uses doveadm search and doveadm fetch
+  - Default output shows mailbox, UID, received date, From and Subject
+  - --uids-only is useful when you only want matching message IDs
+  - --preview adds a short body preview
+  - --body prints the full body field and may produce large output
+EOF
+    exit 1
+}
+
+err() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+require_cmd() {
+    command -v "$1" >/dev/null 2>&1 || err "Required command not found: $1"
+}
+
+validate_email() {
+    local addr="$1"
+    [[ "$addr" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || err "Invalid email address: $addr"
+}
+
+validate_date() {
+    local d="$1"
+    [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || err "Invalid date format: $d (expected YYYY-MM-DD)"
+    date -d "$d" "+%F" >/dev/null 2>&1 || err "Invalid date value: $d"
+}
+
+validate_yes_no() {
+    local v="$1"
+    [[ "$v" = "yes" || "$v" = "no" ]] || err "Value must be yes or no, got: $v"
+}
+
+find_mailbox_owner() {
+    local full_email="$1"
+    local account domain user
+
+    account="${full_email%@*}"
+    domain="${full_email#*@}"
+
+    local users
+    users="$(v-list-users plain 2>/dev/null | awk '{print $1}')"
+
+    for user in $users; do
+        if v-list-mail-domains "$user" plain 2>/dev/null | awk '{print $1}' | grep -Fxq "$domain"; then
+            if v-list-mail-accounts "$user" "$domain" plain 2>/dev/null | awk '{print $1}' | grep -Fxq "$account"; then
+                echo "$user|$domain|$account"
+                return 0
+            fi
+        fi
+    done
+
+    return 1
+}
+
+mailbox_exists() {
+    local full_email="$1"
+    local box="$2"
+    doveadm mailbox list -u "$full_email" 2>/dev/null | grep -Fxq "$box"
+}
+
+supports_doveadm_verbose() {
+    doveadm -v help >/dev/null 2>&1
+}
+
+build_query_array() {
+    QUERY=()
+
+    if [ -n "$mailbox" ]; then
+        QUERY+=(mailbox "$mailbox")
+    fi
+
+    if [ -n "$from_filter" ]; then
+        QUERY+=(FROM "$from_filter")
+    fi
+
+    if [ -n "$to_filter" ]; then
+        QUERY+=(TO "$to_filter")
+    fi
+
+    if [ -n "$subject_filter" ]; then
+        QUERY+=(SUBJECT "$subject_filter")
+    fi
+
+    if [ -n "$text_filter" ]; then
+        QUERY+=(TEXT "$text_filter")
+    fi
+
+    if [ -n "$before_date" ]; then
+        QUERY+=(BEFORE "$before_date")
+    fi
+
+    if [ -n "$since_date" ]; then
+        QUERY+=(SINCE "$since_date")
+    fi
+
+    if [ "${#QUERY[@]}" -eq 0 ]; then
+        QUERY=(ALL)
+    fi
+}
+
+run_search() {
+    local full_email="$1"
+    if supports_doveadm_verbose; then
+        doveadm -v search -u "$full_email" "${QUERY[@]}"
+    else
+        doveadm search -u "$full_email" "${QUERY[@]}"
+    fi
+}
+
+run_fetch() {
+    local full_email="$1"
+    local fields="$2"
+    if supports_doveadm_verbose; then
+        doveadm -v fetch -u "$full_email" "$fields" "${QUERY[@]}"
+    else
+        doveadm fetch -u "$full_email" "$fields" "${QUERY[@]}"
+    fi
+}
+
+parse_args() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --mailbox)
+                [ -n "$2" ] || err "Missing value for --mailbox"
+                mailbox="$2"
+                shift 2
+                ;;
+            --from)
+                [ -n "$2" ] || err "Missing value for --from"
+                from_filter="$2"
+                shift 2
+                ;;
+            --to)
+                [ -n "$2" ] || err "Missing value for --to"
+                to_filter="$2"
+                shift 2
+                ;;
+            --subject)
+                [ -n "$2" ] || err "Missing value for --subject"
+                subject_filter="$2"
+                shift 2
+                ;;
+            --text)
+                [ -n "$2" ] || err "Missing value for --text"
+                text_filter="$2"
+                shift 2
+                ;;
+            --before)
+                [ -n "$2" ] || err "Missing value for --before"
+                before_date="$2"
+                shift 2
+                ;;
+            --since)
+                [ -n "$2" ] || err "Missing value for --since"
+                since_date="$2"
+                shift 2
+                ;;
+            --limit)
+                [ -n "$2" ] || err "Missing value for --limit"
+                limit="$2"
+                shift 2
+                ;;
+            --uids-only)
+                uids_only="yes"
+                shift
+                ;;
+            --preview)
+                preview="yes"
+                shift
+                ;;
+            --body)
+                body="yes"
+                shift
+                ;;
+            -h|--help)
+                usage
+                ;;
+            *)
+                err "Unknown argument: $1"
+                ;;
+        esac
+    done
+}
+
+main() {
+    require_cmd doveadm
+    require_cmd awk
+    require_cmd grep
+    require_cmd sed
+    require_cmd date
+    require_cmd head
+
+    [ -z "$email" ] && usage
+    validate_email "$email"
+
+    parse_args "${ORIGINAL_ARGS[@]}"
+
+    if [ -n "$before_date" ]; then
+        validate_date "$before_date"
+    fi
+
+    if [ -n "$since_date" ]; then
+        validate_date "$since_date"
+    fi
+
+    if [ -n "$limit" ]; then
+        [[ "$limit" =~ ^[0-9]+$ ]] || err "Limit must be a positive integer."
+    fi
+
+    meta="$(find_mailbox_owner "$email")" || err "Mailbox not found in myVesta: $email"
+    IFS='|' read -r user domain account <<< "$meta"
+
+    if [ -n "$mailbox" ]; then
+        mailbox_exists "$email" "$mailbox" || err "Mailbox does not exist for $email: $mailbox"
+    fi
+
+    build_query_array
+
+    echo "Email   : $email"
+    echo "User    : $user"
+    echo "Query   : ${QUERY[*]}"
+    echo
+
+    if [ "$uids_only" = "yes" ]; then
+        if [ -n "$limit" ]; then
+            run_search "$email" | head -n "$limit"
+        else
+            run_search "$email"
+        fi
+        exit 0
+    fi
+
+    fields="uid mailbox date.received hdr.from hdr.subject"
+
+    if [ "$preview" = "yes" ]; then
+        fields="$fields body.preview"
+    fi
+
+    if [ "$body" = "yes" ]; then
+        fields="$fields body"
+    fi
+
+    if [ -n "$limit" ]; then
+        run_fetch "$email" "$fields" | head -n "$limit"
+    else
+        run_fetch "$email" "$fields"
+    fi
+}
+
+main
