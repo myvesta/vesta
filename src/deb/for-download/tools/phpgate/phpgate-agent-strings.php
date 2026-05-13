@@ -42,6 +42,8 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
         "YandexBot" => 1,
         "Amazonbot" => 1,
         "Applebot" => 1,
+        "Aliyun" => 1,
+        "alibaba.com" => 1,
         "dotbot" => -1,
         "Dotbot" => -1,
         "DotBot" => -1,
