@@ -36,9 +36,10 @@ function phpgate_convert_ip_to_key($ip) {
 }
 
 // Limit AI bots per Agent string/specific_endpoint
-function phpgate_count_limit_bot($name, $is_it_bot_or_specific_endpoint=1, $max_retry=3, $find_time=60, $ban_time=60) { 
+function phpgate_count_limit_bot($name, $is_it_bot_or_specific_endpoint=1, $max_retry=3, $find_time=60, $ban_time=60, $message='', $code=429) { 
     // is_it_bot_or_specific_endpoint: 1 = bot, 2 = specific_endpoint
     global $phpgate_run_counter_or_ban, $phpgate_cut_msg, $phpgate_cut_code, $phpgate_ip, $phpgate_counter_key, $phpgate_banned_key, $phpgate_cut_retry_after, $phpgate_find_time, $phpgate_ban_time, $phpgate_max_retry, $phpgate_agent_strings, $phpgate_extend_ban_time;
+    $name_original=$name;
     $phpgate_run_counter_or_ban=true;
     if ($is_it_bot_or_specific_endpoint==1 && isset($phpgate_agent_strings[$name])) $phpgate_max_retry=$phpgate_agent_strings[$name];
     else $phpgate_max_retry=$max_retry;
@@ -54,8 +55,12 @@ function phpgate_count_limit_bot($name, $is_it_bot_or_specific_endpoint=1, $max_
     $phpgate_counter_key='phpgate_ip_'.$name; // we don't want to count hits for this IP separately, that's why we are using the same 'IP value' for this 'name' (agent string/specific_endpoint), so it will count hits for this 'name' whatever IP is used
     $phpgate_banned_key='phpgate_banned_'.$name; // we don't want to ban this IP separately, that's why we are using the same 'key value' for this 'name' (agent string/specific_endpoint), so it will ban this 'name' whatever IP is used
     $phpgate_extend_ban_time=false;
-    $phpgate_cut_msg="Slow down. You're crawling too fast and aggressively. Maximum number of requests per minute is ".$phpgate_max_retry.".";
-    $phpgate_cut_code=429;
+    if ($message=='') {
+        if ($is_it_bot_or_specific_endpoint==1) $message="Slow down. You're crawling too fast and aggressively. Maximum number of requests per minute is ".$phpgate_max_retry.".";
+        if ($is_it_bot_or_specific_endpoint==2) $message='Slow down. Right now there are too many requests for <b>'.$name_original.'</b> query from bot agents. Maximum number of requests for <b>'.$name_original.'</b> query per '.$find_time.' seconds is '.$phpgate_max_retry.'.';
+    }
+    if ($message!='') $phpgate_cut_msg=$message;
+    $phpgate_cut_code=$code;
     $phpgate_cut_retry_after=$phpgate_find_time;
 }
 
@@ -74,8 +79,11 @@ function phpgate_count_limit_ip($max_retry=3, $find_time=60, $ban_time=86400) {
     $phpgate_cut_code=429;
     $phpgate_cut_retry_after=$phpgate_find_time;
 }
-// if ( strpos($_SERVER['REQUEST_URI'], "amplifier-en?tags=") !== false ) phpgate_count_limit_ip(); // example of hit specific URL detection
-// if ( strpos($_SERVER['REQUEST_URI'], "?p=1") !== false ) phpgate_count_limit_ip(3, 60, 60); // example of hit specific URL detection
+
+// if ( strpos($_SERVER['REQUEST_URI'], "amplifier-en?tags=") !== false ) phpgate_count_limit_ip(); // example of hit specific URL detection for specific IP
+// if ( strpos($_SERVER['REQUEST_URI'], "?p=1") !== false ) phpgate_count_limit_ip(3, 60, 60); // example of hit specific URL detection for specific IP
+// if ( isset($_GET['add_to_wishlist']) ) phpgate_count_limit_bot('add_to_wishlist', 2, 10, 60, 60); // example of hit specific URL detection for specific endpoint for all IPs, max 10 requests per minute for all IPs for 'add_to_wishlist' query
+// if ( isset($_GET['filter_product_brand']) ) if (strpos($_GET['filter_product_brand'], "%2C") !== false || strpos($_GET['filter_product_brand'], ",") !== false) phpgate_count_limit_bot('filter_product_brand', 2, 3, 60, 60); // example of hit specific URL detection for specific endpoint for all IPs, max 3 requests per minute for all IPs for 'filter_product_brand' query
 
 $phpgate_the_same_ip=false;
 if (isset($_SERVER['SERVER_ADDR']) && isset($_SERVER['REMOTE_ADDR'])) {
