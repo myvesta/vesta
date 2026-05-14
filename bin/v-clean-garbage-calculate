@@ -1,0 +1,136 @@
+#!/bin/bash
+# info: Calculate the size of the garbage
+# options: NONE
+#
+# The function is calculating the size of the garbage
+
+#----------------------------------------------------------#
+#           Verifications & Variable & Function            #
+#----------------------------------------------------------#
+
+whoami=$(whoami)
+if [ "$whoami" != "root" ]; then
+    echo "You must be root to execute this script"
+    exit 1
+fi
+
+#----------------------------------------------------------#
+#                       Action                             #
+#----------------------------------------------------------#
+
+# Dry-run total bytes calculation
+total_bytes=0
+
+# Helper function to add up file sizes
+add_bytes() {
+    while read -r size; do
+        if [ -n "$size" ]; then
+            total_bytes=$((total_bytes + size))
+            # echo "Size: $size bytes"
+            # echo "Total size: $total_bytes bytes"
+        fi
+    done
+}
+
+add_bytes < <( find /tmp/ -type f -mtime +7 -printf "%s\n" 2>/dev/null )
+
+add_bytes < <( find /var/backups/ -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/cache/apt/archives/ -type f -printf "%s\n" 2>/dev/null )
+
+cd /var/log
+for logname in xferlog lastlog faillog btmp syslog; do
+    if [ -f "$logname" ]; then
+        add_bytes < <( stat -c%s "$logname" 2>/dev/null )
+    fi
+done
+
+add_bytes < <( find /var/log/ -name "*.log" -not -path "/var/log/apt/*" -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -name "*.err" -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -name "errors" -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -name "*.info" -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -name "*.warn" -type f -printf "%s\n" 2>/dev/null )
+
+add_bytes < <( find /var/log/ -type f -name "*.1" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.2" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.3" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.4" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.5" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.6" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.7" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.8" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.9" -printf "%s\n" 2>/dev/null )
+
+add_bytes < <( find /var/log/ -name "*.gz" -type f -printf "%s\n" 2>/dev/null )
+
+add_bytes < <( find /usr/local/vesta/log/ -type f -name "*.log" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /usr/local/vesta/log/ -type f ! -name "*.log" -printf "%s\n" 2>/dev/null )
+
+add_bytes < <( find /var/log/exim4/ -type f -printf "%s\n" 2>/dev/null )
+
+add_bytes < <( find / -maxdepth 1 -name "*.log" -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find / -maxdepth 1 -name "panic-*.log" -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -maxdepth 1 -name "panic-*.log" -type f -printf "%s\n" 2>/dev/null )
+
+total_bytes_system=$total_bytes
+total_bytes=0
+
+clean_home() {
+    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/tmp/ -type f -printf "%s\n" 2>/dev/null )
+    find $1/ -name '.wp-cli' -type d 2>/dev/null | while read -r d; do
+        add_bytes < <( find "$d" -type f -printf "%s\n" 2>/dev/null )
+    done
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/aiowps_backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/envato-backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/ai1wm-backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/wpvividbackups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/updraft/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/plugins/ezpz-one-click-backup/backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/backups-dup-lite/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/cache/ -type f ! -name ".htaccess" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/ -type f -name "*.wpress" -printf "%s\n" 2>/dev/null )
+
+    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/tmp/ -type f -mtime +1 -printf "%s\n" 2>/dev/null )
+
+    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/web/*/public_html/ -type f -name "error_log" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/web/*/public_html/ -type f -name "error_log.txt" -printf "%s\n" 2>/dev/null )
+
+    add_bytes < <( nice -n 19 ionice -c 3 find $1/ -type f -name "*.log" -printf "%s\n" 2>/dev/null )
+}
+
+clean_home "/home"
+if [ -d "/hdd/home" ]; then
+    clean_home "/hdd/home"
+fi
+
+total_bytes_home=$total_bytes
+total_bytes=0
+
+total_bytes=$((total_bytes_system + total_bytes_home))
+
+quiet=false
+if [ $# -eq 1 ] && [ "$1" == "-q" ]; then
+    quiet=true
+fi
+
+if [ "$quiet" == false ]; then
+    # echo "--------------------------------"
+    # echo "Total size of the system garbage: $total_bytes_system bytes"
+    # echo "Total size of the home garbage:   $total_bytes_home bytes"
+    # echo "Total size of the garbage:        $total_bytes bytes"
+    echo "--------------------------------"
+    echo "Total size of the garbage in system: $((total_bytes_system / 1024 / 1024)) MB"
+    echo "Total size of the garbage in system: $((total_bytes_system / 1024 / 1024 / 1024)) GB"
+    echo "--------------------------------"
+    echo "Total size of the garbage in home:   $((total_bytes_home / 1024 / 1024)) MB"
+    echo "Total size of the garbage in home:   $((total_bytes_home / 1024 / 1024 / 1024)) GB"
+    echo "--------------------------------"
+    echo "Total size of the garbage:           $((total_bytes / 1024 / 1024)) MB"
+    echo "Total size of the garbage:           $((total_bytes / 1024 / 1024 / 1024)) GB"
+    echo "--------------------------------"
+fi
+
+echo "$total_bytes" > /usr/local/vesta/data/df/garbage-size.txt
+echo "$total_bytes_system" > /usr/local/vesta/data/df/garbage-size-system.txt
+echo "$total_bytes_home" > /usr/local/vesta/data/df/garbage-size-home.txt
+
+exit 0

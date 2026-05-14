@@ -59,12 +59,20 @@ case $queue in
 esac
 
 if [ "$queue" = "disk" ]; then
+    if [ ! -d "/usr/local/vesta/data/df" ]; then
+        mkdir -p /usr/local/vesta/data/df
+    fi
+
     du -sm /var/log/ | awk '{print $1}' > /usr/local/vesta/data/df/var-log-size.txt 2>/dev/null
+
     if [ -d "/backup" ]; then
         du -sm /backup/ | awk '{print $1}' > /usr/local/vesta/data/df/backup-size.txt 2>/dev/null
     else
         echo "0" > /usr/local/vesta/data/df/backup-size.txt
     fi
+
+    /usr/local/vesta/bin/v-clean-garbage-calculate -q > /dev/null 2>&1
+
     if [ -e "/root/myvesta-custom-df-count" ]; then
         /root/myvesta-custom-df-count
     fi
