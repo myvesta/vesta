@@ -21,16 +21,21 @@ fi
 # Dry-run total bytes calculation
 total_bytes=0
 
+BLOCK_SIZE=$(stat -f -c "%s" /tmp/)
+
 # Helper function to add up file sizes
 add_bytes() {
     while read -r size; do
         if [ -n "$size" ]; then
-            total_bytes=$((total_bytes + size))
+            occupied=$(( ((size + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE ))
+            total_bytes=$((total_bytes + occupied))
             # echo "Size: $size bytes"
             # echo "Total size: $total_bytes bytes"
         fi
     done
 }
+
+# System garbage
 
 add_bytes < <( find /tmp/ -type f -mtime +7 -printf "%s\n" 2>/dev/null )
 
@@ -73,6 +78,8 @@ add_bytes < <( find /var/log/ -maxdepth 1 -name "panic-*.log" -type f -printf "%
 
 total_bytes_system=$total_bytes
 total_bytes=0
+
+# Home garbage
 
 clean_home() {
     add_bytes < <( nice -n 19 ionice -c 3 find $1/*/tmp/ -type f -printf "%s\n" 2>/dev/null )
