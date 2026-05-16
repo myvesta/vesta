@@ -21,60 +21,63 @@ fi
 # Dry-run total bytes calculation
 total_bytes=0
 
-BLOCK_SIZE=$(stat -f -c "%s" /tmp/)
+# BLOCK_SIZE=$(stat -f -c "%s" /tmp/)
+BLOCK_SIZE_COEFFICIENT=$(stat -c "%B" /tmp)
 
 # Helper function to add up file sizes
 add_bytes() {
     while read -r size; do
         if [ -n "$size" ]; then
-            occupied=$(( ((size + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE ))
+            occupied=$(( size * BLOCK_SIZE_COEFFICIENT ))
             total_bytes=$((total_bytes + occupied))
-            # echo "Size: $size bytes"
+            # echo "Size: $size blocks"
+            # echo "Occupied: $occupied bytes"
             # echo "Total size: $total_bytes bytes"
+            # echo "--------------------------------"
         fi
     done
 }
 
 # System garbage
 
-add_bytes < <( find /tmp/ -type f -mtime +7 -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /tmp/ -type f -mtime +7 -printf "%b\n" 2>/dev/null )
 
-add_bytes < <( find /var/backups/ -type f -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/cache/apt/archives/ -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/backups/ -type f -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/cache/apt/archives/ -type f -printf "%b\n" 2>/dev/null )
 
 cd /var/log
 for logname in xferlog lastlog faillog btmp syslog; do
     if [ -f "$logname" ]; then
-        add_bytes < <( stat -c%s "$logname" 2>/dev/null )
+        add_bytes < <( stat -c "%b" "$logname" 2>/dev/null )
     fi
 done
 
-add_bytes < <( find /var/log/ -name "*.log" -not -path "/var/log/apt/*" -type f -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -name "*.err" -type f -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -name "errors" -type f -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -name "*.info" -type f -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -name "*.warn" -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -name "*.log" -not -path "/var/log/apt/*" -type f -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -name "*.err" -type f -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -name "errors" -type f -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -name "*.info" -type f -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -name "*.warn" -type f -printf "%b\n" 2>/dev/null )
 
-add_bytes < <( find /var/log/ -type f -name "*.1" -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -type f -name "*.2" -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -type f -name "*.3" -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -type f -name "*.4" -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -type f -name "*.5" -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -type f -name "*.6" -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -type f -name "*.7" -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -type f -name "*.8" -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -type f -name "*.9" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.1" -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.2" -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.3" -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.4" -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.5" -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.6" -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.7" -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.8" -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -type f -name "*.9" -printf "%b\n" 2>/dev/null )
 
-add_bytes < <( find /var/log/ -name "*.gz" -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -name "*.gz" -type f -printf "%b\n" 2>/dev/null )
 
-add_bytes < <( find /usr/local/vesta/log/ -type f -name "*.log" -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /usr/local/vesta/log/ -type f ! -name "*.log" -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /usr/local/vesta/log/ -type f -name "*.log" -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /usr/local/vesta/log/ -type f ! -name "*.log" -printf "%b\n" 2>/dev/null )
 
-add_bytes < <( find /var/log/exim4/ -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find /var/log/exim4/ -type f -printf "%b\n" 2>/dev/null )
 
-add_bytes < <( find / -maxdepth 1 -name "*.log" -type f -printf "%s\n" 2>/dev/null )
-add_bytes < <( find / -maxdepth 1 -name "panic-*.log" -type f -printf "%s\n" 2>/dev/null )
-add_bytes < <( find /var/log/ -maxdepth 1 -name "panic-*.log" -type f -printf "%s\n" 2>/dev/null )
+add_bytes < <( find / -maxdepth 1 -name "*.log" -type f -printf "%b\n" 2>/dev/null )
+add_bytes < <( find / -maxdepth 1 -name "panic-*.log" -type f -printf "%b\n" 2>/dev/null )
+add_bytes < <( find /var/log/ -maxdepth 1 -name "panic-*.log" -type f -printf "%b\n" 2>/dev/null )
 
 total_bytes_system=$total_bytes
 total_bytes=0
@@ -82,26 +85,26 @@ total_bytes=0
 # Home garbage
 
 clean_home() {
-    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/tmp/ -type f -printf "%s\n" 2>/dev/null )
+    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/tmp/ -type f -printf "%b\n" 2>/dev/null )
     find $1/ -name '.wp-cli' -type d 2>/dev/null | while read -r d; do
-        add_bytes < <( find "$d" -type f -printf "%s\n" 2>/dev/null )
+        add_bytes < <( find "$d" -type f -printf "%b\n" 2>/dev/null )
     done
-    add_bytes < <( find $1/*/web/*/public_html/wp-content/aiowps_backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
-    add_bytes < <( find $1/*/web/*/public_html/wp-content/envato-backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
-    add_bytes < <( find $1/*/web/*/public_html/wp-content/ai1wm-backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
-    add_bytes < <( find $1/*/web/*/public_html/wp-content/wpvividbackups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
-    add_bytes < <( find $1/*/web/*/public_html/wp-content/updraft/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
-    add_bytes < <( find $1/*/web/*/public_html/wp-content/plugins/ezpz-one-click-backup/backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
-    add_bytes < <( find $1/*/web/*/public_html/wp-content/backups-dup-lite/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%s\n" 2>/dev/null )
-    add_bytes < <( find $1/*/web/*/public_html/wp-content/cache/ -type f ! -name ".htaccess" -printf "%s\n" 2>/dev/null )
-    add_bytes < <( find $1/*/web/*/public_html/ -type f -name "*.wpress" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/aiowps_backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%b\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/envato-backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%b\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/ai1wm-backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%b\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/wpvividbackups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%b\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/updraft/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%b\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/plugins/ezpz-one-click-backup/backups/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%b\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/backups-dup-lite/ -type f ! -name ".htaccess" ! -name "index.php" ! -name "index.html" ! -name "web.config" -printf "%b\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/wp-content/cache/ -type f ! -name ".htaccess" -printf "%b\n" 2>/dev/null )
+    add_bytes < <( find $1/*/web/*/public_html/ -type f -name "*.wpress" -printf "%b\n" 2>/dev/null )
 
-    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/tmp/ -type f -mtime +1 -printf "%s\n" 2>/dev/null )
+    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/tmp/ -type f -mtime +1 -printf "%b\n" 2>/dev/null )
 
-    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/web/*/public_html/ -type f -name "error_log" -printf "%s\n" 2>/dev/null )
-    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/web/*/public_html/ -type f -name "error_log.txt" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/web/*/public_html/ -type f -name "error_log" -printf "%b\n" 2>/dev/null )
+    add_bytes < <( nice -n 19 ionice -c 3 find $1/*/web/*/public_html/ -type f -name "error_log.txt" -printf "%b\n" 2>/dev/null )
 
-    add_bytes < <( nice -n 19 ionice -c 3 find $1/ -type f -name "*.log" -printf "%s\n" 2>/dev/null )
+    add_bytes < <( nice -n 19 ionice -c 3 find $1/ -type f -name "*.log" -printf "%b\n" 2>/dev/null )
 }
 
 clean_home "/home"
