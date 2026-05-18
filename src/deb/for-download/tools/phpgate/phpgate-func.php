@@ -140,15 +140,15 @@ if ($phpgate_the_same_ip==false) {
     if (!class_exists('Memcached')) {
         if (false) {
             class Memcached {
-                public const GET_EXTENDED = 1;
-                public const RES_SUCCESS = 0;
-                public const RES_NOTFOUND = 1;
-                public const RES_TIMEOUT = 2;
-                public const RES_CONNECTION_FAILURE = 3;
-                public const RES_CONNECTION_BIND_FAILURE = 4;
-                public const RES_DATA_EXISTS = 5;
-                public const RES_NOTSTORED = 6;
-                public const RES_DELTA_BADVAL = 7;
+                const GET_EXTENDED = 1;
+                const RES_SUCCESS = 0;
+                const RES_NOTFOUND = 1;
+                const RES_TIMEOUT = 2;
+                const RES_CONNECTION_FAILURE = 3;
+                const RES_CONNECTION_BIND_FAILURE = 4;
+                const RES_DATA_EXISTS = 5;
+                const RES_NOTSTORED = 6;
+                const RES_DELTA_BADVAL = 7;
                 public function addServer($host, $port) {
                     return true;
                 }
