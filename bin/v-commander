@@ -89,6 +89,8 @@ myhelp() {
     echo "freexian                  = add Freexian repository"
     echo "fix-debian-backports      = fix Debian backports repository"
     echo "update-spamassassin-rules = update SpamAssassin rules"
+    echo "activate-spamhaus-rbl     = Activate SpamHaus RBL"
+    echo "deactivate-spamhaus-rbl   = Deactivate SpamHaus RBL"
     echo "-----------------------------"
     echo "inst v                = install myVesta"
     echo "inst p                = install multi-php"
@@ -334,6 +336,14 @@ do
 
     if [ "$answer" = 'update-spamassassin-rules' ] || [ "$answer" = 'UPDATE-SPAMASSASSIN-RULES' ]; then
         /usr/local/vesta/bin/v-update-spamassassin-rules
+    fi
+
+    if [ "$answer" = 'activate-spamhaus-rbl' ] || [ "$answer" = 'ACTIVATE-SPAMHAUS-RBL' ]; then
+        /usr/local/vesta/bin/v-activate-spamhaus-rbl
+    fi
+
+    if [ "$answer" = 'deactivate-spamhaus-rbl' ] || [ "$answer" = 'DEACTIVATE-SPAMHAUS-RBL' ]; then
+        /usr/local/vesta/bin/v-deactivate-spamhaus-rbl
     fi
 
     if [ "$answer" = 'e def' ] || [ "$answer" = 'E DEF' ]; then
