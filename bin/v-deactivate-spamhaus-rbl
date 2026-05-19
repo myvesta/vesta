@@ -1,0 +1,59 @@
+#!/bin/bash
+
+if [ -f "/etc/exim4/exim4.conf.template" ]; then
+    if grep -q 'spamhaus' /etc/exim4/dnsbl.conf; then
+        echo "== SpamHaus found in /etc/exim4/dnsbl.conf"
+        echo "== Removing it..."
+        sed -i '/7rkxdmygdqn2ajik4lne4yww5m.zen.dq.spamhaus.net/d' /etc/exim4/dnsbl.conf
+        grep 'spamhaus' /etc/exim4/dnsbl.conf
+        echo "== Restarting Exim4"
+        systemctl restart exim4
+        ret=$?
+        if [ $ret -eq 0 ]; then
+            echo "== Exim4 restarted successfully"
+        else
+            echo "********* ERROR: Exim4 not restarted successfully, ret = $ret"
+        fi
+    fi
+fi
+
+# exit;
+if [ -f "/etc/spamassassin/sh.cf" ]; then
+    spamassassin_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'spamassassin\|spamd' | grep -c 'running')
+
+    echo "== SpamHaus SpamAssassin files found in /etc/spamassassin/sh.cf"
+    echo "== Removing it..."
+
+    sed -i '/sh.pre/d' /etc/spamassassin/init.pre
+    grep 'sh.pre' /etc/spamassassin/init.pre
+    rm /etc/spamassassin/SH.pm
+    rm /etc/spamassassin/sh.pre
+    rm /etc/spamassassin/sh.cf
+    rm /etc/spamassassin/sh_scores.cf
+    
+    if [ -d "/usr/local/src/spamassassin-dqs" ]; then
+        rm -rf /usr/local/srcspamassassin-dqs
+    fi 
+    
+    release=$(/usr/local/vesta/bin/v-get-debian-version)
+    if [ "$release" -lt 12 ]; then
+        spamassassin_command='spamassassin'
+    else
+        spamassassin_command='spamd'
+    fi
+
+
+    if [ $spamassassin_running -eq 1 ]; then
+        echo "== Running: systemctl restart $spamassassin_command"
+        systemctl restart $spamassassin_command
+        ret=$?
+        if [ $ret -ne 0 ]; then
+            echo "********* ERROR: SpamAssassin not restarted successfully, ret = $ret"
+        else
+            echo "== SpamAssassin restarted successfully"
+        fi
+        # systemctl status $spamassassin_command
+    else
+        echo "== SpamAssassin was not active, so we will not restart it"
+    fi
+fi

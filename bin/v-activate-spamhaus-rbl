@@ -1,0 +1,111 @@
+ #!/bin/bash
+
+ if [ "$#" -eq 0 ]; then
+    echo "== Activating SpamHaus RBL"
+    echo ""
+    echo "1. Go to Spamhaus free data query service: https://www.spamhaus.com/data-access/free-data-query-service/ and click 'Sign up for a free account'"
+    echo "(if you are a commercial organization, you will require a Commercial DQS service)"
+    echo "2. Fill in the registration form"
+    echo "3. Verify your email address by clicking the link in the email you received (choose your password on that page)"
+    echo "4. Once logged, go to 'Products → Data Query Service', and below you will see 'Generate a new DQS key', click 'Generate' button."
+    echo "5. On the same page, now you will see your 'DQS Key', copy it and paste it below:"
+    echo ""
+    echo "6. Enter your 'DQS Key' below (copy and paste it here):"
+    read DQS_KEY
+fi
+
+if [ ! -z "$1" ]; then
+    DQS_KEY="$1"
+fi
+
+if [ -z "$DQS_KEY" ]; then
+    echo "== DQS Key is empty, exiting."
+    exit 1
+fi
+
+DQS_FQDN="${DQS_KEY}.zen.dq.spamhaus.net"
+
+echo ""
+echo "== DQS Key: $DQS_KEY"
+echo "== DQS FQDN: $DQS_FQDN"
+echo ""
+
+patched=0;
+
+if grep 'Rejected because \$sender_host_address is in a black list at \$dnslist_domain' -q /etc/exim4/exim4.conf.template; then
+    echo "== Patching /etc/exim4/exim4.conf.template";
+    sed -i 's/Rejected because \$sender_host_address is in a black list at \$dnslist_domain\\n\$dnslist_text/Rejected because \$sender_host_address is in a black list/' /etc/exim4/exim4.conf.template
+    if ! grep 'Rejected because \$sender_host_address is in a black list at \$dnslist_domain' -q /etc/exim4/exim4.conf.template; then
+        echo "== exim4.conf.template patched successfully";
+        patched=1
+    fi
+else
+    echo "== exim4.conf.template already patched";
+fi
+if ! grep -q 'spamhaus' /etc/exim4/dnsbl.conf; then
+    echo "== Adding SpamHaus to /etc/exim4/dnsbl.conf"
+    echo "${DQS_FQDN}" >> /etc/exim4/dnsbl.conf
+    patched=1
+else
+    echo "== SpamHaus already added to /etc/exim4/dnsbl.conf"
+fi
+
+if [ -f "/etc/spamassassin/local.cf" ]; then
+    if [ ! -f "/etc/spamassassin/sh.cf" ]; then
+        spamassassin_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'spamassassin\|spamd' | grep -c 'running')
+        echo "== Get SpamHaus github repo"
+
+        cd /usr/local/src
+        rm -rf spamassassin-dqs
+        git clone https://github.com/spamhaus/spamassassin-dqs
+        release=$(/usr/local/vesta/bin/v-get-debian-version)
+        if [ "$release" -lt 12 ]; then
+            echo "== Using spamassassin-dqs/3.4.1+"
+            cd spamassassin-dqs/3.4.1+
+        else
+            echo "== Using spamassassin-dqs/4.0.0+"
+            cd spamassassin-dqs/4.0.0+
+        fi
+        
+        sed -i "s/your_DQS_key/${DQS_KEY}/g" sh.cf
+        sed -i 's#^loadplugin\s\+Mail::SpamAssassin::Plugin::SH.*#loadplugin\tMail::SpamAssassin::Plugin::SH /etc/spamassassin/SH.pm#' sh.pre
+        cp -f SH.pm sh.pre sh.cf sh_scores.cf /etc/spamassassin/
+        grep -qE '(^|\s)include\s+/etc/spamassassin/sh\.pre' /etc/spamassassin/init.pre || echo "include /etc/spamassassin/sh.pre" >> /etc/spamassassin/init.pre
+        echo "== Checking: spamassassin --lint"
+        spamassassin --lint
+
+        if [ "$release" -lt 12 ]; then
+            spamassassin_command='spamassassin'
+        else
+            spamassassin_command='spamd'
+        fi
+
+        if [ $spamassassin_running -eq 1 ]; then
+            echo "== Running: systemctl restart $spamassassin_command"
+            systemctl restart $spamassassin_command
+            ret=$?
+            if [ $ret -ne 0 ]; then
+                echo "********* ERROR: SpamAssassin not restarted successfully, ret = $ret"
+            else
+                echo "== SpamAssassin restarted successfully"
+            fi
+            systemctl status $spamassassin_command
+        else
+            echo "== SpamAssassin was not active, so we will not restart it"
+        fi
+    else
+        echo "== /etc/spamassassin/sh.cf already added"
+    fi
+else
+    echo "== SpamAssassin not installed"
+fi
+
+if [ $patched -eq 1 ]; then
+    echo "== Restarting Exim4"
+    systemctl restart exim4
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        echo "== Restarted successfully"
+    fi
+fi
+echo "== Done."
