@@ -1,0 +1,138 @@
+#!/bin/bash
+
+release=$(/usr/local/vesta/bin/v-get-debian-version)
+codename=$(/usr/local/vesta/bin/v-get-debian-codename)
+
+echo "============================="
+echo "== updating SpamAssassin rules"
+
+if [ ! -f "/etc/spamassassin/local.cf" ]; then
+    echo "== ERROR: SpamAssassin is not installed"
+    continue;
+fi
+
+spamassassin_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'spamassassin\|spamd' | grep -c 'running')
+
+if [ "$release" -lt 12 ]; then
+    spamassassin_command='spamassassin'
+    /usr/local/vesta/bin/v-commander 'fix-debian-backports' 'freexian'
+else
+    spamassassin_command='spamd'
+fi
+
+if [ -f "/etc/apt/trusted.gpg.d/php.gpg" ] || [ -f "/etc/apt/sources.list.d/nginx.list" ]; then
+    echo "== Fixing sury.org repository and renewing nginx gpg key"
+    /usr/local/vesta/bin/v-commander 's' 'n'
+fi
+
+echo "== Running: apt-get update"
+apt-get update
+ret=$?
+echo "== apt-get update returned: $ret"
+if [ $ret -ne 0 ]; then
+    press_enter "=== Press enter to continue ==="
+fi
+
+echo "== Running: apt-get install $spamassassin_command sa-compile re2c make gcc libmail-spamassassin-perl"
+apt-get -y install $spamassassin_command sa-compile re2c make gcc libmail-spamassassin-perl
+ret=$?
+echo "== apt-get install $spamassassin_command sa-compile re2c make gcc libmail-spamassassin-perl returned: $ret"
+if [ $ret -ne 0 ]; then
+    press_enter "=== Press enter to continue ==="
+fi
+
+echo "== Running: apt-get -y install $(dpkg -l | awk '/^ii  perl/ {print $2}')"
+apt-get -y install $(dpkg -l | awk '/^ii  perl/ {print $2}')        
+ret=$?
+echo "== apt-get -y install $(dpkg -l | awk '/^ii  perl/ {print $2}') returned: $ret"
+if [ $ret -ne 0 ]; then
+    press_enter "=== Press enter to continue ==="
+fi
+
+timestamp=$(date +%Y%m%d_%H%M%S)
+
+echo "== copy /var/lib/spamassassin to /root/spamassassin-var-lib-backup-$timestamp"
+cp -r /var/lib/spamassassin /root/spamassassin-var-lib-backup-$timestamp
+
+echo "== copy /etc/spamassassin to /root/spamassassin-etc-backup-$timestamp"
+cp -r /etc/spamassassin /root/spamassassin-etc-backup-$timestamp
+
+echo "== Running: sa-update --verbose"
+sa-update --verbose
+ret=$?
+echo "== sa-update returned: $ret"
+skip_compile_if_no_updates=1
+if [ $skip_compile_if_no_updates -eq 1 ] && [ $ret -eq 1 ]; then
+    echo "== No updates available"
+    continue;
+fi
+if [ $ret -gt 1 ]; then
+    echo "== ERROR: Command returned $ret - aborting."
+    press_enter "=== Press enter to continue ==="
+    continue;
+fi        
+
+if [ $spamassassin_running -eq 1 ]; then
+    echo "== Stopping $spamassassin_command"
+    systemctl stop $spamassassin_command
+fi
+
+echo "== Removing compiled files from /var/lib/spamassassin/compiled/*"
+rm -rf /var/lib/spamassassin/compiled/*
+
+echo "== Running: spamassassin --version"
+spamassassin --version
+echo ""
+
+echo "== Running: sa-compile"
+sa-compile
+ret=$?
+echo "== sa-compile returned: $ret"
+if [ $ret -ne 0 ]; then
+    echo "== ERROR: Command returned $ret - aborting."
+    press_enter "=== Press enter to continue ==="
+    continue;
+fi
+
+echo "== Checking: spamassassin --lint"
+spamassassin --lint
+ret=$?
+echo "== spamassassin --lint returned: $ret"
+if [ $ret -ne 0 ]; then
+    echo "== ERROR: SpamAssassin lint failed, please check the rules."
+    press_enter "=== Press enter to continue ==="
+else
+    echo "== SpamAssassin lint passed OK"
+fi
+
+if [ $spamassassin_running -eq 1 ]; then
+    echo "== Running: systemctl restart $spamassassin_command"
+    systemctl restart $spamassassin_command
+    ret=$?
+    echo "== systemctl restart $spamassassin_command returned: $ret"
+    if [ $ret -ne 0 ]; then
+        echo "********* ERROR: SpamAssassin not restarted successfully, ret = $ret"
+        press_enter "=== Press enter to continue ==="
+    else
+        echo "== SpamAssassin restarted successfully"
+        systemctl status $spamassassin_command
+        ret=$?
+        echo "== systemctl status $spamassassin_command returned: $ret"
+    fi
+else
+    echo "== SpamAssassin was not active, so we will not restart it"
+fi
+
+echo "== SpamAssassin rules updated successfully."
+
+if [ $spamassassin_running -eq 1 ]; then
+    # echo "== Sleeping for 5 seconds"
+    sleep 1
+    echo "== Showing last 50 lines of /var/log/syslog =="
+    grep 'spam' /var/log/syslog | tail -n 50
+    echo ''
+    echo '------------'
+    echo 'Maybe you want to monitor SpamAssassin by running:'
+    echo 'tail -f /var/log/syslog | grep spam'
+    echo '------------'
+fi
