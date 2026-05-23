@@ -27,11 +27,8 @@ quit_on_empty=0
 release=$(/usr/local/vesta/bin/v-get-debian-version)
 codename=$(/usr/local/vesta/bin/v-get-debian-codename)
 
-if [ $SHOWHEADER -eq 1 ]; then
-    hostname
+save_current_status() {
     if [ -f "/root/current-status.txt" ]; then
-        echo "------------------ WAS LONG TIME AGO ------------------"
-        cat /root/current-status.txt
         truncate -s 0 /root/current-status.txt
     fi
     echo -n 'Debian ' >> /root/current-status.txt && cat /etc/debian_version >> /root/current-status.txt
@@ -40,33 +37,34 @@ if [ $SHOWHEADER -eq 1 ]; then
     /usr/local/vesta/bin/v-list-sys-web-status | grep "Server MPM:" >> /root/current-status.txt
     w | grep 'load average' >> /root/current-status.txt
     df -h | grep '^/dev' | grep -v '/boot' | grep -v '/efi' >> /root/current-status.txt
+}
 
+check_status() {
+    echo "=============================================================="
+    echo "------------------------ WAS ------------------------"
+    hostname
+    cat /root/current-status.txt
     echo "------------------------ NOW ------------------------"
+    hostname
+    save_current_status
+    cat /root/current-status.txt
+    echo "-----------------------------------------------------"
+}
+
+if [ $SHOWHEADER -eq 1 ]; then
+    if [ -f "/root/current-status.txt" ]; then
+        echo "------------------ WAS LONG TIME AGO ------------------"
+        hostname
+        cat /root/current-status.txt
+    fi
+    echo "------------------------ NOW ------------------------"
+    hostname
+    save_current_status
     cat /root/current-status.txt
     echo "-----------------------------------------------------"
     echo "(press 'h' for help)"
     echo ""
 fi
-
-check_status() {
-    echo "=============================================================="
-    hostname
-    echo "------------------------ WAS ------------------------"
-    cat /root/current-status.txt
-    echo "------------------------ NOW ------------------------"
-    if [ -f "/root/current-status.txt" ]; then
-        truncate -s 0 /root/current-status.txt
-    fi
-    hostname
-    echo -n 'Debian ' && cat /etc/debian_version >> /root/current-status.txt
-    php -v | grep '^PHP' >> /root/current-status.txt
-    /usr/local/vesta/bin/v-list-sys-services >> /root/current-status.txt
-    /usr/local/vesta/bin/v-list-sys-web-status | grep "Server MPM:" >> /root/current-status.txt
-    w | grep 'load average' >> /root/current-status.txt
-    df -h | grep '^/dev' | grep -v '/boot' | grep -v '/efi' >> /root/current-status.txt
-    cat /root/current-status.txt
-    echo "-----------------------------------------------------"
-}
 
 myhelp() {
     echo "---------- Press: -----------"
