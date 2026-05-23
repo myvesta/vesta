@@ -223,7 +223,21 @@ do
         fi
         
         apt-get -y --with-new-pkgs upgrade
+        if [ $? -ne 0 ]; then
+            echo "== apt-get upgrade failed"
+            read -p "== Press Enter to continue or 'q' to quit" answer
+            if [ "$answer" = 'q' ]; then
+                exit 1
+            fi
+        fi
         apt-get -y dist-upgrade
+        if [ $? -ne 0 ]; then
+            echo "== apt-get dist-upgrade failed"
+            read -p "== Press Enter to continue or 'q' to quit" answer
+            if [ "$answer" = 'q' ]; then
+                exit 1
+            fi
+        fi
         apt_upgraded=1
         
         kernelupdate=$(grep -c 'linux-image-' /var/log/apt/history.log)
