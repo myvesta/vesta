@@ -39,7 +39,7 @@ if [ $SHOWHEADER -eq 1 ]; then
     /usr/local/vesta/bin/v-list-sys-services >> /root/current-status.txt
     /usr/local/vesta/bin/v-list-sys-web-status | grep "Server MPM:" >> /root/current-status.txt
     w | grep 'load average' >> /root/current-status.txt
-    df -h | grep "/$" >> /root/current-status.txt
+    df -h | grep '^/dev' | grep -v '/boot' | grep -v '/efi' >> /root/current-status.txt
 
     echo "------------------------ NOW ------------------------"
     cat /root/current-status.txt
