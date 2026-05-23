@@ -54,13 +54,17 @@ check_status() {
     echo "------------------------ WAS ------------------------"
     cat /root/current-status.txt
     echo "------------------------ NOW ------------------------"
+    if [ -f "/root/current-status.txt" ]; then
+        truncate -s 0 /root/current-status.txt
+    fi
     hostname
-    echo -n 'Debian ' && cat /etc/debian_version
-    php -v | grep '^PHP'
-    /usr/local/vesta/bin/v-list-sys-services
-    /usr/local/vesta/bin/v-list-sys-web-status | grep "Server MPM:"
-    w | grep 'load average'
-    df -h | grep "/$"
+    echo -n 'Debian ' && cat /etc/debian_version >> /root/current-status.txt
+    php -v | grep '^PHP' >> /root/current-status.txt
+    /usr/local/vesta/bin/v-list-sys-services >> /root/current-status.txt
+    /usr/local/vesta/bin/v-list-sys-web-status | grep "Server MPM:" >> /root/current-status.txt
+    w | grep 'load average' >> /root/current-status.txt
+    df -h | grep '^/dev' | grep -v '/boot' | grep -v '/efi' >> /root/current-status.txt
+    cat /root/current-status.txt
     echo "-----------------------------------------------------"
 }
 
