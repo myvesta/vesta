@@ -218,6 +218,8 @@ do
         if [ $apt_upgraded -eq 0 ]; then
             cp /var/log/apt/history.log /var/log/apt/history-`date +"%Y%m%d%H%M%S"`.log
             truncate -s 0 /var/log/apt/history.log
+            cp /var/log/apt/term.log /var/log/apt/term-`date +"%Y%m%d%H%M%S"`.log
+            truncate -s 0 /var/log/apt/term.log
         fi
         
         apt-get -y --with-new-pkgs upgrade
