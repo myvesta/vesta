@@ -17,9 +17,9 @@ if [ $SHOWHEADER -eq 1 ]; then
     echo "======================= mvVesta-commander ================================"
 fi
 
-if [ -f /root/kernelupdate ]; then
-    rm /root/kernelupdate
-fi
+# if [ -f /root/kernelupdate ]; then
+#    rm /root/kernelupdate
+#fi
 apt_updated=0
 apt_upgraded=0
 quit_on_empty=0
