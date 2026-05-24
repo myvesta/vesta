@@ -372,7 +372,7 @@ do
         echo "============================="
         echo "== checking if we need mpm_event mode"
         echo "== detected Debian $release"
-        if [ "$release" -eq 10 ] || [ "$release" -eq 11 ] || [ -f "/root/switch-apache-to-event-mode.sh" ]; then
+        if [ "$release" -gt 9 ] || [ -f "/root/switch-apache-to-event-mode.sh" ]; then
             isevent=$(/usr/local/vesta/bin/v-list-sys-web-status | grep -c "Server MPM: event")
             if [ $isevent -eq 0 ]; then
                 echo "== Apache should be switched to mpm_event mode"
