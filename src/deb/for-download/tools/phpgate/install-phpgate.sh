@@ -48,6 +48,9 @@ fix_php_ini "/etc/php5/apache2/php.ini"
 php_versions=$(/usr/local/vesta/bin/v-list-php)
 for version in $php_versions; do
     fix_php_ini "/etc/php/${version}/fpm/php.ini"
+    if [ -f "/etc/php/${version}/fpm/php-ioncube.ini" ]; then
+        fix_php_ini "/etc/php/${version}/fpm/php-ioncube.ini"
+    fi
 done
 
 echo "== Done, phpgate installed."
