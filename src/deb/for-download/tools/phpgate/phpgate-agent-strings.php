@@ -80,7 +80,8 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
         "ImagesiftBot" => -1,
         "Scrapy" => -1,
         "SeznamBot" => -1,
-        "DataForSeoBot" => -1
+        "DataForSeoBot" => -1,
+        "Chatlingbot" => -1
     );
         // "GuzzleHttp" => -1,
         // "Dalvik" => 3,
