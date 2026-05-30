@@ -1,0 +1,17 @@
+#!/bin/bash
+# info: Check if Freexian security repository is available in /etc/apt/
+# options: NONE
+
+if [ ! -f "/etc/apt/auth.conf" ]; then
+    echo "0"
+    exit 1
+fi
+
+found=$(grep -c 'machine security.freexian.com' /etc/apt/auth.conf)
+if [ $found -eq 0 ]; then
+    echo "0"
+    exit 1
+else
+    echo "1"
+    exit 0
+fi

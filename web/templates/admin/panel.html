@@ -123,6 +123,7 @@
 $vesta_version=file_get_contents('/usr/local/vesta/version.txt');
 $vesta_build_date=file_get_contents('/usr/local/vesta/build_date.txt');
 $debian_ver=file_get_contents('/etc/debian_version');
+$freexian_security_available=intval(shell_exec('/usr/local/vesta/bin/v-check-if-freexian-security-available'));
 ?>
         <div style="display: block; padding: 30px 0 0 19px; color: #b9bcbd;">
             <span style="font-weight: bold;">myVesta</span> <?php echo $vesta_version;?><br />
@@ -134,9 +135,9 @@ $debian_ver=file_get_contents('/etc/debian_version');
             <a href="https://forum.myvestacp.com/viewtopic.php?f=23&t=819" target="_blank" style="text-decoration: underline; font-weight: bold;">Need urgent assistance?</a>
         </div>
         -->
-		<?php if(intval($debian_ver) >= 9 && intval($debian_ver) <= 11) { ?>
+		<?php if(intval($debian_ver) >= 9 && intval($debian_ver) <= 11 && $freexian_security_available == 0) { ?>
         <div style="display: block; padding: 30px 0 0 19px; color: #b9bcbd;">
-            <a href="https://www.freexian.com/lts/extended/" target="_blank" style="text-decoration: underline; font-weight: bold; color: #b9bcbd;">Get security updates for Debian <?php echo intval($debian_ver); ?>!</a>
+            <a href="https://www.freexian.com/lts/extended/?utm_source=myvestacp.com&utm_medium=partner" target="_blank" style="text-decoration: underline; font-weight: bold; color: #b9bcbd;">Debian <?php echo intval($debian_ver); ?> is EOL, click here to get security updates!</a>
         </div>
 		<?php } ?>
       </div>
