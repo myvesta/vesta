@@ -83,7 +83,6 @@ myhelp() {
     echo "t  = clean the trash"
     echo "u  = apt-get update"
     echo "v  = update myVesta"
-    echo "vo = update myVesta without 'apt-get update'"
     echo "w  = w"
     echo "-----------------------------"
     echo "s  = download sury.org apt-get key"
@@ -93,8 +92,8 @@ myhelp() {
     echo "update-spamassassin-rules = update SpamAssassin rules"
     echo "activate-spamhaus-rbl     = Activate SpamHaus RBL"
     echo "deactivate-spamhaus-rbl   = Deactivate SpamHaus RBL"
+    echo "post-update-scripts       = run post-update scripts"
     echo "-----------------------------"
-    echo "inst v                = install myVesta"
     echo "inst p                = install multi-php"
     echo "inst pgw              = install php-gate"
     echo "inst web-fail2ban     = install web-fail2ban"
@@ -266,6 +265,19 @@ do
             touch /root/kernelupdate
             echo "== kernel is updated, reboot is required!"
         fi
+    fi
+
+    if [ "$answer" = 'post-update-scripts' ] || [ "$answer" = 'POST-UPDATE-SCRIPTS' ]; then
+        echo "============================="
+        echo "== running post-update scripts"
+        apt-get install -y $(systemctl --full --type service --all | grep "php...-fpm" | sed 's#●##g' | awk '{print $1}' | cut -c1-6 | xargs -n 1 printf "%s-memcache ")
+        apt-get install -y $(systemctl --full --type service --all | grep "php...-fpm" | sed 's#●##g' | awk '{print $1}' | cut -c1-6 | xargs -n 1 printf "%s-memcached ")
+        apt-get install -y $(systemctl --full --type service --all | grep "php...-fpm" | sed 's#●##g' | awk '{print $1}' | cut -c1-6 | xargs -n 1 printf "%s-imagick ")
+        apt-get install -y $(systemctl --full --type service --all | grep "php...-fpm" | sed 's#●##g' | awk '{print $1}' | cut -c1-6 | xargs -n 1 printf "%s-apcu ")
+        if [ -x "/root/myvesta-post-update-script.sh" ]; then
+            /root/myvesta-post-update-script.sh
+        fi
+        echo "== post-update scripts finished"
     fi
 
     if [ "$answer" = 'c' ] || [ "$answer" = 'C' ]; then
@@ -521,36 +533,7 @@ do
     if [ "$answer" = 'v' ] || [ "$answer" = 'V' ]; then
         echo "============================="
         echo "== updating myVesta"
-        if [ -f "/usr/local/vesta/bin/v-update-myvesta" ]; then
-            /usr/local/vesta/bin/v-update-myvesta
-        else
-            number_of_files=$(ls /var/cache/apt/archives/vesta_.* 2>/dev/null | wc -l)
-            if [ $number_of_files -gt 0 ]; then
-                rm /var/cache/apt/archives/vesta_* > /dev/null 2>&1
-            fi
-            apt-get update -o Dir::Etc::sourcelist="sources.list.d/vesta.list" -o Dir::Etc::sourceparts="-" -o APT::Get::List-Cleanup="0"  > /usr/local/vesta/log/update-$package.log 2>&1
-            apt-get install --reinstall vesta
-        fi
-    fi
-
-    if [ "$answer" = 'vo' ] || [ "$answer" = 'VO' ]; then
-        echo "============================="
-        echo "== updating myVesta (without 'apt-get update')"
-        number_of_files=$(ls /var/cache/apt/archives/vesta_.* 2>/dev/null | wc -l)
-        if [ $number_of_files -gt 0 ]; then
-            rm /var/cache/apt/archives/vesta_* > /dev/null 2>&1
-        fi
-        apt-get install --reinstall vesta
-    fi
-
-    if [ "$answer" = 'vor' ] || [ "$answer" = 'VOR' ]; then
-        echo "============================="
-        echo "== updating myVesta (without apt-get update and without reinstall)"
-        number_of_files=$(ls /var/cache/apt/archives/vesta_.* 2>/dev/null | wc -l)
-        if [ $number_of_files -gt 0 ]; then
-            rm /var/cache/apt/archives/vesta_* > /dev/null 2>&1
-        fi
-        apt-get install vesta
+        /usr/local/vesta/bin/v-update-myvesta
     fi
 
     if [ "$answer" = 't' ] || [ "$answer" = 'T' ]; then
@@ -719,23 +702,6 @@ do
 
     if [ "$answer" = 'h' ] || [ "$answer" = 'H' ]; then
         myhelp
-    fi
-
-    if [ "$answer" = 'inst v' ] || [ "$answer" = 'INST V' ]; then
-        echo "============================="
-        echo "== installing myVesta"
-        if [ "$release" -lt 10 ]; then
-            apt-get update
-        else
-            apt-get update --allow-releaseinfo-change
-        fi
-        apt-get -y --with-new-pkgs upgrade && apt-get -y dist-upgrade
-        apt-get -y install curl wget mc git sudo dnsutils screen
-        cd ~
-        curl -O http://c.myvestacp.com/vst-install-debian.sh
-        sudo bash vst-install-debian.sh
-        source /etc/profile
-        PATH=$PATH:/usr/local/vesta/bin && export PATH
     fi
 
     if [ "$answer" = 'inst r' ] || [ "$answer" = 'INST R' ]; then
