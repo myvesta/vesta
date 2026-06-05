@@ -613,7 +613,7 @@ if (!empty($_POST['save'])) {
             // Delete FTP account
             if ($v_ftp_user_data['delete'] == 1) {
                 $v_ftp_username = $user . '_' . $v_ftp_user_data['v_ftp_user'];
-                exec (VESTA_CMD."v-delete-web-domain-ftp ".$v_username." ".$v_domain." ".$v_ftp_username, $output, $return_var);
+                exec (VESTA_CMD."v-delete-web-domain-ftp ".$v_username." ".$v_domain." ".escapeshellarg($v_ftp_username), $output, $return_var);
                 check_return_code($return_var,$output);
                 unset($output);
 
