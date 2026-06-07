@@ -15,6 +15,7 @@ inst_81=0
 inst_82=0
 inst_83=0
 inst_84=0
+inst_85=0
 
 #######################################################################
 
@@ -64,8 +65,11 @@ fi
 if [ $# -gt 11 ]; then
     inst_84=${12}
 fi
+if [ $# -gt 12 ]; then
+    inst_85=${13}
+fi
 
-if [ $inst_56 -eq 1 ] || [ $inst_70 -eq 1 ] || [ $inst_71 -eq 1 ] || [ $inst_72 -eq 1 ] || [ $inst_73 -eq 1 ] || [ $inst_74 -eq 1 ] || [ $inst_80 -eq 1 ] || [ $inst_81 -eq 1 ] || [ $inst_82 -eq 1 ] || [ $inst_83 -eq 1 ] || [ $inst_84 -eq 1 ]; then
+if [ $inst_56 -eq 1 ] || [ $inst_70 -eq 1 ] || [ $inst_71 -eq 1 ] || [ $inst_72 -eq 1 ] || [ $inst_73 -eq 1 ] || [ $inst_74 -eq 1 ] || [ $inst_80 -eq 1 ] || [ $inst_81 -eq 1 ] || [ $inst_82 -eq 1 ] || [ $inst_83 -eq 1 ] || [ $inst_84 -eq 1 ] || [ $inst_85 -eq 1 ]; then
     inst_repo=1
 fi
 
@@ -97,6 +101,7 @@ echo "inst_81=$inst_81"
 echo "inst_82=$inst_82"
 echo "inst_83=$inst_83"
 echo "inst_84=$inst_84"
+echo "inst_85=$inst_85"
 echo "wait_to_press_enter=$wait_to_press_enter"
 
 press_enter "=== Press enter to continue ==============================================================================="
@@ -407,6 +412,32 @@ if [ "$inst_84" -eq 1 ]; then
     press_enter "=== PHP 8.4 installed, press enter to continue ==============================================================================="
 fi
 
+if [ "$inst_85" -eq 1 ]; then
+    press_enter "=== Press enter to install PHP 8.5 ==============================================================================="
+    apt-get -y install php8.5-mbstring php8.5-bcmath php8.5-cli php8.5-curl php8.5-fpm php8.5-gd php8.5-intl php8.5-mysql php8.5-soap php8.5-xml php8.5-zip php8.5-memcache php8.5-memcached php8.5-imagick
+    update-rc.d php8.5-fpm defaults
+    a2enconf php8.5-fpm
+    a2dismod php8.5
+    apt-get -y remove libapache2-mod-php8.5
+    systemctl restart apache2
+    cp -r /etc/php/8.5/ /root/vst_install_backups/php8.5/
+    wget -nv https://c.myvestacp.com/tools/apache-fpm-tpl/PHP-FPM-85.stpl -O /usr/local/vesta/data/templates/web/apache2/PHP-FPM-85.stpl
+    wget -nv https://c.myvestacp.com/tools/apache-fpm-tpl/PHP-FPM-85.tpl -O /usr/local/vesta/data/templates/web/apache2/PHP-FPM-85.tpl
+    wget -nv https://c.myvestacp.com/tools/apache-fpm-tpl/PHP-FPM-85.sh -O /usr/local/vesta/data/templates/web/apache2/PHP-FPM-85.sh
+    wget -nv https://c.myvestacp.com/tools/apache-fpm-tpl/PHP-FPM-85-public.stpl -O /usr/local/vesta/data/templates/web/apache2/PHP-FPM-85-public.stpl
+    wget -nv https://c.myvestacp.com/tools/apache-fpm-tpl/PHP-FPM-85-public.tpl -O /usr/local/vesta/data/templates/web/apache2/PHP-FPM-85-public.tpl
+    wget -nv https://c.myvestacp.com/tools/apache-fpm-tpl/PHP-FPM-85-public.sh -O /usr/local/vesta/data/templates/web/apache2/PHP-FPM-85-public.sh
+    chmod a+x /usr/local/vesta/data/templates/web/apache2/PHP-FPM-85.sh
+    chmod a+x /usr/local/vesta/data/templates/web/apache2/PHP-FPM-85-public.sh
+    echo "=== Patching php.ini for php8.5"
+    wget -nv https://c.myvestacp.com/tools/patches/php8.5.patch -O /root/php8.5.patch
+    patch /etc/php/8.5/fpm/php.ini < /root/php8.5.patch
+    if [ $memory -gt 9999999 ]; then
+        sed -i "s|opcache.memory_consumption=512|opcache.memory_consumption=2048|g" /etc/php/8.5/fpm/php.ini
+    fi
+    service php8.5-fpm restart
+    press_enter "=== PHP 8.5 installed, press enter to continue ==============================================================================="
+fi
 
 # apt update > /dev/null 2>&1
 # apt upgrade -y > /dev/null 2>&1
@@ -425,6 +456,7 @@ if [ $debian_version -ge 10 ]; then
     a2dismod php8.2 > /dev/null 2>&1
     a2dismod php8.3 > /dev/null 2>&1
     a2dismod php8.4 > /dev/null 2>&1
+    a2dismod php8.5 > /dev/null 2>&1
     a2dismod mpm_prefork > /dev/null 2>&1
     a2enmod mpm_event > /dev/null 2>&1
     apt-get -y remove libapache2-mod-php* > /dev/null 2>&1
