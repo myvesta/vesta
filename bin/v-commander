@@ -100,6 +100,7 @@ myhelp() {
     echo "inst r                = install new Roundcube"
     echo "inst memcached        = install memcached"
     echo "inst redis            = install Redis"
+    echo "inst es7              = install ElasticSearch 7"
     echo "inst nginx-rate-limit = install nginx-rate-limit templates"
     echo "dis fb   = stop and disable fail2ban"
     echo "dis dove = stop and disable dovecot"
@@ -654,6 +655,29 @@ do
         curl -O https://c.myvestacp.com/tools/rate-limit-tpl/install_rate_limit_tpl.sh
         bash install_rate_limit_tpl.sh
         echo "== nginx-rate-limit templates installed."
+        echo "-------------------"
+    fi
+
+    if [ "$answer" = 'inst es7' ] || [ "$answer" = 'INST ES7' ]; then
+        echo "============================="
+        echo "== Installing ElasticSearch 7"
+        curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
+        apt-get install apt-transport-https
+        echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/7.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-7.x.list
+        apt-get update
+        apt-get -y install elasticsearch
+
+        echo "" >> /etc/elasticsearch/jvm.options
+        echo "-Xms2g" >> /etc/elasticsearch/jvm.options
+        echo "-Xmx2g" >> /etc/elasticsearch/jvm.options
+
+        systemctl daemon-reload
+        systemctl enable elasticsearch.service
+        systemctl start elasticsearch.service
+        systemctl status elasticsearch.service
+
+        curl -X GET "http://localhost:9200/?pretty"
+        echo "== ElasticSearch 7 installed."
         echo "-------------------"
     fi
 
