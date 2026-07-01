@@ -24,16 +24,37 @@ source /usr/local/vesta/func/main.sh
 DOMAIN=$1
 IP=$2
 
+if [ $# -gt 2 ]; then
+    NETMASK=$3
+else
+    NETMASK='255.255.255.255'
+fi
+
+if [ -z "$NETMASK" ]; then
+    NETMASK='255.255.255.255'
+fi
+
+if [ $# -gt 3 ]; then
+    INTERFACE=$4
+else
+    INTERFACE=$(ip r get 8.8.8.8 | grep -oP 'dev \K\S+')
+fi
+
+if [ -z "$INTERFACE" ]; then
+    INTERFACE=$(ip r get 8.8.8.8 | grep -oP 'dev \K\S+')
+fi
+
+
 #----------------------------------------------------------#
 #                    Verifications                         #
 #----------------------------------------------------------#
 
-check_args '2' "$#" 'DOMAIN IP'
+check_args '2' "$#" 'DOMAIN IP [NETMASK] [INTERFACE]'
 is_domain_format_valid "$DOMAIN"
 is_ip_format_valid "$IP"
 
 if [ ! -d "/etc/exim4/virtual" ]; then
-    /usr/local/vesta/bin/v-make-separated-ip-for-email "$DOMAIN" "$IP"
+    /usr/local/vesta/bin/v-make-separated-ip-for-email "$DOMAIN" "$IP" "$NETMASK" "$INTERFACE"
 fi
 
 HOST_USER=$($VESTA/bin/v-search-domain-owner "$HOSTNAME")
@@ -49,7 +70,7 @@ HOST_IP=$($VESTA/bin/v-list-web-domain "$HOST_USER" "$HOSTNAME" | grep 'IP:' | a
 
 check_grep=$(grep -c "^$IP:" /etc/exim4/virtual/helo_data)
 if [ "$check_grep" -eq 0 ]; then
-    /usr/local/vesta/bin/v-make-separated-ip-for-email "$DOMAIN" "$IP"
+    /usr/local/vesta/bin/v-make-separated-ip-for-email "$DOMAIN" "$IP" "$NETMASK" "$INTERFACE"
 fi
 
 USER=$($VESTA/bin/v-search-domain-owner "$DOMAIN")

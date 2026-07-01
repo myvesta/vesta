@@ -1323,3 +1323,7 @@ list_child_pids() {
         list_child_pids $child
     done
 }
+
+press_enter_to_continue() {
+    read -p "= Press Enter to continue..."
+}

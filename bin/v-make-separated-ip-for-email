@@ -27,20 +27,28 @@ MAIL_IP=$2
 if [ $# -gt 2 ]; then
     NETMASK=$3
 else
-    NETMASK='255.255.255.192'
+    NETMASK='255.255.255.255'
+fi
+
+if [ -z "$NETMASK" ]; then
+    NETMASK='255.255.255.255'
 fi
 
 if [ $# -gt 3 ]; then
     INTERFACE=$4
 else
-    INTERFACE='eth0'
+    INTERFACE=$(ip r get 8.8.8.8 | grep -oP 'dev \K\S+')
+fi
+
+if [ -z "$INTERFACE" ]; then
+    INTERFACE=$(ip r get 8.8.8.8 | grep -oP 'dev \K\S+')
 fi
 
 #----------------------------------------------------------#
 #                    Verifications                         #
 #----------------------------------------------------------#
 
-check_args '2' "$#" 'MAIL_HOSTNAME MAIL_IP [NETMASK] [INTERFACE]'
+check_args '2' "$#" 'MailHostname MailIP [Netmask] [Interface]'
 is_domain_format_valid "$MAIL_HOSTNAME"
 is_ip_format_valid "$MAIL_IP"
 
@@ -56,12 +64,8 @@ echo "HOSTNAME     : $HOSTNAME"
 echo "HOSTNAME IP  : $HOST_IP"
 echo "MAIL HOSTNAME: $MAIL_HOSTNAME"
 echo "MAIL_IP      : $MAIL_IP"
-if [ $# -gt 2 ]; then
-    echo "NETMASK      : $NETMASK"
-fi
-if [ $# -gt 3 ]; then
-    echo "INTERFACE    : $INTERFACE"
-fi
+echo "NETMASK      : $NETMASK"
+echo "INTERFACE    : $INTERFACE"
 
 #----------------------------------------------------------#
 #                       Action                             #
@@ -134,8 +138,9 @@ $VESTA/bin/v-make-ip-ssl "$HOST_USER" "$HOSTNAME"
 echo "=== Generating IP SSL for mail hostname $MAIL_HOSTNAME"
 $VESTA/bin/v-make-ip-ssl "$MAIL_USER" "$MAIL_HOSTNAME"
 
-check_grep=$(grep -c 'smtp_active_hostname' /etc/exim4/exim4.conf.template)
-if [ "$check_grep" -eq 0 ]; then
+check_grep1=$(grep -c '#local_interfaces =  0.0.0.0' /etc/exim4/exim4.conf.template)
+check_grep2=$(grep -c '^local_interfaces =  0.0.0.0' /etc/exim4/exim4.conf.template)
+if [ "$check_grep1" -eq 1 ] || [ "$check_grep2" -eq 0 ]; then
     echo "=== patching exim4.conf.template"
     mv /etc/exim4/exim4.conf.template /etc/exim4/exim4.conf.template-backup
     cp /usr/local/vesta/install/debian/12/exim/exim4.conf.template /etc/exim4/exim4.conf.template
