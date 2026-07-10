@@ -29,22 +29,33 @@ source $VESTA/conf/vesta.conf
 #----------------------------------------------------------#
 
 check_args '2' "$#" 'USER BACKUP [WEB] [DNS] [MAIL] [DB] [CRON] [UDIR]'
-is_format_valid 'user'
+is_format_valid 'user' 'backup'
 is_system_enabled "$BACKUP_SYSTEM" 'BACKUP_SYSTEM'
 is_object_valid 'user' 'USER' "$user"
 is_backup_enabled
 is_backup_scheduled 'restore'
-
 
 #----------------------------------------------------------#
 #                       Action                             #
 #----------------------------------------------------------#
 
 # Adding restore task to  the queue
-log=$VESTA/log/restore.log
-options="'$web' '$dns' '$mail' '$db' '$cron' '$udir'"
-echo "nice -n 19 ionice -c 3 $BIN/v-restore-user $user $backup $options  yes >> $log 2>&1" >>\
-    $VESTA/data/queue/backup.pipe
+log="$VESTA/log/restore.log"
+queue_file="$VESTA/data/queue/backup.pipe"
+
+# Store a safely serialized command line for the legacy Bash queue consumer.
+printf \
+  'nice -n 19 ionice -c 3 %q %q %q %q %q %q %q %q %q yes >> %q 2>&1\n' \
+  "$BIN/v-restore-user" \
+  "$user" \
+  "$backup" \
+  "$web" \
+  "$dns" \
+  "$mail" \
+  "$db" \
+  "$cron" \
+  "$udir" \
+  "$log" >> "$queue_file"
 
 
 #----------------------------------------------------------#
