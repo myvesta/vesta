@@ -28,7 +28,8 @@ json_list() {
         DATE=$(echo "$str" |cut -f 4 -d \')
         TIME=$(echo "$str" |cut -f 6 -d \')
         CMD=$(echo "$str" |cut -f 8 -d \')
-        CMD=${CMD//\"/\\\"}
+        # CMD=${CMD//\"/\\\"}
+        CMD=$(echo "$CMD" | sed 's/\\ / /g')
         echo -n '    "'$ID'": {
         "CMD": "'$CMD'",
         "UNDO": "'$UNDO'",
@@ -97,7 +98,7 @@ is_object_valid 'user' 'USER' "$user"
 #----------------------------------------------------------#
 
 # Parsing history log
-logs=$(tail -n $limit $USER_DATA/history.log | tac)
+logs=$(tail -n $limit $USER_DATA/history.log)
 
 case $format in
     json)   json_list ;;

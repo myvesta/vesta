@@ -64,7 +64,7 @@ rm -f $USER_DATA/mail/$domain/$account@$domain.msg
 update_object_value "mail/$domain" 'ACCOUNT' "$account"  '$AUTOREPLY' 'no'
 
 # Logging
-log_history "$ARGUMENTS"
+log_history "deleted autoreply message for $account@$domain"
 log_event "$OK" "$ARGUMENTS"
 
 exit

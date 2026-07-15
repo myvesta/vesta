@@ -75,10 +75,13 @@ log_history() {
     log_user=${3-$user}
     log=$VESTA/data/users/$log_user/history.log
     touch $log
-    if [ '99' -lt "$(wc -l $log |cut -f 1 -d ' ')" ]; then
-        tail -n 49 $log > $log.moved
+    if [ '999' -lt "$(wc -l $log |cut -f 1 -d ' ')" ]; then
+        log_archive="$log.`date +%Y%m%d%H%M%S`"
+        cp $log $log_archive
+        tail -n 499 $log > $log.moved
         mv -f $log.moved $log
         chmod 660 $log
+        chmod 660 $log_archive
     fi
     if [ -z "$date" ]; then
         time_n_date=$(date +'%T %F')
@@ -87,6 +90,9 @@ log_history() {
     fi
     curr_str=$(grep "ID=" $log | cut -f 2 -d \' | sort -n | tail -n1)
     id="$((curr_str +1))"
+    cmd=$(echo "$cmd" | sed "s/'/\"/g")
+    cmd=$(printf "%q" "$cmd")
+    cmd=$(echo "$cmd" | sed 's/\\ / /g')
     echo "ID='$id' DATE='$date' TIME='$time' CMD='$cmd' UNDO='$undo'" >> $log
 }
 
