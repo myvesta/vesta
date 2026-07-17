@@ -1,3 +1,29 @@
+Version 0.9.9-0-17 [2026-07-17]
+==================================================
+* Improvement: Installer for PHP 8.5
+* Introducing: v-import-dns-zone command for DNS import
+* Introducing: v-clean-garbage-calculate command
+* Introducing: v-install-docker-service command
+* Introducing: v-update-spamassassin-rules command
+* Introducing: v-activate-spamhaus-rbl command
+* Introducing: v-search-mails-doveadm command for email search
+* Introducing: v-move-mails-doveadm command for email moving between email accounts
+* Introducing: v-delete-wordpress-admin command for deleting WordPress admin user
+* Introducing: v-list-wordpress-admins command to list WordPress admins
+* Introducing: v-rebuild-all-web-domains command
+* Introducing: v-commander 'inst es7' - a script for ElasticSearch 7 installation
+* Security: Check the backup filename and the other fields (credits to: projectblack.io)
+* Security: web\edit\web\index.php fix (credits to: hllttz (nitsuite))
+* Bugfix: v-make-separated-ip-for-email
+* Bugfix: User log (v-list-user-log)
+* Improvement: phpgate enhancements and refactoring
+* Improvement: Add a link to Freexian ELTS in the left sidebar
+* Improvement: v-commander: Many minor bugfixes and improvement
+* Improvement: v-df-snapshot-diff: allow up to 32 positions and show error when no snapshot is found for specified position
+* Bugfix: Parse admin CSV by numeric ID rows only (v-change-wordpress-admin-passwords)
+* Bugfix: Turning off Validity rules in SpamAssassin
+* Improvement: Enhance email and domain blacklist/whitelist scripts to check for file existence before updating entries, refactoring output messages for consistency and clarity
+
 Version 0.9.9-0-16 [2026-03-01]
 ==================================================
 * Improvement: Fix for 'invalid token' error in login form
