@@ -12,8 +12,8 @@ Version 0.9.9-0-17 [2026-07-17]
 * Introducing: v-list-wordpress-admins command to list WordPress admins
 * Introducing: v-rebuild-all-web-domains command
 * Introducing: v-commander 'inst es7' - a script for ElasticSearch 7 installation
-* Security: Check the backup filename and the other fields (credits to: projectblack.io)
-* Security: web\edit\web\index.php fix (credits to: hllttz (nitsuite))
+* Security: Check the backup filename and the other fields (credits to: hllttz (nitsuite))
+* Security: web\edit\web\index.php fix (credits to: projectblack.io)
 * Bugfix: v-make-separated-ip-for-email
 * Bugfix: User log (v-list-user-log)
 * Improvement: phpgate enhancements and refactoring
