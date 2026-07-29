@@ -80,18 +80,28 @@ function phpgate_count_limit_ip($max_retry=3, $find_time=60, $ban_time=86400) {
     $phpgate_cut_retry_after=$phpgate_find_time;
 }
 
-// if ( strpos($_SERVER['REQUEST_URI'], "amplifier-en?tags=") !== false ) phpgate_count_limit_ip(); // example of hit specific URL detection for specific IP
-// if ( strpos($_SERVER['REQUEST_URI'], "?p=1") !== false ) phpgate_count_limit_ip(3, 60, 60); // example of hit specific URL detection for specific IP
-// if ( isset($_GET['add_to_wishlist']) ) phpgate_count_limit_bot('add_to_wishlist', 2, 10, 60, 60); // example of hit specific URL detection for specific endpoint for all IPs, max 10 requests per minute for all IPs for 'add_to_wishlist' query
-// if ( isset($_GET['filter_product_brand']) ) if (strpos($_GET['filter_product_brand'], "%2C") !== false || strpos($_GET['filter_product_brand'], ",") !== false) phpgate_count_limit_bot('filter_product_brand', 2, 3, 60, 60); // example of hit specific URL detection for specific endpoint for all IPs, max 3 requests per minute for all IPs for 'filter_product_brand' query
-
 $phpgate_the_same_ip=false;
 if (isset($_SERVER['SERVER_ADDR']) && isset($_SERVER['REMOTE_ADDR'])) {
     if ($_SERVER['REMOTE_ADDR']=="127.0.0.1" || $_SERVER['SERVER_ADDR'] == $_SERVER['REMOTE_ADDR']) $phpgate_the_same_ip=true;
 }
 
-
 if (file_exists('/usr/share/phpgate/phpgate-conf.php')==true) include_once('/usr/share/phpgate/phpgate-conf.php');
+/*
+In /usr/share/phpgate/phpgate-conf.php you can add your own rules for limiting bot traffic, here are some examples:
+
+// example of hit detection for specific URL and specific IP, max 3 requests per minute for unique IP, ban for 24 hours
+if ( strpos($_SERVER['REQUEST_URI'], "amplifier-en?tags=") !== false ) phpgate_count_limit_ip(3, 60, 86400);
+
+// example of hit detection for specific URL and specific IP, max 3 requests per minute for unique IP, ban for 1 minute
+if ( strpos($_SERVER['REQUEST_URI'], "?p=1") !== false ) phpgate_count_limit_ip(3, 60, 60);
+
+// example of hit detection for specific endpoint for all IPs, max 10 requests per minute for all IPs with 'add_to_wishlist' query
+$get_query='add_to_wishlist'; if ( isset($_GET[$get_query]) ) phpgate_count_limit_bot($get_query, 2, 10, 60, 60);
+
+// example of hit detection for specific endpoint for all IPs, max 3 requests per minute for all IPs with 'filter_product_brand' query that contains comma separated values
+$get_query='filter_product_brand'; if ( isset($_GET[$get_query]) ) if (strpos($_GET[$get_query], "%2C") !== false || strpos($_GET[$get_query], ",") !== false) phpgate_count_limit_bot($get_query, 2, 3, 60, 60);
+*/
+
 if (isset($_REQUEST['wc-api'])==true && $_REQUEST['wc-api']=='wc_allsecureexchange') $phpgate_skip_agent_string_check=true;
 
 if (isset($_GET['sharing'])==false && isset($phpgate_skip_agent_string_check)==false && file_exists('/usr/share/phpgate/phpgate-agent-strings.php')==true) include_once('/usr/share/phpgate/phpgate-agent-strings.php');
