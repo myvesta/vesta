@@ -102,6 +102,7 @@ myhelp() {
     echo "inst redis            = install Redis"
     echo "inst es7              = install ElasticSearch 7"
     echo "inst nginx-rate-limit = install nginx-rate-limit templates"
+    echo "inst linux-kernel-6.1 = install Linux kernel 6.1"
     echo "dis fb   = stop and disable fail2ban"
     echo "dis dove = stop and disable dovecot"
     echo "dis spam = stop and disable spamassassin"
@@ -394,8 +395,8 @@ do
                 echo "== Apache is already in mpm_event mode"
             fi
         fi
-        
     fi
+
     if [ "$answer" = 'e' ] || [ "$answer" = 'E' ]; then
         echo "============================="
         echo "== switching to mpm_event mode"
@@ -744,6 +745,27 @@ do
         echo "=== YOUR id_rsa.pub IS BELOW ==="
         cat /root/.ssh/id_rsa.pub
         echo "======"
+    fi
+
+    if [ "$answer" = "inst linux-kernel-6.1" ] || [ "$answer" = "INST LINUX-KERNEL-6.1" ]; then
+        echo "============================="
+        if dpkg-query -W -f='${Status}\n' linux-image-6.1-amd64 2>/dev/null | grep -q "^install ok installed$"; then
+            echo "== Linux kernel 6.1 is already installed"
+        else
+            if [ "$release" -eq 9 ] || [ "$release" -eq 10 ]; then
+                echo "== Installing Linux kernel 6.1"
+                apt-get -y install linux-image-6.1-amd64
+                if [ $? -eq 0 ]; then
+                    echo "== Linux kernel 6.1 installed successfully"
+                    touch /root/kernelupdate
+                    echo "== kernel is updated, reboot is required!"
+                else
+                    echo "*** Linux kernel 6.1 installation failed ***"
+                fi
+            else
+                echo "= Linux kernel 6.1 is not supported for this Debian release"
+            fi
+        fi
     fi
 
 done
