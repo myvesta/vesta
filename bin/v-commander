@@ -32,6 +32,7 @@ save_current_status() {
         truncate -s 0 /root/current-status.txt
     fi
     echo -n 'Debian ' >> /root/current-status.txt && cat /etc/debian_version >> /root/current-status.txt
+    echo -n 'Linux kernel: ' >> /root/current-status.txt && uname -r >> /root/current-status.txt
     php -v | grep '^PHP' >> /root/current-status.txt
     /usr/local/vesta/bin/v-list-sys-services >> /root/current-status.txt
     /usr/local/vesta/bin/v-list-sys-web-status | grep "Server MPM:" >> /root/current-status.txt
