@@ -42,7 +42,8 @@ save_current_status() {
 
 check_status() {
     echo "=============================================================="
-    echo "------------------------ WAS ------------------------"
+    changed=$(stat /root/current-status.txt | grep 'Change:' | sed 's#Change: ##g' | awk -F. '{print $1}')
+    echo "------------------------ WAS on $changed ------------------------"
     hostname
     cat /root/current-status.txt
     echo "------------------------ NOW ------------------------"
@@ -54,7 +55,8 @@ check_status() {
 
 if [ $SHOWHEADER -eq 1 ]; then
     if [ -f "/root/current-status.txt" ]; then
-        echo "------------------ WAS LONG TIME AGO ------------------"
+        changed=$(stat /root/current-status.txt | grep 'Change:' | sed 's#Change: ##g' | awk -F. '{print $1}')
+        echo "------------------ WAS on $changed ------------------"
         hostname
         cat /root/current-status.txt
     fi
