@@ -41,6 +41,12 @@ E_UPDATE=19
 E_RESTART=20
 E_TEAPOT=418
 
+if [ -z "$myvesta_main_sh_loaded" ]; then
+    source /usr/local/vesta/func/error.sh
+fi
+myvesta_main_sh_loaded=1
+export myvesta_main_sh_loaded
+
 # Event string for logger
 for ((I=1; I <= $# ; I++)); do
     if [[ "$HIDE" != $I ]]; then
