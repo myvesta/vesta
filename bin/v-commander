@@ -755,7 +755,7 @@ do
         if dpkg-query -W -f='${Status}\n' linux-image-6.1-amd64 2>/dev/null | grep -q "^install ok installed$"; then
             echo "== Linux kernel 6.1 is already installed"
         else
-            if [ "$release" -eq 9 ] || [ "$release" -eq 10 ]; then
+            if [ "$release" -eq 9 ] || [ "$release" -eq 10 ] || [ "$release" -eq 11 ]; then
                 echo "== Installing Linux kernel 6.1"
                 apt-get -y install linux-image-6.1-amd64
                 if [ $? -eq 0 ]; then
