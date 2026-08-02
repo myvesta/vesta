@@ -2,10 +2,24 @@
 
 check_error() {
     ret=$?
+	msg=""
+	if [ $# -eq 1 ]; then
+	    if [ ! -z "$1" ]; then
+	        ret=$1
+	    fi
+	fi
+	if [ $# -eq 2 ]; then
+		if [ ! -z "$2" ]; then
+		    msg=$2
+		fi
+	fi
     if [ $ret -ne 0 ]; then
-        echo "*** Error returned: $ret"
+		if [ ! -z "$msg" ]; then
+			echo "*** Error msg : $msg"
+		fi
+        echo "*** Error code: $ret"
    		while true; do
-			read -p "======= Press 'i' to continue, 'x/q' to exit, 'b' for temporary escape to Bash, 't' for top, 's' for v-commander status, 'c' for v-commander: " answer
+			read -p "=== Press 'i' to continue, 'x/q' to exit, 'b' for temporary escape to Bash, 't' for top, 's' for v-commander status, 'c' for v-commander: " answer
 			if [ "$answer" = 'i' ] || [ "$answer" = 'I' ]; then
 				return;
 			fi
