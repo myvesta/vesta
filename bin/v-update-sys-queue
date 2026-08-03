@@ -42,7 +42,10 @@ b_task=$(ps auxf |grep -v "grep" |grep "$VESTA/bin/v-update-sys-queue backup")
 b_task=$(echo "$b_task" |grep -v sudo |wc -l)
 d_task=$(ps auxf |grep -v "grep" |grep "$VESTA/bin/v-update-sys-queue dns")
 d_task=$(echo "$d_task" |grep -v sudo |wc -l)
-if [ "$b_task" -gt 2 ] || [ "$d_task" -gt 2 ]; then
+if [ "$b_task" -gt 2 ] && [ "$queue" = "backup" ]; then
+    exit
+fi
+if [ "$d_task" -gt 2 ] && [ "$queue" = "dns-cluster" ]; then
     exit
 fi
 
