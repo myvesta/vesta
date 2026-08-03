@@ -3,6 +3,7 @@
 check_error() {
     ret=$?
 	msg=""
+	prompt="=== Press 'i' to continue, 'x/q' to exit, 'b' for temporary escape to Bash, 't' for top, 's' for v-commander status, 'c' for v-commander: "
 	if [ $# -eq 1 ]; then
 	    if [ ! -z "$1" ]; then
 	        ret=$1
@@ -17,9 +18,26 @@ check_error() {
 		if [ ! -z "$msg" ]; then
 			echo "*** Error msg : $msg"
 		fi
-        echo "*** Error code: $ret"
+		echo "*** Error code: $ret"
+
+        if [[ ! -t 0 ]]; then
+            echo "*** stdin is not a terminal"
+            return $ret
+        fi
+        if [[ ! -t 1 ]]; then
+            echo "*** stdout is not a terminal"
+            return $ret
+        fi
+        # if [[ ! -t 2 ]]; then
+        #     echo "*** stderr is not a terminal" >&2
+        #     return $ret
+        # fi
+
    		while true; do
-			read -p "=== Press 'i' to continue, 'x/q' to exit, 'b' for temporary escape to Bash, 't' for top, 's' for v-commander status, 'c' for v-commander: " answer
+		    if [[ ! -t 2 ]]; then
+                echo "$prompt"
+            fi
+			read -p "$prompt" answer
 			if [ "$answer" = 'i' ] || [ "$answer" = 'I' ]; then
 				return;
 			fi
