@@ -30,26 +30,28 @@ source /usr/local/vesta/func/main.sh
 
 # Cleaning fail2ban database
 fail2ban_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'fail2ban' | grep -c 'running')
-if [ $fail2ban_running -eq 1 ]; then
-    echo "== Stopping fail2ban"
-    systemctl stop fail2ban
+
+echo "== Unbanning all IP addresses"
+fail2ban-client unban --all > /dev/null 2>&1
+
+if [ -f "/usr/local/vesta/data/firewall/banlist.conf" ]; then
+    echo "== Cleaning firewall banlist.conf"
+    truncate -s 0 /usr/local/vesta/data/firewall/banlist.conf
 fi
-if [ -f "/var/lib/fail2ban/fail2ban.sqlite3" ]; then
-    echo "== Cleaning fail2ban database"
-    rm /var/lib/fail2ban/fail2ban.sqlite3
-    if [ -f "/etc/nginx/conf.d/block.conf" ]; then
-        echo "== Cleaning nginx block.conf"
-        truncate -s 0 /etc/nginx/conf.d/block.conf
-        nginx_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'nginx' | grep -c 'running')
-        if [ $nginx_running -eq 1 ]; then
-            echo "== Restarting nginx"
-            systemctl restart nginx
-        fi
+
+if [ -f "/etc/nginx/conf.d/block.conf" ]; then
+    echo "== Cleaning nginx block.conf"
+    truncate -s 0 /etc/nginx/conf.d/block.conf
+    nginx_running=$(/usr/local/vesta/bin/v-list-sys-services | grep 'nginx' | grep -c 'running')
+    if [ $nginx_running -eq 1 ]; then
+        echo "== Restarting nginx"
+        systemctl restart nginx
     fi
 fi
+
 if [ $fail2ban_running -eq 1 ]; then
-    echo "== Starting fail2ban"
-    systemctl start fail2ban
+    echo "== Restarting fail2ban"
+    systemctl restart fail2ban
 fi
 
 echo "== Done, fail2ban database cleaned"
