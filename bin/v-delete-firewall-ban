@@ -49,7 +49,7 @@ fi
 conf="$VESTA/data/firewall/banlist.conf"
 check_ip=$(grep "IP='$ip' CHAIN='$chain'" $conf 2>/dev/null)
 if [ -z "$check_ip" ]; then
-    exit
+    exit 1; # IP not found in banlist
 fi
 
 # Deleting ip from banlist
@@ -77,4 +77,4 @@ fi
 # Logging
 log_event "$OK" "$ARGUMENTS"
 
-exit
+exit 0;

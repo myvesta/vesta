@@ -17,6 +17,9 @@ if ($_SERVER['SCRIPT_FILENAME']=='/usr/local/vesta/web//reset/mail/get-ar.php') 
 if (substr($_SERVER['SCRIPT_FILENAME'], 0, 28)=='/usr/local/vesta/web/custom/') $secure_gate_check=false; // custom scripts like git webhooks
 if (substr($_SERVER['SCRIPT_FILENAME'], 0, 29)=='/usr/local/vesta/web//custom/') $secure_gate_check=false;
 
+if (substr($_SERVER['SCRIPT_FILENAME'], 0, 27)=='/usr/local/vesta/web/unban/') $secure_gate_check=false; // fail2ban unban script
+if (substr($_SERVER['SCRIPT_FILENAME'], 0, 28)=='/usr/local/vesta/web//unban/') $secure_gate_check=false;
+
 if (substr($_SERVER['SCRIPT_FILENAME'], 0, 21)=='/usr/local/vesta/bin/') $secure_gate_check=false; // allow executing v-* PHP scripts from bash
 if (substr($_SERVER['SCRIPT_FILENAME'], 0, 29)=='/usr/local/vesta/softaculous/') $secure_gate_check=false; // allow softaculous
 if (substr($_SERVER['SCRIPT_FILENAME'], 0, 33)=='/usr/local/vesta/web/softaculous/') $secure_gate_check=false; // allow softaculous
