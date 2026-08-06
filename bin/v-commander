@@ -99,15 +99,15 @@ myhelp() {
     echo "deactivate-spamhaus-rbl   = Deactivate SpamHaus RBL"
     echo "post-update-scripts       = run post-update scripts"
     echo "-----------------------------"
-    echo "inst p                = install multi-php"
-    echo "inst pgw              = install php-gate"
-    echo "inst web-fail2ban     = install web-fail2ban"
-    echo "inst r                = install new Roundcube"
-    echo "inst memcached        = install memcached"
-    echo "inst redis            = install Redis"
-    echo "inst es7              = install ElasticSearch 7"
-    echo "inst nginx-rate-limit = install nginx-rate-limit templates"
-    echo "inst linux-kernel-6.1 = install Linux kernel 6.1"
+    echo "inst p                   = install multi-php"
+    echo "inst pgw                 = install php-gate"
+    echo "inst web-fail2ban        = install web-fail2ban"
+    echo "inst r                   = install new Roundcube"
+    echo "inst memcached           = install memcached"
+    echo "inst redis               = install Redis"
+    echo "inst es7                 = install ElasticSearch 7"
+    echo "inst nginx-rate-limit    = install nginx-rate-limit templates"
+    echo "inst linux-kernel-newest = install Linux kernel 6.1 or 6.12"
     echo "dis fb   = stop and disable fail2ban"
     echo "dis dove = stop and disable dovecot"
     echo "dis spam = stop and disable spamassassin"
@@ -742,12 +742,11 @@ do
         echo "======"
     fi
 
-    if [ "$answer" = "inst linux-kernel-6.1" ] || [ "$answer" = "INST LINUX-KERNEL-6.1" ]; then
-        echo "============================="
-        if dpkg-query -W -f='${Status}\n' linux-image-6.1-amd64 2>/dev/null | grep -q "^install ok installed$"; then
-            echo "== Linux kernel 6.1 is already installed"
-        else
-            if [ "$release" -eq 9 ] || [ "$release" -eq 10 ] || [ "$release" -eq 11 ]; then
+    if [ "$answer" = "inst linux-kernel-newest" ] || [ "$answer" = "INST LINUX-KERNEL-NEWEST" ]; then
+        if [ "$release" -eq 9 ] || [ "$release" -eq 10 ] || [ "$release" -eq 11 ]; then
+            if dpkg-query -W -f='${Status}\n' linux-image-6.1-amd64 2>/dev/null | grep -q "^install ok installed$"; then
+                echo "== Linux kernel 6.1 is already installed"
+            else
                 echo "== Installing Linux kernel 6.1"
                 apt-get -y install linux-image-6.1-amd64
                 if [ $? -eq 0 ]; then
@@ -757,8 +756,21 @@ do
                 else
                     echo "*** Linux kernel 6.1 installation failed ***"
                 fi
+            fi
+        fi
+        if [ "$release" -eq 12 ]; then
+            if dpkg-query -W -f='${Status}\n' linux-image-6.12-amd64 2>/dev/null | grep -q "^install ok installed$"; then
+                echo "== Linux kernel 6.12 is already installed"
             else
-                echo "= Linux kernel 6.1 is not supported for this Debian release"
+                echo "== Installing Linux kernel 6.12"
+                apt-get -y install linux-image-6.12-amd64
+                if [ $? -eq 0 ]; then
+                    echo "== Linux kernel 6.12 installed successfully"
+                    touch /root/kernelupdate
+                    echo "== kernel is updated, reboot is required!"
+                else
+                    echo "*** Linux kernel 6.12 installation failed ***"
+                fi
             fi
         fi
     fi
