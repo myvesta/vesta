@@ -1,0 +1,39 @@
+#!/bin/bash
+
+ipv4=$(curl -4 -fs --max-time 5 https://scripts.myvestacp.com/ip.php)
+if [ $? -eq 0 ] && [ -n "$ipv4" ]; then
+    echo "$ipv4" | tr -d '\r\n'
+    exit 0
+fi
+
+ipv4=$(curl -4 -fs --max-time 5 http://api.ipify.org)
+if [ $? -eq 0 ] && [ -n "$ipv4" ]; then
+    echo "$ipv4" | tr -d '\r\n'
+    exit 0
+fi
+
+ipv4=$(curl -4 -fs --max-time 5 http://icanhazip.com)
+if [ $? -eq 0 ] && [ -n "$ipv4" ]; then
+    echo "$ipv4" | tr -d '\r\n'
+    exit 0
+fi
+
+ipv4=$(curl -4 -fs --max-time 5 http://ifconfig.me)
+if [ $? -eq 0 ] && [ -n "$ipv4" ]; then
+    echo "$ipv4" | tr -d '\r\n'
+    exit 0
+fi
+
+ipv4=$(ip -4 route get 1.1.1.1 | sed -n 's/.* src \([^ ]*\).*/\1/p')
+if [ $? -eq 0 ] && [ -n "$ipv4" ]; then
+    echo "$ipv4" | tr -d '\r\n'
+    exit 0
+fi
+
+ipv4=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -n 1)
+if [ $? -eq 0 ] && [ -n "$ipv4" ]; then
+    echo "$ipv4" | tr -d '\r\n'
+    exit 0
+fi
+
+exit 1
