@@ -61,5 +61,23 @@ check_error() {
     fi
 }
 
+check_continue() {
+	if [[ ! -t 0 ]]; then
+		echo "*** stdin is not a terminal"
+		return $ret
+	fi
+	if [[ ! -t 1 ]]; then
+		echo "*** stdout is not a terminal"
+		return $ret
+	fi
+	read -p '>> Are you sure you want to continue? (Y/n): ' answer
+	if [ "$answer" != "y" ] || if [ "$answer" != "Y" ] || [ -z "$answer" ] ; then
+		echo "== Continuing..."
+		return 0;
+	fi
+	echo "== Exiting..."
+	exit 1;
+}
+
 myvesta_error_sh_loaded=1
 export myvesta_error_sh_loaded

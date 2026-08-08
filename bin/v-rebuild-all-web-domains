@@ -4,8 +4,34 @@
 #
 # The function rebuilds all web configuration files.
 
+source /usr/local/vesta/func/error.sh
+
 if [ -z "$VESTA" ]; then
     export VESTA="/usr/local/vesta"
+fi
+
+services_list=$(/usr/local/vesta/bin/v-list-sys-services)
+
+has_nginx=0
+has_apache2=0
+has_nginx_running=0
+has_apache2_running=0
+
+grep_nginx=$(echo "$services_list" | grep 'nginx')
+grep_apache2=$(echo "$services_list" | grep 'apache2')
+if [ ! -z "$grep_nginx" ]; then
+    has_nginx=1
+    grep_nginx_running=$(echo "$grep_nginx" | grep 'running')
+    if [ ! -z "$grep_nginx_running" ]; then
+        has_nginx_running=1
+    fi
+fi
+if [ ! -z "$grep_apache2" ]; then
+    has_apache2=1
+    grep_apache2_running=$(echo "$grep_apache2" | grep 'running')
+    if [ ! -z "$grep_apache2_running" ]; then
+        has_apache2_running=1
+    fi
 fi
 
 for user in $(grep '@' /etc/passwd |cut -f1 -d:); do
@@ -15,7 +41,39 @@ for user in $(grep '@' /etc/passwd |cut -f1 -d:); do
     /usr/local/vesta/bin/v-rebuild-web-domains $user 'no'
 done
 
-systemctl restart nginx
-systemctl restart apache2
+EXIT_CODE1=0
+EXIT_CODE2=0
 
-exit 0
+if [ $has_nginx -eq 1 ] && [ $has_nginx_running -eq 1 ]; then
+    systemctl restart nginx
+    EXIT_CODE1=$?
+    if [ $EXIT_CODE1 -ne 0 ]; then
+        check_error $EXIT_CODE1 "'systemctl restart nginx' failed"
+    else
+        echo "== Nginx restarted successfully"
+    fi
+else
+    echo "has_nginx:         $has_nginx"
+    echo "has_nginx_running: $has_nginx_running"
+    echo "== Nginx is not restarted"
+fi
+
+if [ $has_apache2 -eq 1 ] && [ $has_apache2_running -eq 1 ]; then
+    systemctl restart apache2
+    EXIT_CODE2=$?
+    if [ $EXIT_CODE2 -ne 0 ]; then
+        check_error $EXIT_CODE2 "'systemctl restart apache2' failed"
+    else
+        echo "== Apache2 restarted successfully"
+    fi
+else
+    echo "has_apache2:         $has_apache2"
+    echo "has_apache2_running: $has_apache2_running"
+    echo "== Apache2 is not restarted"
+fi
+
+if [ $EXIT_CODE1 -eq 0 ] && [ $EXIT_CODE2 -eq 0 ]; then
+    exit 0
+else
+    exit $EXIT_CODE1
+fi

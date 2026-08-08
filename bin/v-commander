@@ -99,15 +99,16 @@ myhelp() {
     echo "deactivate-spamhaus-rbl   = Deactivate SpamHaus RBL"
     echo "post-update-scripts       = run post-update scripts"
     echo "-----------------------------"
-    echo "inst p                   = install multi-php"
-    echo "inst pgw                 = install php-gate"
-    echo "inst web-fail2ban        = install web-fail2ban"
-    echo "inst r                   = install new Roundcube"
-    echo "inst memcached           = install memcached"
-    echo "inst redis               = install Redis"
-    echo "inst es7                 = install ElasticSearch 7"
-    echo "inst nginx-rate-limit    = install nginx-rate-limit templates"
-    echo "inst linux-kernel-newest = install Linux kernel 6.1 or 6.12"
+    echo "inst p                      = install multi-php"
+    echo "inst pgw                    = install php-gate"
+    echo "inst web-fail2ban           = install web-fail2ban"
+    echo "inst r                      = install new Roundcube"
+    echo "inst memcached              = install memcached"
+    echo "inst redis                  = install Redis"
+    echo "inst es7                    = install ElasticSearch 7"
+    echo "inst nginx-rate-limit       = install nginx-rate-limit templates"
+    echo "inst linux-kernel-newest    = install Linux kernel 6.1 or 6.12"
+    echo "inst nginx-from-debian-repo = install nginx from Debian repository"
     echo "dis fb   = stop and disable fail2ban"
     echo "dis dove = stop and disable dovecot"
     echo "dis spam = stop and disable spamassassin"
@@ -154,7 +155,7 @@ do
         shift
     else
         if [ $HAS_PARAMETERS -eq 1 ]; then
-            exit;
+            exit $EXIT_CODE;
         fi
         read -p 'What to do: ' answer
     fi
@@ -174,6 +175,8 @@ do
         quit_on_empty=1
         HAS_PARAMETERS=0
     fi
+
+    EXIT_CODE=0
 
     if [ "$answer" = 'a' ] || [ "$answer" = 'A' ]; then
         timestamp=$(date +%Y%m%d_%H%M%S)
@@ -342,8 +345,10 @@ do
                     rm /etc/apt/sources.list.d/hetzner*
                 fi
             fi
+            EXIT_CODE=0
         else
             echo "== Freexian is not supported on Debian 11 or higher"
+            EXIT_CODE=0
         fi
     fi
 
@@ -717,7 +722,7 @@ do
     if [ "$answer" = 'q' ] || [ "$answer" = 'Q' ]; then
         echo "============================="
         echo "== Exiting... bye bye :)"
-        exit 0
+        exit $EXIT_CODE;
     fi
 
     if [ "$answer" = 'h' ] || [ "$answer" = 'H' ]; then
@@ -771,6 +776,86 @@ do
                 else
                     echo "*** Linux kernel 6.12 installation failed ***"
                 fi
+            fi
+        fi
+    fi
+
+    if [ "$answer" = "inst nginx-from-debian-repo" ] || [ "$answer" = "INST NGINX-FROM-DEBIAN-REPO" ]; then
+        if [ "$release" -eq 9 ] || [ "$release" -eq 10 ] || [ "$release" -eq 11 ] || [ "$release" -eq 12 ]; then
+            if [ -f "/etc/apt/sources.list.d/nginx.list" ]; then
+                mv /etc/apt/sources.list.d/nginx.list /root/nginx.list.backup.$(date +%Y%m%d%H%M%S)
+            else
+                echo "== nginx is already installed from Debian repository"
+                check_continue
+            fi
+            /usr/local/vesta/bin/v-commander "freexian"
+            if [ "$release" -eq 9 ] || [ "$release" -eq 10 ]; then
+                sed -i 's/ delay=.;/;/' /usr/local/vesta/data/templates/web/nginx/*
+                sed -i 's/ delay=..;/;/' /usr/local/vesta/data/templates/web/nginx/*
+                sed -i 's/ delay=.;/;/' /home/*/conf/web/*.nginx.conf
+                sed -i 's/ delay=.;/;/' /home/*/conf/web/*.nginx.ssl.conf
+                sed -i 's/ delay=..;/;/' /home/*/conf/web/*.nginx.conf
+                sed -i 's/ delay=..;/;/' /home/*/conf/web/*.nginx.ssl.conf
+                v-rebuild-all-web-domains
+                check_error
+            fi
+
+            if [ ! -d "/root/nginx-before-freexian" ]; then
+                cp -a /etc/nginx /root/nginx-before-freexian
+            fi
+            if [ ! -f "/root/nginx-official-repo-build.txt" ]; then
+                nginx -V 2>&1 | tee /root/nginx-official-repo-build.txt
+            fi
+            if [ ! -f "/root/nginx-official-repo-config.txt" ]; then
+                nginx -T > /root/nginx-official-repo-config.txt 2>&1
+            fi
+
+            apt-get update
+            check_error
+
+            nginx_version=$(apt-cache madison nginx | grep 'freexian' | awk '{ print $3 }')
+
+            if [ -z "$nginx_version" ]; then
+                EXIT_CODE=1
+                check_error $EXIT_CODE "nginx_version variable is empty"
+                continue;
+            fi
+
+            echo "== Simulating nginx downgrade to $nginx_version"
+
+            apt-get -s install --allow-downgrades nginx=$nginx_version
+            EXIT_CODE=$?
+            if [ $EXIT_CODE -ne 0 ]; then
+                check_error $EXIT_CODE "nginx downgrade simulation failed"
+            fi
+
+            echo "== Seems good"
+            check_continue
+
+            echo "== Installing nginx $nginx_version"
+
+            apt-get install --allow-downgrades nginx=$nginx_version
+            EXIT_CODE=$?
+            if [ $EXIT_CODE -ne 0 ]; then
+                apt-get -f install
+                check_error
+            fi
+
+            echo "== Checking nginx version after installation"
+            nginx -v
+            check_error
+            echo "== Checking nginx version and build options"
+            nginx -V
+            check_error
+            echo "== Checking nginx configuration"
+            nginx -t
+            EXIT_CODE=$?
+            if [ $EXIT_CODE -ne 0 ]; then
+                echo "== nginx looks good, restarting nginx"
+                systemctl restart nginx
+                EXIT_CODE=$?
+            else
+                check_error $EXIT_CODE "'nginx -t' returned error code $EXIT_CODE"
             fi
         fi
     fi
