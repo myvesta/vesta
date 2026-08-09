@@ -1209,11 +1209,95 @@ send_email_to_admin() {
     echo "$2" | $SENDMAIL -s "$1" "$email" 'yes'
 }
 
+translate_service_name() {
+    service=$1
+    if [ "$service" = "mysql" ]; then
+        service="mariadb"
+    fi
+    if [ "$service" = "spamassassin" ]; then
+        service="spamd"
+    fi
+    echo "$service"
+}
+
 check_if_service_exists() {
     if [ $(systemctl list-units --all -t service --full --no-legend | grep -c "$1") -gt 0 ]; then
         echo "1"
     else
         echo "0"
+    fi
+}
+
+check_if_service_is_running() {
+    if [ $(systemctl is-active "$1") = "active" ]; then
+        echo "1"
+    else
+        echo "0"
+    fi
+}
+
+check_if_service_is_enabled() {
+    if [ $(systemctl is-enabled "$1") = "enabled" ]; then
+        echo "1"
+    else
+        echo "0"
+    fi
+}
+
+check_if_service_exists_with_alternate_name() {
+    service_name="$1"
+    alternate_service_name=$(translate_service_name "$service_name")
+    if [ "$alternate_service_name" == "$service_name" ]; then
+        value=$(check_if_service_exists "$alternate_service_name")
+        echo "$value"
+        return 0;
+    else
+        value1=$(check_if_service_exists "$service_name")
+        value2=$(check_if_service_exists "$alternate_service_name")
+        if [ "$value1" == "1" ] || [ "$value2" == "1" ]; then
+            echo "1"
+        else
+            echo "0"
+        fi
+        return 0;
+    fi
+}
+
+check_if_service_is_running_with_alternate_name() {
+    service_name="$1"
+    alternate_service_name=$(translate_service_name "$service_name")
+    if [ "$alternate_service_name" == "$service_name" ]; then
+        value=$(check_if_service_is_running "$alternate_service_name")
+        echo "$value"
+        return 0;
+    else
+        value1=$(check_if_service_is_running "$service_name")
+        value2=$(check_if_service_is_running "$alternate_service_name")
+        if [ "$value1" == "1" ] || [ "$value2" == "1" ]; then
+            echo "1"
+        else
+            echo "0"
+        fi
+        return 0;
+    fi
+}
+
+check_if_service_is_enabled_with_alternate_name() {
+    service_name="$1"
+    alternate_service_name=$(translate_service_name "$service_name")
+    if [ "$alternate_service_name" == "$service_name" ]; then
+        value=$(check_if_service_is_enabled "$alternate_service_name")
+        echo "$value"
+        return 0;
+    else
+        value1=$(check_if_service_is_enabled "$service_name")
+        value2=$(check_if_service_is_enabled "$alternate_service_name")
+        if [ "$value1" == "1" ] || [ "$value2" == "1" ]; then
+            echo "1"
+        else
+            echo "0"
+        fi
+        return 0;
     fi
 }
 
