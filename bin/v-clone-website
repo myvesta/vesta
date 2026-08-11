@@ -354,7 +354,7 @@ if [ "$SITE_SUBFOLDER" = ".." ]; then
     fi
 fi
 
-if [ ! -z "$FROM_DOMAIN_PROXY_TPL" ]; then
+if [ ! -z "$FROM_DOMAIN_PROXY_TPL" ] && [ -z "$SITE_SUBFOLDER" ]; then
     echo "=== Set $FROM_DOMAIN_PROXY_TPL proxy template to domain $TO_DOMAIN"
     /usr/local/vesta/bin/v-change-web-domain-proxy-tpl "$TO_USER" "$TO_DOMAIN" "$FROM_DOMAIN_PROXY_TPL" "$FROM_DOMAIN_PROXY_EXT" "yes"
 fi
@@ -378,9 +378,12 @@ rm $FROM_DATABASE_NAME.sql
 EXCLUDE=''
 if [ ! -z "$EXCLUDE_UPLOADS" ]; then
     EXCLUDE="--exclude '/wp-content/uploads/*'"
+    if [ ! -z "$SITE_SUBFOLDER" ] && [ "$SITE_SUBFOLDER" != ".." ]; then
+        EXCLUDE="--exclude '/$SITE_SUBFOLDER/wp-content/uploads/*'"
+    fi
 fi
 
-echo "=== Copying files from $FROM_FOLDER to folder $TO_FOLDER"
+echo "=== Copying files from $FROM_FOLDER/ to folder $TO_FOLDER/"
 if [ "$SITE_SUBFOLDER" != ".." ]; then
     run="rsync -a --delete $EXCLUDE $FROM_FOLDER/ $TO_FOLDER/"
     echo "====== Executing: $run"
@@ -397,7 +400,7 @@ replace_php_config_value "${FROM_DATABASE_NAME}" "${TO_DATABASE_NAME}" "$TO_CONF
 replace_php_config_value "${FROM_DATABASE_USERNAME}" "${TO_DATABASE_USERNAME}" "$TO_CONFIG_FILE_FULL_PATH" "yes"
 replace_php_config_value "${FROM_DATABASE_PASSWORD}" "${TO_DATABASE_PASSWORD}" "$TO_CONFIG_FILE_FULL_PATH" "yes"
 
-if [ $CREATE_TO_DATABASE -eq 0 ] && [ $IT_IS_WP -eq 1 ]; then
+if [ $CREATE_TO_DATABASE -eq 0 ] && [ $IT_IS_WP -eq 1 ] && [ -z "$SITE_SUBFOLDER" ]; then
     echo "=== Change database password for $TO_DATABASE_NAME"
     /usr/local/vesta/bin/v-change-database-password-for-wordpress "$TO_DOMAIN" "$TO_USER" > /dev/null 2>&1
 fi
@@ -433,14 +436,14 @@ if [ $IT_IS_WP -eq 0 ]; then
     fi
 else
     echo "=== Replacing $FROM_DOMAIN to $TO_DOMAIN in database $TO_DATABASE_NAME"
-    /usr/local/vesta/bin/v-run-wp-cli $TO_DOMAIN search-replace "$FROM_DOMAIN" "$TO_DOMAIN" --precise --all-tables --skip-columns=guid --skip-plugins --skip-themes;
+    SUBFOLDER="$SITE_SUBFOLDER" /usr/local/vesta/bin/v-run-wp-cli $TO_DOMAIN search-replace "$FROM_DOMAIN" "$TO_DOMAIN" --precise --all-tables --skip-columns=guid --skip-plugins --skip-themes;
     if [ "$FROM_USER" != "$TO_USER" ]; then
         echo "=== Replacing /home/$FROM_USER/ to /home/$TO_USER/ in database $TO_DATABASE_NAME"
-        /usr/local/vesta/bin/v-run-wp-cli $TO_DOMAIN search-replace "/home/$FROM_USER/" "/home/$TO_USER/" --precise --all-tables --skip-columns=guid --skip-plugins --skip-themes;
+        SUBFOLDER="$SITE_SUBFOLDER" /usr/local/vesta/bin/v-run-wp-cli $TO_DOMAIN search-replace "/home/$FROM_USER/" "/home/$TO_USER/" --precise --all-tables --skip-columns=guid --skip-plugins --skip-themes;
     fi
-    /usr/local/vesta/bin/v-run-wp-cli $TO_DOMAIN cache flush --skip-plugins --skip-themes;
-    /usr/local/vesta/bin/v-run-wp-cli $TO_DOMAIN config shuffle-salts WP_CACHE_KEY_SALT --force --skip-plugins --skip-themes;
-    /usr/local/vesta/bin/v-run-wp-cli $TO_DOMAIN config shuffle-salts --skip-plugins --skip-themes;
+    SUBFOLDER="$SITE_SUBFOLDER" /usr/local/vesta/bin/v-run-wp-cli $TO_DOMAIN cache flush --skip-plugins --skip-themes;
+    SUBFOLDER="$SITE_SUBFOLDER" /usr/local/vesta/bin/v-run-wp-cli $TO_DOMAIN config shuffle-salts WP_CACHE_KEY_SALT --force --skip-plugins --skip-themes;
+    SUBFOLDER="$SITE_SUBFOLDER" /usr/local/vesta/bin/v-run-wp-cli $TO_DOMAIN config shuffle-salts --skip-plugins --skip-themes;
 fi
 
 # ----------- Update Wordfence WAF Path -------------

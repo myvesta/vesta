@@ -112,7 +112,13 @@ fi
 #                       Action                             #
 #----------------------------------------------------------#
 
-cd /home/$USER/web/$domain/public_html
+folder="/home/$USER/web/$domain/public_html"
+
+if [ ! -z "$SUBFOLDER" ]; then
+    folder="$folder/$SUBFOLDER"
+fi
+
+cd $folder
 
 if [ -z "$OPEN_BASEDIR" ]; then
     OPEN_BASEDIR="/home/$user/web/$domain:/home/$user/.wp-cli:/home/$user/tmp:/usr/local/bin:/tmp"
@@ -123,9 +129,9 @@ if [ -z "$DISABLE_FUNCTIONS" ]; then
 fi
 
 if [ -z "$SHOW_ERRORS" ]; then
-    sudo -u $USER $WP_CLI_PACKAGES_DIR /usr/bin/php$phpver -d disable_functions=$DISABLE_FUNCTIONS -d open_basedir=$OPEN_BASEDIR $wpcli --path=/home/$user/web/$domain/public_html/ $wp_command 2>/home/$user/web/$domain/wp-cli-error.log
+    sudo -u $USER $WP_CLI_PACKAGES_DIR /usr/bin/php$phpver -d disable_functions=$DISABLE_FUNCTIONS -d open_basedir=$OPEN_BASEDIR $wpcli --path=$folder/ $wp_command 2>/home/$user/web/$domain/wp-cli-error.log
 else
-    sudo -u $USER $WP_CLI_PACKAGES_DIR /usr/bin/php$phpver -d disable_functions=$DISABLE_FUNCTIONS -d open_basedir=$OPEN_BASEDIR $wpcli --path=/home/$user/web/$domain/public_html/ $wp_command
+    sudo -u $USER $WP_CLI_PACKAGES_DIR /usr/bin/php$phpver -d disable_functions=$DISABLE_FUNCTIONS -d open_basedir=$OPEN_BASEDIR $wpcli --path=$folder/ $wp_command
 fi
 
 return_code=$?
