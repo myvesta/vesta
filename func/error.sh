@@ -125,5 +125,26 @@ check_continue() {
 	fi
 }
 
+press_enter_to_continue() {
+	msg=""
+	if [ $# -gt 0 ]; then
+		if [ ! -z "$1" ]; then
+		    msg=$1
+		fi
+	fi
+
+	if [ -z "$msg" ]; then
+		msg="Press Enter to continue..."
+	fi
+
+	check_if_interactive
+	if [ $? -ne 0 ]; then
+		return 0;
+	fi
+
+	read -p ">> $msg" answer
+	return 0;
+}
+
 myvesta_error_sh_loaded=1
 export myvesta_error_sh_loaded
