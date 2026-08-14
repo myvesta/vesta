@@ -308,6 +308,10 @@ function humanize_usage_measure($usage) {
 
 
 function get_percentage($used,$total) {
+    if ($total === 'unlimited' || !is_numeric($total)) return 0;
+    if (!is_numeric($used)) $used = 0;
+    $total = (float)$total;
+    $used = (float)$used;
     if (!isset($total)) $total =  0;
     if (!isset($used)) $used =  0;
     if ( $total == 0 ) {
@@ -382,11 +386,11 @@ function list_timezones() {
     foreach($timezone_offsets as $timezone => $offset){
         $offset_prefix = $offset < 0 ? '-' : '+';
         $offset_formatted = gmdate( 'H:i', abs($offset) );
-        $pretty_offset = "UTC${offset_prefix}${offset_formatted}";
+        $pretty_offset = "UTC{$offset_prefix}{$offset_formatted}";
         $t = new DateTimeZone($timezone);
         $c = new DateTime(null, $t);
         $current_time = $c->format('H:i:s');
-        $timezone_list[$timezone] = "$timezone [ $current_time ] ${pretty_offset}";
+        $timezone_list[$timezone] = "$timezone [ $current_time ] {$pretty_offset}";
     }
     return $timezone_list;
 }
