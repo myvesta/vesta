@@ -1,3 +1,20 @@
+Version 0.9.9-0-18 [2026-08-14]
+==================================================
+* Introducing: Ability for a user to unban themselves by visiting the 'unban' URL
+* Bugfix: Displaying user logs in the right panel in descending date order
+* Introducing: Update v-commander to support installation of the newest Linux kernel 6.1x in v-commander
+* Introducing: v-commander "inst nginx-from-debian-repo"
+* Introducing: v-what-is-my-ipv4
+* Introducing: func/error.sh: check_error and other prompting functions
+* Introducing: check_if_service_is_* functions
+* Introducing: nulled nginx template for websites that are under the DDoS http-flood attack
+* Bugfix: v-clone-website $SUBFOLDER fix
+* Improvement: v-rebuild-all-web-domains: checking apache2 and nginx services
+* Bugfix: Avoid re-banning previously banned IPs when doing v-clear-fail2ban
+* Bugfix: Fix skipping traffic reset
+* Introducing: Add Linux kernel version information to current status output in v-commander
+* Improvement: Update phpgate.php to include examples of custom bot traffic limiting rules in the configuration file
+
 Version 0.9.9-0-17 [2026-07-17]
 ==================================================
 * Improvement: Installer for PHP 8.5
