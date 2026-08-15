@@ -44,6 +44,7 @@ is_object_unsuspended 'mail' 'DOMAIN' "$domain"
 is_object_valid "mail/$domain" 'ACCOUNT' "$account"
 is_object_unsuspended "mail/$domain" 'ACCOUNT' "$account"
 
+release=$(/usr/local/vesta/bin/v-get-debian-version)
 
 #----------------------------------------------------------#
 #                       Action                             #
@@ -55,7 +56,11 @@ if [[ "$MAIL_SYSTEM" =~ exim ]]; then
         quota=0
     fi
     sed -i "/^$account:/d" $HOMEDIR/$user/conf/mail/$domain/passwd
-    str="$account:$md5:$user:mail::$HOMEDIR/$user:$quota"
+    if [ "$release" -lt '13' ]; then
+        str="$account:$md5:$user:mail::$HOMEDIR/$user:$quota"
+    else
+        str="$account:$md5:$user:mail::$HOMEDIR/$user/mail/$domain/$account:${quota}:userdb_quota_storage_size=${quota}M"
+    fi
     echo $str >> $HOMEDIR/$user/conf/mail/$domain/passwd
 fi
 
