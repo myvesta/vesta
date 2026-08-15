@@ -5,10 +5,10 @@
 #                                                                    #
 ######################################################################
 
-SPAMASSASSIN = yes
-SPAM_SCORE = 50
-SPAM_REJECT_SCORE = 100
-CLAMD = yes
+#SPAMASSASSIN = yes
+#SPAM_SCORE = 50
+#SPAM_REJECT_SCORE = 100
+#CLAMD = yes
 
 smtp_banner = $smtp_active_hostname ESMTP
 smtp_active_hostname = ${lookup dnsdb{>: defer_never,ptr=$interface_address}{${listextract{1}{$value}}}{$primary_hostname}}
@@ -87,7 +87,9 @@ DKIM_DOMAIN = ${lc:${domain:$h_from:}}
 DKIM_FILE = /etc/exim4/domains/${lookup{${lc:${domain:$h_from:}}}dsearch{/etc/exim4/domains/}}/dkim.pem
 DKIM_PRIVATE_KEY = ${if exists{DKIM_FILE}{DKIM_FILE}{0}}
 
+SMTP_AUTHENTICATED_USERS_IP = /etc/exim4/smtp_authenticated_users_ip
 OUTGOING_IP = /etc/exim4/domains/${lookup{$sender_address_domain}dsearch{/etc/exim4/domains}}/ip
+OUTGOING_SECOND_IP_AUTHENTICATED_USERS = /etc/exim4/domains/${lookup{$sender_address_domain}dsearch{/etc/exim4/domains}}/ip_smtp_authenticated_users
 
 SMTP_RELAY_FILE = ${if exists{/etc/exim4/domains/${lookup{$sender_address_domain}dsearch{/etc/exim4/domains}}/smtp_relay.conf}{/etc/exim4/domains/${lookup{$sender_address_domain}dsearch{/etc/exim4/domains}}/smtp_relay.conf}{/etc/exim4/smtp_relay.conf}}
 SMTP_RELAY_HOST = ${lookup{host}lsearch{SMTP_RELAY_FILE}}
@@ -429,7 +431,14 @@ remote_smtp:
   dkim_canon = relaxed
   dkim_strict = 0
   hosts_try_fastopen = !*.l.google.com
-  interface = ${if exists{OUTGOING_IP}{${readfile{OUTGOING_IP}}}}
+  interface = ${if eq{$acl_m3}{no}\
+                {${if exists{OUTGOING_SECOND_IP_AUTHENTICATED_USERS}\
+                    {${readfile{OUTGOING_SECOND_IP_AUTHENTICATED_USERS}}}\
+                    {${if exists{SMTP_AUTHENTICATED_USERS_IP}\
+                        {${readfile{SMTP_AUTHENTICATED_USERS_IP}}}\
+                        {${if exists{OUTGOING_IP}\
+                            {${readfile{OUTGOING_IP}}}}}}}}}\
+                {${if exists{OUTGOING_IP}{${readfile{OUTGOING_IP}}}}}}
 
 remote_forwarded_smtp:
   driver = smtp
