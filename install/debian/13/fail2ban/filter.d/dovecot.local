@@ -1,0 +1,4 @@
+[Definition]
+
+failregex = %(known/failregex)s
+            ^(?:Login aborted|Aborted login|Disconnected|Remote closed connection|Client has quit the connection)%(_bypass_reject_reason)s \((?:auth failed, \d+ attempts(?: in \d+ secs)?|tried to use (?:disabled|disallowed) \S+ auth|proxy dest auth failed)\)[^:]*:(?: user=<<F-USER>[^>]*</F-USER>>,)?(?: method=\S+,)? rip=<HOST>(?:[^>]*(?:, session=<\S+>)?)\s*$

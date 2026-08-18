@@ -24,6 +24,12 @@ filter  = dovecot
 action  = vesta[name=MAIL]
 logpath = /var/log/dovecot.log
 
+[dovecot-missing-passwd]
+enabled = true
+filter  = dovecot-missing-passwd
+action  = vesta[name=MAIL]
+logpath = /var/log/dovecot.log
+
 [mysqld-iptables]
 enabled  = false
 filter   = mysqld-auth
