@@ -2022,7 +2022,7 @@ if [ "$release" -eq 12 ]; then
   apt-get -y install php8.2-apcu php8.2-mbstring php8.2-bcmath php8.2-curl php8.2-gd php8.2-intl php8.2-mysql php8.2-mysqlnd php8.2-pdo php8.2-soap php8.2-xml php8.2-zip php8.2-memcache php8.2-memcached php8.2-zip php8.2-imagick php8.2-imap
 fi
 if [ "$release" -eq 13 ]; then
-  apt-get -y install php8.4-apcu php8.4-mbstring php8.4-bcmath php8.4-curl php8.4-gd php8.4-intl php8.4-mysql php8.4-mysqlnd php8.4-pdo php8.4-soap php8.4-xml php8.4-zip php8.4-memcache php8.4-memcached php8.4-zip php8.4-imagick php8.4-imap
+  apt-get -y install php8.4-apcu php8.4-mbstring php8.4-bcmath php8.4-curl php8.4-gd php8.4-intl php8.4-mysql php8.4-common php8.4-soap php8.4-xml php8.4-zip php8.4-memcache php8.4-memcached php8.4-zip php8.4-imagick
 fi
 
 touch /var/log/php-mail.log
