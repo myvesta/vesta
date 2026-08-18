@@ -2201,6 +2201,36 @@ if [ -f "/root/.bash_profile" ]; then
     echo "alias v-cd-www='source /usr/local/vesta/bin/v-change-dir-www'" >> /root/.bash_profile
 fi
 
+if [ "$release" -gt 12 ]; then
+  echo '=== Making systemd service (vesta.service) for myVesta'
+  service vesta stop
+  rm /etc/init.d/vesta
+  cat > /etc/systemd/system/vesta.service <<'EOF'
+[Unit]
+Description=myVesta Control Panel
+After=network.target local-fs.target remote-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+Environment="VESTA=/usr/local/vesta"
+
+ExecStart=/usr/sbin/start-stop-daemon --start --quiet --pidfile /run/vesta-nginx.pid --retry 5 --exec /usr/local/vesta/nginx/sbin/vesta-nginx --oknodo
+ExecStart=/usr/sbin/start-stop-daemon --start --quiet --pidfile /run/vesta-php.pid --retry 5 --exec /usr/local/vesta/php/sbin/vesta-php --oknodo -- --fpm-config /usr/local/vesta/php/etc/php-fpm.conf
+
+ExecStop=/usr/sbin/start-stop-daemon --stop --quiet --pidfile /run/vesta-nginx.pid --retry 5 --oknodo --exec /usr/local/vesta/nginx/sbin/vesta-nginx
+ExecStop=/usr/sbin/start-stop-daemon --stop --quiet --pidfile /run/vesta-php.pid --retry 5 --oknodo --exec /usr/local/vesta/php/sbin/vesta-php
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable vesta.service
+  systemctl start vesta.service
+fi
+
 #----------------------------------------------------------#
 #                  myVesta Access Info                     #
 #----------------------------------------------------------#
