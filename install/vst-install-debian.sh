@@ -184,7 +184,7 @@ set_default_lang() {
         bs da en fi id ka pl ro tr vi
         cn de es fr it nl pt-BR ru tw
         bg ko sr th ur"
-    if !(echo $lang_list |grep -w $lang 1>&2>/dev/null); then
+    if ! (echo $lang_list |grep -w $lang 1>&2>/dev/null); then
         eval lang=$1
     fi
 }
