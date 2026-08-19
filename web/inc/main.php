@@ -270,6 +270,7 @@ function humanize_time($usage) {
 }
 
 function humanize_usage_size($usage) {
+    $usage = floatval($usage);
     if ( $usage > 1024 ) {
         $usage = $usage / 1024;
         if ( $usage > 1024 ) {
@@ -289,6 +290,7 @@ function humanize_usage_size($usage) {
 }
 
 function humanize_usage_measure($usage) {
+    $usage = floatval($usage);
     $measure = 'kb';
 
     if ( $usage > 1024 ) {
