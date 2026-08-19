@@ -1890,6 +1890,15 @@ if [ "$postgresql" = 'yes' ]; then
     $VESTA/bin/v-add-database admin db db $(gen_pass) pgsql
 fi
 
+if [ "$release" -gt 12 ]; then
+  if [ -d "/usr/local/vesta/data/templates/web/apache2" ]; then
+    if compgen -G "/usr/local/vesta/data/templates/web/apache2/*.sh" > /dev/null; then
+      echo "== Chmod Apache2 template .sh files"
+      chmod 755 /usr/local/vesta/data/templates/web/apache2/*.sh
+    fi
+  fi
+fi
+
 echo "== Adding default domain"
 $VESTA/bin/v-add-domain admin $servername
 check_result $? "can't create $servername domain"
