@@ -1532,6 +1532,10 @@ if [ "$exim" = 'yes' ]; then
     rm -rf /etc/exim4/domains
     mkdir -p /etc/exim4/domains
 
+    if [ "$release" -gt 12 ]; then
+        cp $vestacp/exim/system.filter /etc/exim4/system.filter
+    fi
+
     rm -f /etc/alternatives/mta
     ln -s /usr/sbin/exim4 /etc/alternatives/mta
     update-rc.d -f sendmail remove > /dev/null 2>&1
