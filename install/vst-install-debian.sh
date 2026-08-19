@@ -1850,7 +1850,8 @@ if [ "$iptables" = 'yes' ]; then
 fi
 
 echo "== Get public ip"
-pub_ip=$(curl -4 -s https://scripts.myvestacp.com/ip.php)
+pub_ip=$(/usr/local/vesta/bin/v-what-is-my-ipv4)
+echo "== Public ip: $pub_ip"
 
 if [ ! -z "$pub_ip" ] && [ "$pub_ip" != "$ip" ]; then
     echo "== NAT detected"
