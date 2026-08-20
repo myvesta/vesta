@@ -1170,6 +1170,10 @@ if [ "$nginx" = 'yes' ]; then
     
     # default user/pass for private-hosting.tpl: private / folder
     echo 'private:$apr1$0MYnchM5$yVi/OTfp7o3lGNst/a8.90' > /etc/nginx/.htpasswd
+
+    # block.conf is used to block access to the server
+    touch /etc/nginx/conf.d/block.conf
+    cho "WEB_FAIL2BAN_ONLY_NGINX='yes'" >> /usr/local/vesta/conf/vesta.conf
     
     echo > /etc/nginx/conf.d/vesta.conf
     mkdir -p /var/log/nginx/domains
@@ -1734,6 +1738,32 @@ if [ "$exim" = 'yes' ] && { [ "$mysql" = 'yes' ] || [ "$mysql8" = 'yes' ]; } the
         fi
 
     fi
+
+    if [ "$release" -gt 12 ] && [ "$fail2ban" = 'yes' ]; then
+        # RoundCube filter for fail2ban on Debian 13
+        cat <<EOF > /etc/fail2ban/filter.d/roundcube-auth-deb13.conf
+[Definition]
+
+failregex = ^.*IMAP Error: Login failed for .* against .* from <HOST> \(X-Forwarded-For: [^)]+\)\. AUTHENTICATE PLAIN: Authentication failed\.
+
+ignoreregex =
+EOF
+
+        cat <<EOF >> /etc/fail2ban/jail.local
+
+[roundcube]
+enabled = true
+filter   = roundcube-auth-deb13
+action   = vesta[name=WEB]
+#port    = http,https
+logpath  = /var/log/roundcube/errors.log
+# Use following line in your jail.local if roundcube logs to journal.
+#backend = %(syslog_backend)s
+bantime = 864000
+findtime = 3600
+maxretry = 10
+EOF
+    fi
 fi
 
 
@@ -1787,7 +1817,8 @@ EOF
     #update-rc.d fail2ban defaults
     currentservice='fail2ban'
     ensure_startup $currentservice
-    ensure_start $currentservice
+    #ensure_start $currentservice
+    systemctl restart $currentservice
 fi
 
 
