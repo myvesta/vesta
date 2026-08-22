@@ -9,6 +9,11 @@
 #                    Variable&Function                     #
 #----------------------------------------------------------#
 
+relase=$(/usr/local/vesta/bin/v-get-debian-version)
+if [ "$release" -gt 12 ]; then
+    exit 0;
+fi
+
 # Importing system variables
 source /etc/profile
 

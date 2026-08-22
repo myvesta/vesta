@@ -9,12 +9,21 @@
 #                    Variable&Function                     #
 #----------------------------------------------------------#
 
+release=$(/usr/local/vesta/bin/v-get-debian-version)
+
 # Importing system variables
 source /etc/profile
 
 # Argument definition
 ip=$1
-chain=$(echo $2|tr '[:lower:]' '[:upper:]')
+if [ "$release" -lt 13 ]; then
+    chain=$(echo $2|tr '[:lower:]' '[:upper:]')
+else
+    chain=$(echo $2|tr '[:upper:]' '[:lower:]')
+    if [ "$chain" = "web" ]; then
+        chain="WEB";
+    fi
+fi
 
 # Defining absolute path for iptables and modprobe
 iptables="/sbin/iptables"
@@ -36,6 +45,28 @@ is_system_enabled "$FIREWALL_SYSTEM" 'FIREWALL_SYSTEM'
 #----------------------------------------------------------#
 #                       Action                             #
 #----------------------------------------------------------#
+
+run_legacy_code=0;
+
+if [ "$release" -gt 12 ]; then
+    if [ "$chain" = "WEB" ]; then
+        run_legacy_code=1;
+    else
+       run_legacy_code=1;
+    fi
+fi
+
+if [ "$release" -gt 12 ]; then
+    if [ "$chain" != "WEB" ]; then
+        fail2ban-client set $chain unbanip $ip
+        log_event "$OK" "$ARGUMENTS"
+        exit 0;
+    fi
+fi
+
+if [ $run_legacy_code -eq 0 ]; then
+    exit 0;
+fi
 
 skip_iptables_ban=0;
 if [ $ip_is_ipv6 -eq 1 ]; then
