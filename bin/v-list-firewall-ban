@@ -15,11 +15,19 @@ format=${1-shell}
 # Includes
 source $VESTA/func/main.sh
 
+BANLIST_FILE=$VESTA/data/firewall/banlist.conf
+release=$(/usr/local/vesta/bin/v-get-debian-version)
+if [ "$release" -gt 12 ]; then
+    BANLIST_FILE=$VESTA/data/firewall/banlist_temp.conf
+    touch $VESTA/data/firewall/banlist.conf
+    cat $VESTA/data/firewall/banlist.conf > $BANLIST_FILE
+fi
+
 # JSON list function
 json_list() {
     IFS=$'\n'
     i=1
-    objects=$(grep IP $VESTA/data/firewall/banlist.conf |wc -l)
+    objects=$(grep IP $BANLIST_FILE |wc -l)
     echo "{"
     while read str; do
         eval $str
@@ -35,7 +43,7 @@ json_list() {
             echo
         fi
         ((i++))
-    done < <(cat $VESTA/data/firewall/banlist.conf)
+    done < <(cat $BANLIST_FILE)
     echo '}'
 }
 
@@ -47,7 +55,7 @@ shell_list() {
     while read str; do
         eval $str
         echo "$IP $CHAIN $TIME $DATE"
-    done < <(cat $VESTA/data/firewall/banlist.conf)
+    done < <(cat $BANLIST_FILE)
 }
 
 # PLAIN list function
@@ -56,7 +64,7 @@ plain_list() {
     while read str; do
         eval $str
         echo -e "$IP\t$CHAIN\t$TIME\t$DATE"
-    done < <(cat $VESTA/data/firewall/banlist.conf)
+    done < <(cat $BANLIST_FILE)
 }
 
 # CSV list function
@@ -66,13 +74,25 @@ csv_list() {
     while read str; do
         eval $str
         echo "$IP,$CHAIN,$TIME,$DATE"
-    done < <(cat $VESTA/data/firewall/banlist.conf)
+    done < <(cat $BANLIST_FILE)
 }
 
 
 #----------------------------------------------------------#
 #                       Action                             #
 #----------------------------------------------------------#
+
+if [ "$release" -gt 12 ]; then
+    jails=$(fail2ban-client status | sed -n 's/.*Jail list:[[:space:]]*//p' | tr ',' ' ')
+
+    for jail in $jails; do
+        ips=$(fail2ban-client get "$jail" banip)
+
+        for ip in $ips; do
+            echo "IP='$ip' CHAIN='$jail' TIME='' DATE=''" >> "$BANLIST_FILE"
+        done
+    done
+fi
 
 # Listing data
 case $format in

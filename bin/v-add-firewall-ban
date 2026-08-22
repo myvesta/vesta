@@ -37,6 +37,13 @@ is_system_enabled "$FIREWALL_SYSTEM" 'FIREWALL_SYSTEM'
 #                       Action                             #
 #----------------------------------------------------------#
 
+release=$(/usr/local/vesta/bin/v-get-debian-version)
+if [ "$release" -gt 12 ]; then
+    if [ "$chain" != "WEB" ]; then
+        exit;
+    fi
+fi
+
 # Checking server ip
 if [ -e "$VESTA/data/ips/$ip" ] || [ "$ip" = '127.0.0.1' ]; then
     exit
@@ -65,7 +72,9 @@ if [ ! -z "$check_ip" ]; then
 fi
 
 # Adding chain
-$BIN/v-add-firewall-chain $chain
+if [ "$chain" != "WEB" ]; then
+    $BIN/v-add-firewall-chain $chain
+fi
 
 # Generating timestamp
 time_n_date=$(date +'%T %F')

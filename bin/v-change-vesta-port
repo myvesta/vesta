@@ -36,6 +36,8 @@ fi
 check_args '1' "$#" 'PORT'
 is_int_format_valid "$port" 'port number'
 
+release=$(/usr/local/vesta/bin/v-get-debian-version)
+
 #----------------------------------------------------------#
 #                       Action                             #
 #----------------------------------------------------------#
@@ -47,7 +49,14 @@ if [ -f "/etc/roundcube/plugins/password/config.inc.php" ]; then
 fi
 sed -i "s|'$oldport'|'$port'|g" $VESTA/data/firewall/rules.conf
 $VESTA/bin/v-update-firewall
+
+if [ "$release" -gt 12 ]; then
+    if [ -f "/etc/fail2ban/jail.local" ]; then
+        sed -i "s|= $oldport|= $port|g" /etc/fail2ban/jail.local
+    fi
+fi
 systemctl restart fail2ban.service
+
 sed -i "s| $oldport | $port |g" /etc/iptables.rules
 systemctl restart vesta
 

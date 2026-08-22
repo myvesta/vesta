@@ -9,12 +9,21 @@
 #                    Variable&Function                     #
 #----------------------------------------------------------#
 
+release=$(/usr/local/vesta/bin/v-get-debian-version)
+
 # Importing system variables
 source /etc/profile
 
 # Argument definition
 ip=$1
-chain=$(echo $2|tr '[:lower:]' '[:upper:]')
+if [ "$release" -lt 13 ]; then
+    chain=$(echo $2|tr '[:lower:]' '[:upper:]')
+else
+    chain=$(echo $2|tr '[:upper:]' '[:lower:]')
+    if [ "$chain" = "web" ]; then
+        chain="WEB";
+    fi
+fi
 
 # Defining absolute path for iptables and modprobe
 iptables="/sbin/iptables"
@@ -36,6 +45,37 @@ is_system_enabled "$FIREWALL_SYSTEM" 'FIREWALL_SYSTEM'
 #----------------------------------------------------------#
 #                       Action                             #
 #----------------------------------------------------------#
+
+# Debian 13+ routine starts and ends in this block
+if [ "$release" -gt 12 ]; then
+    # fail2ban-client set $chain unbanip $ip
+    jails=$(fail2ban-client status | sed -n 's/.*Jail list:[[:space:]]*//p' | tr ',' ' ')
+    ret=1
+    for jail in $jails; do
+        found=$(fail2ban-client get $jail banip | grep $ip)
+        if [ -n "$found" ]; then
+            fail2ban-client set $jail unbanip $ip
+            sub_ret=$?
+            if [ $sub_ret -eq 0 ]; then
+                ret=0
+            fi
+        fi
+    done
+    if [ -f "/etc/nginx/conf.d/block.conf" ]; then
+        found=$(grep "deny $ip;" /etc/nginx/conf.d/block.conf)
+        if [ -n "$found" ]; then
+            sed -i "/deny $ip;/d" /etc/nginx/conf.d/block.conf
+            systemctl reload nginx
+            ret=0
+        fi
+    fi
+    if [ $ret -eq 0 ]; then
+        log_event "$OK" "$ARGUMENTS"
+    else
+        log_event "$ERROR" "$ARGUMENTS"
+    fi
+    exit $ret;
+fi
 
 skip_iptables_ban=0;
 if [ $ip_is_ipv6 -eq 1 ]; then
