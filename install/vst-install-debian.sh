@@ -1676,6 +1676,7 @@ fi
 #----------------------------------------------------------#
 
 if [ "$exim" = 'yes' ] && { [ "$mysql" = 'yes' ] || [ "$mysql8" = 'yes' ]; } then
+    roundcube='yes'
     echo "=== Configure RoundCube"
     if [ "$apache" = 'yes' ]; then
         cp -f $vestacp/roundcube/apache.conf /etc/roundcube/
@@ -1738,32 +1739,6 @@ if [ "$exim" = 'yes' ] && { [ "$mysql" = 'yes' ] || [ "$mysql8" = 'yes' ]; } the
         fi
 
     fi
-
-    if [ "$release" -gt 12 ] && [ "$fail2ban" = 'yes' ]; then
-        # RoundCube filter for fail2ban on Debian 13
-        cat <<EOF > /etc/fail2ban/filter.d/roundcube-auth-deb13.conf
-[Definition]
-
-failregex = ^.*IMAP Error: Login failed for .* against .* from <HOST> \(X-Forwarded-For: [^)]+\)\. AUTHENTICATE PLAIN: Authentication failed\.
-
-ignoreregex =
-EOF
-
-        cat <<EOF >> /etc/fail2ban/jail.local
-
-[roundcube]
-enabled = true
-filter   = roundcube-auth-deb13
-action   = vesta[name=WEB]
-#port    = http,https
-logpath  = /var/log/roundcube/errors.log
-# Use following line in your jail.local if roundcube logs to journal.
-#backend = %(syslog_backend)s
-bantime = 864000
-findtime = 3600
-maxretry = 10
-EOF
-    fi
 fi
 
 
@@ -1814,6 +1789,32 @@ maxretry = 5
 EOF
     fi
 
+    if [ "$release" -gt 12 ] && [ "$roundcube" = 'yes' ]; then
+        # RoundCube filter for fail2ban on Debian 13
+        cat <<EOF > /etc/fail2ban/filter.d/roundcube-auth-deb13.conf
+[Definition]
+
+failregex = ^.*IMAP Error: Login failed for .* against .* from <HOST> \(X-Forwarded-For: [^)]+\)\. AUTHENTICATE PLAIN: Authentication failed\.
+
+ignoreregex =
+EOF
+
+        cat <<EOF >> /etc/fail2ban/jail.local
+
+[roundcube]
+enabled = true
+filter   = roundcube-auth-deb13
+action   = vesta[name=WEB]
+#port    = http,https
+logpath  = /var/log/roundcube/errors.log
+# Use following line in your jail.local if roundcube logs to journal.
+#backend = %(syslog_backend)s
+bantime = 864000
+findtime = 3600
+maxretry = 10
+EOF
+    fi
+
     #update-rc.d fail2ban defaults
     currentservice='fail2ban'
     ensure_startup $currentservice
@@ -1856,6 +1857,9 @@ if [ "$exim" = 'yes' ] && { [ "$mysql" = 'yes' ] || [ "$mysql8" = 'yes' ]; } the
         mkdir /var/log/roundcube
     fi
     chown admin:admin /var/log/roundcube
+    touch /var/log/roundcube/errors.log
+    chown admin:admin /var/log/roundcube/errors.log
+    chmod a+rw /var/log/roundcube/errors.log
 fi
 
 # Vesta data sessions permissions
