@@ -37,7 +37,7 @@ is_system_enabled "$FIREWALL_SYSTEM" 'FIREWALL_SYSTEM'
 #                       Action                             #
 #----------------------------------------------------------#
 
-relase=$(/usr/local/vesta/bin/v-get-debian-version)
+release=$(/usr/local/vesta/bin/v-get-debian-version)
 if [ "$release" -gt 12 ]; then
     if [ "$chain" != "WEB" ]; then
         exit;
