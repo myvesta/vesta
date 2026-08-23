@@ -24,7 +24,7 @@ if [ "$release" -eq 13 ]; then
     software="nginx apache2 apache2-utils
         libapache2-mod-fcgid php-fpm php
         php-common php-cgi php-mysql php-curl php-fpm php-pgsql awstats
-        vsftpd proftpd-basic bind9 exim4 exim4-daemon-heavy
+        vsftpd proftpd-basic proftpd-mod-crypto bind9 exim4 exim4-daemon-heavy
         clamav-daemon spamassassin dovecot-imapd dovecot-pop3d roundcube-core
         roundcube-mysql roundcube-plugins mariadb-server mariadb-common
         mariadb-client postgresql postgresql-contrib phpmyadmin mc
