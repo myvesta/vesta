@@ -347,9 +347,9 @@ function send_email($to,$subject,$mailtext,$from) {
     $sep = chr(13) . chr(10);
     $disposition = "inline";
     $subject = "=?$charset?B?".base64_encode($subject)."?=";
-    $header = "From: $from \nX-Priority: $priority\nCC:\n";
-    $header .= "Mime-Version: 1.0\nContent-Type: text/plain; charset=$charset \n";
-    $header .= "Content-Transfer-Encoding: $ctencoding\nX-Mailer: Php/libMailv1.3\n";
+    $header = "From: $from \r\nX-Priority: $priority\r\n";
+    $header .= "Mime-Version: 1.0\r\nContent-Type: text/plain; charset=$charset \r\n";
+    $header .= "Content-Transfer-Encoding: $ctencoding\r\nX-Mailer: Php/libMailv1.3\r\n";
     $message = $mailtext;
     mail($to, $subject, $message, $header);
 }
