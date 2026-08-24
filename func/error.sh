@@ -62,7 +62,7 @@ check_error() {
 			fi
 			if [ "$answer" = 'b' ] || [ "$answer" = 'B' ]; then
                 echo "======= Temporary escape to Bash"
-				/usr/bin/bash
+				bash
 			fi
 			if [ "$answer" = 's' ] || [ "$answer" = 'S' ]; then
 				/usr/local/vesta/bin/v-commander 'c'
