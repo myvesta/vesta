@@ -2027,6 +2027,8 @@ command="sudo $VESTA/bin/v-df-snapshot-make"
 $VESTA/bin/v-add-cron-job 'admin' '05' '04' '*' '*' '*' "$command"
 command="sudo $VESTA/bin/v-df-snapshot-logs-cleaner"
 $VESTA/bin/v-add-cron-job 'admin' '10' '04' '*' '*' '*' "$command"
+command="sudo $VESTA/bin/v-cron-system-fixes"
+$VESTA/bin/v-add-cron-job 'admin' '50' '04' '*' '*' '*' "$command"
 systemctl restart cron.service
 
 echo "== Building inititall rrd images"

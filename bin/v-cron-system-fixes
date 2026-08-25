@@ -1,0 +1,9 @@
+#!/bin/bash
+
+release=$(/usr/local/vesta/bin/v-get-debian-version)
+
+if [ "$release" -eq 13 ]; then
+    find /home/*/mail/*/*/ -maxdepth 1 -type f -name "maildirfolder" -delete > /dev/null 2>&1
+fi
+
+exit 0;
