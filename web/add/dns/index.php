@@ -137,14 +137,14 @@ if (!empty($_POST['ok_rec'])) {
 }
 
 
-$v_ns1 = str_replace("'", "", $v_ns1);
-$v_ns2 = str_replace("'", "", $v_ns2);
-$v_ns3 = str_replace("'", "", $v_ns3);
-$v_ns4 = str_replace("'", "", $v_ns4);
-$v_ns5 = str_replace("'", "", $v_ns5);
-$v_ns6 = str_replace("'", "", $v_ns6);
-$v_ns7 = str_replace("'", "", $v_ns7);
-$v_ns8 = str_replace("'", "", $v_ns8);
+if (isset($v_ns1)) $v_ns1 = str_replace("'", "", $v_ns1);
+if (isset($v_ns2)) $v_ns2 = str_replace("'", "", $v_ns2);
+if (isset($v_ns3)) $v_ns3 = str_replace("'", "", $v_ns3);
+if (isset($v_ns4)) $v_ns4 = str_replace("'", "", $v_ns4);
+if (isset($v_ns5)) $v_ns5 = str_replace("'", "", $v_ns5);
+if (isset($v_ns6)) $v_ns6 = str_replace("'", "", $v_ns6);
+if (isset($v_ns7)) $v_ns7 = str_replace("'", "", $v_ns7);
+if (isset($v_ns8)) $v_ns8 = str_replace("'", "", $v_ns8);
 
 
 if (empty($_GET['domain'])) {
@@ -155,14 +155,14 @@ if (empty($_GET['domain'])) {
     if (empty($v_ns1)) {
         exec (VESTA_CMD."v-list-user-ns ".$user." json", $output, $return_var);
         $nameservers = json_decode(implode('', $output), true);
-        $v_ns1 = str_replace("'", "", $nameservers[0]);
-        $v_ns2 = str_replace("'", "", $nameservers[1]);
-        $v_ns3 = str_replace("'", "", $nameservers[2]);
-        $v_ns4 = str_replace("'", "", $nameservers[3]);
-        $v_ns5 = str_replace("'", "", $nameservers[4]);
-        $v_ns6 = str_replace("'", "", $nameservers[5]);
-        $v_ns7 = str_replace("'", "", $nameservers[6]);
-        $v_ns8 = str_replace("'", "", $nameservers[7]);
+        if (isset($nameservers[0])) $v_ns1 = str_replace("'", "", $nameservers[0]);
+        if (isset($nameservers[1])) $v_ns2 = str_replace("'", "", $nameservers[1]);
+        if (isset($nameservers[2])) $v_ns3 = str_replace("'", "", $nameservers[2]);
+        if (isset($nameservers[3])) $v_ns4 = str_replace("'", "", $nameservers[3]);
+        if (isset($nameservers[4])) $v_ns5 = str_replace("'", "", $nameservers[4]);
+        if (isset($nameservers[5])) $v_ns6 = str_replace("'", "", $nameservers[5]);
+        if (isset($nameservers[6])) $v_ns7 = str_replace("'", "", $nameservers[6]);
+        if (isset($nameservers[7])) $v_ns8 = str_replace("'", "", $nameservers[7]);
         unset($output);
     }
 

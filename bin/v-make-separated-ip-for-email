@@ -44,11 +44,17 @@ if [ -z "$INTERFACE" ]; then
     INTERFACE=$(ip r get 8.8.8.8 | grep -oP 'dev \K\S+')
 fi
 
+if [ $# -gt 4 ]; then
+    MAKE_IP_PRIMARY_FOR_MAIL=$5
+else
+    MAKE_IP_PRIMARY_FOR_MAIL=1
+fi
+
 #----------------------------------------------------------#
 #                    Verifications                         #
 #----------------------------------------------------------#
 
-check_args '2' "$#" 'MailHostname MailIP [Netmask] [Interface]'
+check_args '2' "$#" 'MailHostname MailIP [Netmask] [Interface] [MakeIPPrimaryForMail]'
 is_domain_format_valid "$MAIL_HOSTNAME"
 is_ip_format_valid "$MAIL_IP"
 
@@ -58,7 +64,14 @@ if [ -z "$HOST_USER" ]; then
     exit 4
 fi
 
-HOST_IP=$($VESTA/bin/v-list-web-domain "$HOST_USER" "$HOSTNAME" | grep 'IP:' | awk '{print $2}')
+HOST_IP=$($VESTA/bin/v-what-is-my-ipv4)
+if [ -z "$HOST_IP" ]; then
+    HOST_IP=$($VESTA/bin/v-list-web-domain "$HOST_USER" "$HOSTNAME" | grep 'IP:' | awk '{print $2}')
+fi
+if [ -z "$HOST_IP" ]; then
+    echo "Error: failed to get host IP"
+    exit 5
+fi
 
 echo "HOSTNAME     : $HOSTNAME"
 echo "HOSTNAME IP  : $HOST_IP"
@@ -66,6 +79,9 @@ echo "MAIL HOSTNAME: $MAIL_HOSTNAME"
 echo "MAIL_IP      : $MAIL_IP"
 echo "NETMASK      : $NETMASK"
 echo "INTERFACE    : $INTERFACE"
+echo "MAKE_IP_PRIM.: $MAKE_IP_PRIMARY_FOR_MAIL"
+
+check_continue "y"
 
 #----------------------------------------------------------#
 #                       Action                             #
@@ -86,6 +102,7 @@ if [ -z "$MAIL_USER" ]; then
     $VESTA/bin/v-delete-web-domain-alias "$MAIL_USER" "$MAIL_HOSTNAME" "$www_host" 'no'
     $VESTA/bin/v-delete-dns-on-web-alias "$MAIL_USER" "$MAIL_HOSTNAME" "$www_host" 'no'
 else
+    echo "=== (sub)domain $MAIL_HOSTNAME already exists"
     CURRENT_MAIL_IP=$($VESTA/bin/v-list-web-domain "$MAIL_USER" "$MAIL_HOSTNAME" | grep 'IP:' | awk '{print $2}')
     if [ "$CURRENT_MAIL_IP" != "$MAIL_IP" ]; then
         echo "=== Switching (sub)domain $MAIL_HOSTNAME to IP: $MAIL_IP"
@@ -94,105 +111,226 @@ else
     fi
 fi
 
+upper_level_domain="${MAIL_HOSTNAME#*.}"
+upper_level_domain_user=$($VESTA/bin/v-search-domain-owner "$MAIL_HOSTNAME")
+subdomain="${MAIL_HOSTNAME%%.*}"
+if [ ! -z "$upper_level_domain_user" ]; then
+    records=$($VESTA/bin/v-list-dns-records "$upper_level_domain_user" "$upper_level_domain" | awk '{print $1" "$2}')
+    grep_records=$(echo "$records" | grep " $subdomain$")
+    if [ ! -z "$grep_records" ]; then
+        while read -r record_line; do
+            record_id=$(echo "$record_line" | awk '{print $1}')
+            record_name=$(echo "$record_line" | awk '{print $2}')
+            if [ ! -z "$record_id" ] && [ ! -z "$record_name" ]; then
+                echo "=== Deleting shadow DNS record: [$record_id] $record_name"
+                $VESTA/bin/v-delete-dns-record "$upper_level_domain_user" "$upper_level_domain" "$record_id" 'yes'
+                check_error
+            fi
+        done <<< "$grep_records"
+    fi
+fi
+
 if [ -f "/home/$MAIL_USER/conf/web/ssl.$MAIL_HOSTNAME.ca" ]; then
-    echo "=== Signed SSL already installed"
+    echo "=== Signed SSL already installed for (sub)domain $MAIL_HOSTNAME"
 else
     echo "=== Installing LetsEncrypt for (sub)domain $MAIL_HOSTNAME"
     $VESTA/bin/v-add-letsencrypt-domain "$MAIL_USER" "$MAIL_HOSTNAME" "" "yes"
-    if [ $? -ne 0 ]; then
-        echo "=== LetsEncrypt installation failed"
-    fi
+    check_error
 fi
 
-if [ ! -d "/etc/exim4/virtual" ]; then
-    echo "=== Creating /etc/exim4/virtual directory"
-    mkdir -p /etc/exim4/virtual
-    echo "$HOST_IP: $HOSTNAME" > /etc/exim4/virtual/helo_data
-    echo "$HOSTNAME: $HOST_IP" > /etc/exim4/virtual/interfaces
-    length=$(wc -c </etc/exim4/virtual/helo_data)
-    dd if=/dev/null of=/etc/exim4/virtual/helo_data obs="$((length-1))" seek=1 > /dev/null 2>&1
-    length=$(wc -c </etc/exim4/virtual/interfaces)
-    dd if=/dev/null of=/etc/exim4/virtual/interfaces obs="$((length-1))" seek=1 > /dev/null 2>&1
-fi
-check_grep1=$(grep -c "^$MAIL_IP:" /etc/exim4/virtual/helo_data)
-check_grep2=$(grep -c ": $MAIL_HOSTNAME" /etc/exim4/virtual/helo_data)
-if [ "$check_grep1" -eq 0 ] && [ "$check_grep2" -eq 0 ]; then
-    echo "=== Adding $MAIL_IP: $MAIL_HOSTNAME to /etc/exim4/virtual/helo_data"
-    echo "" >> /etc/exim4/virtual/helo_data
-    echo "$MAIL_IP: $MAIL_HOSTNAME" >> /etc/exim4/virtual/helo_data
-    length=$(wc -c </etc/exim4/virtual/helo_data)
-    dd if=/dev/null of=/etc/exim4/virtual/helo_data obs="$((length-1))" seek=1 > /dev/null 2>&1
-fi
-check_grep1=$(grep -c "^$MAIL_HOSTNAME:" /etc/exim4/virtual/interfaces)
-check_grep2=$(grep -c ": $MAIL_IP" /etc/exim4/virtual/interfaces)
-if [ "$check_grep1" -eq 0 ] && [ "$check_grep2" -eq 0 ]; then
-    echo "=== Adding $MAIL_HOSTNAME: $MAIL_IP to /etc/exim4/virtual/interfaces"
-    echo "" >> /etc/exim4/virtual/interfaces
-    echo "$MAIL_HOSTNAME: $MAIL_IP" >> /etc/exim4/virtual/interfaces
-    length=$(wc -c </etc/exim4/virtual/interfaces)
-    dd if=/dev/null of=/etc/exim4/virtual/interfaces obs="$((length-1))" seek=1 > /dev/null 2>&1
-fi
+# At this point:
+# - (sub)domain $MAIL_HOSTNAME is created
+# - SSL is installed
 
-echo "=== Generating IP SSL for hostname $HOSTNAME"
-$VESTA/bin/v-make-ip-ssl "$HOST_USER" "$HOSTNAME"
-echo "=== Generating IP SSL for mail hostname $MAIL_HOSTNAME"
-$VESTA/bin/v-make-ip-ssl "$MAIL_USER" "$MAIL_HOSTNAME"
-
-check_grep1=$(grep -c '#local_interfaces =  0.0.0.0' /etc/exim4/exim4.conf.template)
-check_grep2=$(grep -c '^local_interfaces =  0.0.0.0' /etc/exim4/exim4.conf.template)
-if [ "$check_grep1" -eq 1 ] || [ "$check_grep2" -eq 0 ]; then
-    echo "=== patching exim4.conf.template"
-    mv /etc/exim4/exim4.conf.template /etc/exim4/exim4.conf.template-backup
-    cp /usr/local/vesta/install/debian/12/exim/exim4.conf.template /etc/exim4/exim4.conf.template
-
-    eximversion=$(exim4 --version | grep '^Exim version ' | awk '{print $3}')
-    if (( $(echo "$eximversion < 4.96" | bc -l) )); then
-        cp /usr/local/vesta/install/debian/12/exim/exim4.conf.template.without-srs /etc/exim4/exim4.conf.template
-        sed -i "s|message_linelength_limit|#message_linelength_limit|g" /etc/exim4/exim4.conf.template
+release=$(/usr/local/vesta/bin/v-get-debian-version)
+if [ "$release" -lt 13 ]; then
+    # Debian 12 and older
+    echo "=== Debian 12 and older routine"
+    if [ ! -d "/etc/exim4/virtual" ]; then
+        echo "=== Creating /etc/exim4/virtual directory"
+        mkdir -p /etc/exim4/virtual
+        echo "$HOST_IP: $HOSTNAME" > /etc/exim4/virtual/helo_data
+        echo "$HOSTNAME: $HOST_IP" > /etc/exim4/virtual/interfaces
+        length=$(wc -c </etc/exim4/virtual/helo_data)
+        dd if=/dev/null of=/etc/exim4/virtual/helo_data obs="$((length-1))" seek=1 > /dev/null 2>&1
+        length=$(wc -c </etc/exim4/virtual/interfaces)
+        dd if=/dev/null of=/etc/exim4/virtual/interfaces obs="$((length-1))" seek=1 > /dev/null 2>&1
+    fi
+    check_grep1=$(grep -c "^$MAIL_IP:" /etc/exim4/virtual/helo_data)
+    check_grep2=$(grep -c ": $MAIL_HOSTNAME" /etc/exim4/virtual/helo_data)
+    if [ "$check_grep1" -eq 0 ] && [ "$check_grep2" -eq 0 ]; then
+        echo "=== Adding $MAIL_IP: $MAIL_HOSTNAME to /etc/exim4/virtual/helo_data"
+        echo "" >> /etc/exim4/virtual/helo_data
+        echo "$MAIL_IP: $MAIL_HOSTNAME" >> /etc/exim4/virtual/helo_data
+        length=$(wc -c </etc/exim4/virtual/helo_data)
+        dd if=/dev/null of=/etc/exim4/virtual/helo_data obs="$((length-1))" seek=1 > /dev/null 2>&1
+    fi
+    check_grep1=$(grep -c "^$MAIL_HOSTNAME:" /etc/exim4/virtual/interfaces)
+    check_grep2=$(grep -c ": $MAIL_IP" /etc/exim4/virtual/interfaces)
+    if [ "$check_grep1" -eq 0 ] && [ "$check_grep2" -eq 0 ]; then
+        echo "=== Adding $MAIL_HOSTNAME: $MAIL_IP to /etc/exim4/virtual/interfaces"
+        echo "" >> /etc/exim4/virtual/interfaces
+        echo "$MAIL_HOSTNAME: $MAIL_IP" >> /etc/exim4/virtual/interfaces
+        length=$(wc -c </etc/exim4/virtual/interfaces)
+        dd if=/dev/null of=/etc/exim4/virtual/interfaces obs="$((length-1))" seek=1 > /dev/null 2>&1
     fi
 
-    if (( $(echo "$eximversion < 4.94" | bc -l) )); then
-        sed -i "s|smtputf8_advertise_hosts|#smtputf8_advertise_hosts|g" /etc/exim4/exim4.conf.template
-    fi
+    echo "=== Generating IP SSL for hostname $HOSTNAME"
+    $VESTA/bin/v-make-ip-ssl "$HOST_USER" "$HOSTNAME"
+    echo "=== Generating IP SSL for mail hostname $MAIL_HOSTNAME"
+    $VESTA/bin/v-make-ip-ssl "$MAIL_USER" "$MAIL_HOSTNAME"
 
-    sed -i "s|FIRSTIP|$HOST_IP|g" /etc/exim4/exim4.conf.template
-    sed -i "s|SECONDIP|$MAIL_IP|g" /etc/exim4/exim4.conf.template
-    sed -i "s|FIRSTHOST|$HOSTNAME|g" /etc/exim4/exim4.conf.template
-    sed -i "s|SECONDHOST|$MAIL_HOSTNAME|g" /etc/exim4/exim4.conf.template
-    sed -i "s|#local_interfaces|local_interfaces|g" /etc/exim4/exim4.conf.template
-    sed -i "s|#smtp_active_hostname|smtp_active_hostname|g" /etc/exim4/exim4.conf.template
-    sed -i "s|#smtp_banner|smtp_banner|g" /etc/exim4/exim4.conf.template
-    sed -i "s|#interface =|interface =|g" /etc/exim4/exim4.conf.template
-    sed -i "s|#helo_data =|helo_data =|g" /etc/exim4/exim4.conf.template
-    /usr/local/vesta/bin/v-sed 'tls_certificate = /usr/local/vesta/ssl/certificate.crt' 'tls_certificate = /usr/local/vesta/ssl/$received_ip_address.crt' '/etc/exim4/exim4.conf.template'
-    /usr/local/vesta/bin/v-sed 'tls_privatekey = /usr/local/vesta/ssl/certificate.key' 'tls_privatekey = /usr/local/vesta/ssl/$received_ip_address.key' '/etc/exim4/exim4.conf.template'
-    touch /etc/exim4/limit_per_email_account_max_sent_emails_per_hour
-    touch /etc/exim4/limit_per_email_account_max_recipients
-    touch /etc/exim4/limit_per_hosting_account_max_sent_emails_per_hour
-    touch /etc/exim4/limit_per_hosting_account_max_recipients
-    check_grep=$(grep -c '#SPAMASSASSIN' /etc/exim4/exim4.conf.template-backup)
-    if [ "$check_grep" -eq 0 ]; then
-        sed -i "s|#SPAMASSASSIN|SPAMASSASSIN|g" /etc/exim4/exim4.conf.template
-    fi
-    check_grep=$(grep -c '#SPAM_SCORE' /etc/exim4/exim4.conf.template-backup)
-    if [ "$check_grep" -eq 0 ]; then
-        sed -i "s|#SPAM_SCORE|SPAM_SCORE|g" /etc/exim4/exim4.conf.template
-    fi
-    check_grep=$(grep -c '#CLAMD' /etc/exim4/exim4.conf.template-backup)
-    if [ "$check_grep" -eq 0 ]; then
-        sed -i "s|#CLAMD|CLAMD|g" /etc/exim4/exim4.conf.template
-    fi
-    systemctl restart exim4
-    if [ $? -ne 0 ]; then
-        systemctl status exim4
-        cp /etc/exim4/exim4.conf.template-backup /etc/exim4/exim4.conf.template
+    check_grep1=$(grep -c '#local_interfaces =  0.0.0.0' /etc/exim4/exim4.conf.template)
+    check_grep2=$(grep -c '^local_interfaces =  0.0.0.0' /etc/exim4/exim4.conf.template)
+    if [ "$check_grep1" -eq 1 ] || [ "$check_grep2" -eq 0 ]; then
+        echo "=== patching exim4.conf.template"
+        mv /etc/exim4/exim4.conf.template /etc/exim4/exim4.conf.template-backup
+        cp /usr/local/vesta/install/debian/12/exim/exim4.conf.template /etc/exim4/exim4.conf.template
+
+        eximversion=$(exim4 --version | grep '^Exim version ' | awk '{print $3}')
+        if (( $(echo "$eximversion < 4.96" | bc -l) )); then
+            cp /usr/local/vesta/install/debian/12/exim/exim4.conf.template.without-srs /etc/exim4/exim4.conf.template
+            sed -i "s|message_linelength_limit|#message_linelength_limit|g" /etc/exim4/exim4.conf.template
+        fi
+
+        if (( $(echo "$eximversion < 4.94" | bc -l) )); then
+            sed -i "s|smtputf8_advertise_hosts|#smtputf8_advertise_hosts|g" /etc/exim4/exim4.conf.template
+        fi
+
+        sed -i "s|FIRSTIP|$HOST_IP|g" /etc/exim4/exim4.conf.template
+        sed -i "s|SECONDIP|$MAIL_IP|g" /etc/exim4/exim4.conf.template
+        sed -i "s|FIRSTHOST|$HOSTNAME|g" /etc/exim4/exim4.conf.template
+        sed -i "s|SECONDHOST|$MAIL_HOSTNAME|g" /etc/exim4/exim4.conf.template
+        sed -i "s|#local_interfaces|local_interfaces|g" /etc/exim4/exim4.conf.template
+        sed -i "s|#smtp_active_hostname|smtp_active_hostname|g" /etc/exim4/exim4.conf.template
+        sed -i "s|#smtp_banner|smtp_banner|g" /etc/exim4/exim4.conf.template
+        sed -i "s|#interface =|interface =|g" /etc/exim4/exim4.conf.template
+        sed -i "s|#helo_data =|helo_data =|g" /etc/exim4/exim4.conf.template
+        /usr/local/vesta/bin/v-sed 'tls_certificate = /usr/local/vesta/ssl/certificate.crt' 'tls_certificate = /usr/local/vesta/ssl/$received_ip_address.crt' '/etc/exim4/exim4.conf.template'
+        /usr/local/vesta/bin/v-sed 'tls_privatekey = /usr/local/vesta/ssl/certificate.key' 'tls_privatekey = /usr/local/vesta/ssl/$received_ip_address.key' '/etc/exim4/exim4.conf.template'
+        touch /etc/exim4/limit_per_email_account_max_sent_emails_per_hour
+        touch /etc/exim4/limit_per_email_account_max_recipients
+        touch /etc/exim4/limit_per_hosting_account_max_sent_emails_per_hour
+        touch /etc/exim4/limit_per_hosting_account_max_recipients
+        check_grep=$(grep -c '#SPAMASSASSIN' /etc/exim4/exim4.conf.template-backup)
+        if [ "$check_grep" -eq 0 ]; then
+            sed -i "s|#SPAMASSASSIN|SPAMASSASSIN|g" /etc/exim4/exim4.conf.template
+        fi
+        check_grep=$(grep -c '#SPAM_SCORE' /etc/exim4/exim4.conf.template-backup)
+        if [ "$check_grep" -eq 0 ]; then
+            sed -i "s|#SPAM_SCORE|SPAM_SCORE|g" /etc/exim4/exim4.conf.template
+        fi
+        check_grep=$(grep -c '#CLAMD' /etc/exim4/exim4.conf.template-backup)
+        if [ "$check_grep" -eq 0 ]; then
+            sed -i "s|#CLAMD|CLAMD|g" /etc/exim4/exim4.conf.template
+        fi
         systemctl restart exim4
-        echo "=== Patching failed, old exim conf returned, exim4 restarted again."
-        exit 1
+        if [ $? -ne 0 ]; then
+            systemctl status exim4
+            cp /etc/exim4/exim4.conf.template-backup /etc/exim4/exim4.conf.template
+            systemctl restart exim4
+            echo "=== Patching failed, old exim conf returned, exim4 restarted again."
+            exit 1
+        fi
+        echo "=== Patching successful"
+    else
+        echo "=== exim4.conf.template already patched"
     fi
-    echo "=== Patching successful"
 else
-    echo "=== exim4.conf.template already patched"
+    # Debian 13 and newer
+    echo "=== Debian 13 and newer routine"
+    if [ ! -d "/etc/exim4/virtual" ]; then
+        echo "=== Creating /etc/exim4/virtual directory for legacy reasons"
+        mkdir -p /etc/exim4/virtual
+    fi
+    if [ -f "/etc/exim4/virtual/helo_data" ] && [ ! -L "/etc/exim4/virtual/helo_data" ]; then
+        echo "=== Moving /etc/exim4/virtual/helo_data to /usr/local/vesta/conf/virtual/ip_to_hostname"
+        mv -f /etc/exim4/virtual/helo_data /usr/local/vesta/conf/virtual/ip_to_hostname
+    fi
+    if [ -f "/etc/exim4/virtual/interfaces" ] && [ ! -L "/etc/exim4/virtual/interfaces" ]; then
+        echo "=== Moving /etc/exim4/virtual/interfaces to /usr/local/vesta/conf/virtual/hostname_to_ip"
+        mv -f /etc/exim4/virtual/interfaces /usr/local/vesta/conf/virtual/hostname_to_ip
+    fi
+
+    if [ -d "/usr/local/vesta/conf/virtual" ]; then
+        virtual_dir_existed=1
+    else
+        virtual_dir_existed=0
+        echo "=== Creating /usr/local/vesta/conf/virtual directory"
+        mkdir -p /usr/local/vesta/conf/virtual
+    fi
+
+    if [ -f "/usr/local/vesta/conf/virtual/ip_to_hostname" ]; then
+        ip_to_hostname_existed=1
+    else
+        ip_to_hostname_existed=0
+        touch /usr/local/vesta/conf/virtual/ip_to_hostname
+    fi
+    if [ -f "/usr/local/vesta/conf/virtual/hostname_to_ip" ]; then
+        hostname_to_ip_existed=1
+    else
+        hostname_to_ip_existed=0
+        touch /usr/local/vesta/conf/virtual/hostname_to_ip
+    fi
+
+    # Add $HOST_IP: $HOSTNAME to /usr/local/vesta/conf/virtual/
+    if ! grep -q "$HOST_IP: $HOSTNAME" /usr/local/vesta/conf/virtual/ip_to_hostname; then
+        echo "=== Writing that $HOST_IP refers to $HOSTNAME in /usr/local/vesta/conf/virtual/ip_to_hostname"
+        if [ "$ip_to_hostname_existed" -eq 1 ]; then
+            echo "" >> /usr/local/vesta/conf/virtual/ip_to_hostname
+        fi
+        echo "$HOST_IP: $HOSTNAME" >> /usr/local/vesta/conf/virtual/ip_to_hostname
+    else
+        echo "=== $HOST_IP: $HOSTNAME already exists in /usr/local/vesta/conf/virtual/ip_to_hostname"
+    fi
+    if ! grep -q "$HOSTNAME: $HOST_IP" /usr/local/vesta/conf/virtual/hostname_to_ip; then
+        echo "=== Writing that $HOSTNAME refers to $HOST_IP in /usr/local/vesta/conf/virtual/hostname_to_ip"
+        if [ "$hostname_to_ip_existed" -eq 1 ]; then
+            echo "" >> /usr/local/vesta/conf/virtual/hostname_to_ip
+        fi
+        echo "$HOSTNAME: $HOST_IP" >> /usr/local/vesta/conf/virtual/hostname_to_ip
+    else
+        echo "=== $HOSTNAME: $HOST_IP already exists in /usr/local/vesta/conf/virtual/hostname_to_ip"
+    fi
+
+    # Add $MAIL_IP: $MAIL_HOSTNAME to /usr/local/vesta/conf/virtual/
+    if ! grep -q "$MAIL_IP: $MAIL_HOSTNAME" /usr/local/vesta/conf/virtual/ip_to_hostname; then
+        echo "=== Writing that $MAIL_IP refers to $MAIL_HOSTNAME in /usr/local/vesta/conf/virtual/ip_to_hostname"
+        if [ "$ip_to_hostname_existed" -eq 1 ]; then
+            echo "" >> /usr/local/vesta/conf/virtual/ip_to_hostname
+        fi
+        echo "$MAIL_IP: $MAIL_HOSTNAME" >> /usr/local/vesta/conf/virtual/ip_to_hostname
+    else
+        echo "=== $MAIL_IP: $MAIL_HOSTNAME already exists in /usr/local/vesta/conf/virtual/ip_to_hostname"
+    fi
+    if ! grep -q "$MAIL_HOSTNAME: $MAIL_IP" /usr/local/vesta/conf/virtual/hostname_to_ip; then
+        echo "=== Writing that $MAIL_HOSTNAME refers to $MAIL_IP in /usr/local/vesta/conf/virtual/hostname_to_ip"
+        if [ "$hostname_to_ip_existed" -eq 1 ]; then
+            echo "" >> /usr/local/vesta/conf/virtual/hostname_to_ip
+        fi
+        echo "$MAIL_HOSTNAME: $MAIL_IP" >> /usr/local/vesta/conf/virtual/hostname_to_ip
+    else
+        echo "=== $MAIL_HOSTNAME: $MAIL_IP already exists in /usr/local/vesta/conf/virtual/hostname_to_ip"
+    fi
+
+    if [ ! -L "/etc/exim4/virtual/helo_data" ]; then
+        echo "=== Symlinking /etc/exim4/virtual/helo_data to /usr/local/vesta/conf/virtual/ip_to_hostname"
+        ln -s /usr/local/vesta/conf/virtual/ip_to_hostname /etc/exim4/virtual/helo_data
+    fi
+    if [ ! -L "/etc/exim4/virtual/interfaces" ]; then
+        echo "=== Symlinking /etc/exim4/virtual/interfaces to /usr/local/vesta/conf/virtual/hostname_to_ip"
+        ln -s /usr/local/vesta/conf/virtual/hostname_to_ip /etc/exim4/virtual/interfaces
+    fi
+
+    echo "=== Generating IP SSL for hostname $HOSTNAME"
+    $VESTA/bin/v-make-ip-ssl "$HOST_USER" "$HOSTNAME"
+    echo "=== Generating IP SSL for mail hostname $MAIL_HOSTNAME"
+    $VESTA/bin/v-make-ip-ssl "$MAIL_USER" "$MAIL_HOSTNAME"
+
+    if [ "$MAKE_IP_PRIMARY_FOR_MAIL" -eq 1 ]; then
+        echo "=== Making $MAIL_IP primary for mail for SMTP authenticated users (/etc/exim4/smtp_authenticated_users_ip)"
+        echo "$MAIL_IP" > /etc/exim4/smtp_authenticated_users_ip
+    fi
 fi
 
 check_grep=$(grep -c 'v-make-ip-ssl' /usr/local/vesta/conf/vesta.conf)
@@ -213,6 +351,9 @@ if [ "$check_grep" -eq 0 ]; then
     find /usr/local/vesta/data/users/*/dns/ -type f -exec grep -L "$NOTFOUNDVAL" {} \; | xargs sed -i "s|$OLDVAL|$NEWVAL|g"
     find /home/*/conf/dns/ -type f -exec grep -L "$NOTFOUNDVAL" {} \; | xargs sed -i "s|$OLDVAL|$NEWVAL|g"
     service bind9 reload
+    check_error
+else
+    echo "=== IP $MAIL_IP already in SPF"
 fi
 
 echo "=== Done!"

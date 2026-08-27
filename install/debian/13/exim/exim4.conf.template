@@ -53,14 +53,18 @@ tls_advertise_hosts = *
 
 # We test that $tls_in_sni is a valid domain, by an arbitrary email address foo@domain.tld .
 # Then, we extract the domain with a function that would fail if the email address is invalid.
-# If the certificate exists, we will use it, otherwise the default certificate in /etc/ssl will be used.
+# If the certificate exists, we will use it, otherwise the default certificate in /usr/local/vesta/ssl/ will be used.
 tls_certificate = \
         ${if and {\
                      { eq {${domain:foo@$tls_in_sni}} {$tls_in_sni}}\
                      { exists{/usr/local/vesta/ssl/mail/$tls_in_sni.crt} }\
                  }\
-                 {/usr/local/vesta/ssl/mail/$tls_in_sni.crt}\
-                 {/usr/local/vesta/ssl/certificate.crt}\
+                     {/usr/local/vesta/ssl/mail/$tls_in_sni.crt}\
+                     {${if exists{/usr/local/vesta/ssl/$received_ip_address.crt}\
+                         {/usr/local/vesta/ssl/$received_ip_address.crt}\
+                         {/usr/local/vesta/ssl/certificate.crt}\
+                       }\
+                     }\
          }
 
 tls_privatekey = \
@@ -68,8 +72,12 @@ tls_privatekey = \
                      { eq {${domain:foo@$tls_in_sni}} {$tls_in_sni}}\
                      { exists{/usr/local/vesta/ssl/mail/$tls_in_sni.key} }\
                  }\
-                 {/usr/local/vesta/ssl/mail/$tls_in_sni.key}\
-                 {/usr/local/vesta/ssl/certificate.key}\
+                     {/usr/local/vesta/ssl/mail/$tls_in_sni.key}\
+                     {${if exists{/usr/local/vesta/ssl/$received_ip_address.key}\
+                         {/usr/local/vesta/ssl/$received_ip_address.key}\
+                         {/usr/local/vesta/ssl/certificate.key}\
+                       }\
+                     }\
          }
 
 daemon_smtp_ports = 25 : 465 : 587
@@ -87,7 +95,6 @@ DKIM_DOMAIN = ${lc:${domain:$h_from:}}
 DKIM_FILE = /etc/exim4/domains/${lookup{${lc:${domain:$h_from:}}}dsearch{/etc/exim4/domains/}}/dkim.pem
 DKIM_PRIVATE_KEY = ${if exists{DKIM_FILE}{DKIM_FILE}{0}}
 
-SMTP_AUTHENTICATED_USERS_IP = /etc/exim4/smtp_authenticated_users_ip
 OUTGOING_IP = /etc/exim4/domains/${lookup{$sender_address_domain}dsearch{/etc/exim4/domains}}/ip
 OUTGOING_SECOND_IP_AUTHENTICATED_USERS = /etc/exim4/domains/${lookup{$sender_address_domain}dsearch{/etc/exim4/domains}}/ip_smtp_authenticated_users
 
@@ -434,8 +441,8 @@ remote_smtp:
   interface = ${if eq{$acl_m3}{no}\
                 {${if exists{OUTGOING_SECOND_IP_AUTHENTICATED_USERS}\
                     {${readfile{OUTGOING_SECOND_IP_AUTHENTICATED_USERS}}}\
-                    {${if exists{SMTP_AUTHENTICATED_USERS_IP}\
-                        {${readfile{SMTP_AUTHENTICATED_USERS_IP}}}\
+                    {${if exists{/etc/exim4/smtp_authenticated_users_ip}\
+                        {${readfile{/etc/exim4/smtp_authenticated_users_ip}}}\
                         {${if exists{OUTGOING_IP}\
                             {${readfile{OUTGOING_IP}}}}}}}}}\
                 {${if exists{OUTGOING_IP}{${readfile{OUTGOING_IP}}}}}}

@@ -2,7 +2,7 @@
 // Init
 error_reporting(NULL);
 ob_start();
-session_start();
+//session_start();
 include($_SERVER['DOCUMENT_ROOT']."/inc/main.php");
 
 // Delete as someone else?
