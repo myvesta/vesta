@@ -110,15 +110,15 @@ apt update
 if [ "$inst_repo" -eq 1 ]; then
     press_enter "=== Press enter to install sury.org repo ==============================================================================="
     apt -y install apt-transport-https ca-certificates
-    if [ $debian_version -ge 11 ]; then
+    if [ $debian_version -ge 12 ]; then
       wget -nv -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
     fi
     # if [ $debian_version -eq 10 ]; then
     #   sh -c 'echo "deb https://packages.sury.org/php/ buster main" > /etc/apt/sources.list.d/php.list'
     # fi
-    if [ $debian_version -eq 11 ]; then
-      sh -c 'echo "deb https://packages.sury.org/php/ bullseye main" > /etc/apt/sources.list.d/php.list'
-    fi
+    # if [ $debian_version -eq 11 ]; then
+    #   sh -c 'echo "deb https://packages.sury.org/php/ bullseye main" > /etc/apt/sources.list.d/php.list'
+    # fi
     if [ $debian_version -eq 12 ]; then
       sh -c 'echo "deb https://packages.sury.org/php/ bookworm main" > /etc/apt/sources.list.d/php.list'
     fi

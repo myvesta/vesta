@@ -318,7 +318,7 @@ do
     fi
 
     if [ "$answer" = 'freexian' ] || [ "$answer" = 'FREEXIAN' ]; then
-        if [ "$release" -lt 11 ]; then
+        if [ "$release" -lt 12 ]; then
             echo "== Downloading freexian-archive-keyring_2022.06.08_all.deb"
             wget -nv https://deb.freexian.com/extended-lts/pool/main/f/freexian-archive-keyring/freexian-archive-keyring_2022.06.08_all.deb -O freexian-archive-keyring_2022.06.08_all.deb
             sudo dpkg -i freexian-archive-keyring_2022.06.08_all.deb
@@ -347,7 +347,7 @@ do
             fi
             EXIT_CODE=0
         else
-            echo "== Freexian is not supported on Debian 11 or higher"
+            echo "== Freexian is not supported on Debian 12 or higher"
             EXIT_CODE=0
         fi
     fi
