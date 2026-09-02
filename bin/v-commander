@@ -788,6 +788,13 @@ do
                 echo "== nginx is already installed from Debian repository"
                 check_continue
             fi
+
+            if [ "$release" -eq 10 ] || [ "$release" -eq 11 ]; then
+                if [ -f "/etc/nginx/conf.d/aaa.conf" ]; then
+                    sed -i 's/http2 on/# http2 on/' /etc/nginx/conf.d/aaa.conf
+                fi
+            fi
+
             /usr/local/vesta/bin/v-commander "freexian"
             if [ "$release" -eq 9 ] || [ "$release" -eq 10 ]; then
                 sed -i 's/ delay=.;/;/' /usr/local/vesta/data/templates/web/nginx/*
