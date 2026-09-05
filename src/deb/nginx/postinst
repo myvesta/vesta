@@ -15,6 +15,28 @@ if [ ! -e "/usr/local/vesta/data/users/admin" ]; then
     exit
 fi
 
+release=$(cat /etc/debian_version | tr "." "\n" | head -n1)
+if [ "$release" -ge 10 ]; then
+    NGINX_CONF='/usr/local/vesta/nginx/conf/nginx.conf'
+
+    if grep -qE '^[[:space:]]*ssl[[:space:]]+on[[:space:]]*;' "$NGINX_CONF"; then
+        echo "=== Patching deprecated nginx SSL configuration ==="
+
+        sed -i -E \
+            '/^[[:space:]]*listen[[:space:]].*ssl[[:space:]]*;/! s/^([[:space:]]*listen[[:space:]][^;]*);/\1 ssl;/' \
+            "$NGINX_CONF"
+
+        sed -i -E \
+            '/^[[:space:]]*ssl[[:space:]]+on[[:space:]]*;/d' \
+            "$NGINX_CONF"
+
+    elif grep -qE '^[[:space:]]*listen[[:space:]].*[[:space:]]ssl[[:space:]]*;' "$NGINX_CONF"; then
+        ok=1
+    else
+        echo "=== WARNING: Unable to detect nginx SSL configuration ==="
+    fi
+fi
+
 echo "=== Restarting vesta ==="
 service vesta stop
 service vesta start

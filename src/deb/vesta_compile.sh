@@ -1,14 +1,13 @@
 #!/bin/bash
 
-# Autocompile Script for VestaCP deb files - ver 1.0
-# Made for MyVesta fork.
+# Autocompile script for myVesta deb files - ver 1.1
 # Autocompile script borrowed from HestiaCP, special thanks to Raphael Schneeberger
 
 build_deb_package=1
 add_deb_to_apt_repo=0
 
-TARGET_DEB_NAME='trixie'
-TARGET_DEB_VER='13'
+TARGET_DEB_NAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
+TARGET_DEB_VER=$(cat /etc/debian_version | tr "." "\n" | head -n1)
 
 run_apt_update_and_install=1
 wait_to_press_enter=1
@@ -31,8 +30,8 @@ fi
 
 MAINTAINER_EMAIL='info@myvestacp.com'
 
-TARGET_DEB_NAME_MAIN='trixie'
-TARGET_DEB_VER_MAIN='13'
+TARGET_DEB_NAME_MAIN=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
+TARGET_DEB_VER_MAIN=$(cat /etc/debian_version | tr "." "\n" | head -n1)
 
 # Set compiling directory
 BUILD_DIR="/usr/src/$TARGET_DEB_NAME"
@@ -59,11 +58,12 @@ BUILD_DATE=$(date +"%d-%b-%Y")
 # Set Version for compiling
 VESTA_V=$VESTA_VER"_amd64"
 
-NGINX_V='1.29.1'
-PHP_V='8.4.11'
+NGINX_V='1.31.5'
+PHP_V='8.5.10'
 OPENSSL_V='1.1.1w'
 PCRE_V='8.45'
-ZLIB_V='1.3.1'
+ZLIB_V='1.3.2'
+ONIG_V='6.9.10'
 
 # Generate Links for sourcecode
 NGINX='https://nginx.org/download/nginx-'$NGINX_V'.tar.gz'
@@ -80,9 +80,9 @@ PHP='https://www.php.net/distributions/php-'$PHP_V'.tar.gz'
 release=$(cat /etc/debian_version | tr "." "\n" | head -n1)
 
 if [ "$release" -lt 12 ]; then
-    SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro dpkg-sig git rsync'
+    SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro dpkg-sig git rsync libonig-dev'
 else
-    SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro git rsync libsqlite3-dev libonig-dev'
+    SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro git rsync libonig-dev'
 fi
 
 function press_enter {
@@ -181,11 +181,13 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
-if [ ! -d "/root/backup-www" ]; then
-    mkdir /root/backup-www
+if [ -d "$WWW_FOLDER" ]; then
+  if [ ! -d "/root/backup-www" ]; then
+      mkdir /root/backup-www
+  fi
+  echo "=== Making backup of $WWW_FOLDER"
+  rsync -a --delete $WWW_FOLDER/ /root/backup-www/
 fi
-echo "=== Making backup of $WWW_FOLDER"
-rsync -a --delete $WWW_FOLDER/ /root/backup-www/
 
 if [ $build_deb_package -eq 1 ]; then
   if [ "$APTWEB_B" = true ]; then
@@ -574,7 +576,7 @@ if [ "$NGINX_B" = true ]; then
     
     echo "=== Get nginx.conf"
     cd $BUILD_DIR/vesta-nginx_$VESTA_V
-    if [ "$release" -lt 12 ]; then
+    if [ "$release" -lt 10 ]; then
       cp /root/vesta/src/deb/for-download/nginx/nginx.conf $BUILD_DIR/vesta-nginx_$VESTA_V/usr/local/vesta/nginx/conf/nginx.conf
     else
       cp /root/vesta/src/deb/for-download/nginx/nginx-deb12.conf $BUILD_DIR/vesta-nginx_$VESTA_V/usr/local/vesta/nginx/conf/nginx.conf
@@ -607,6 +609,34 @@ if [ "$PHP_B" = true ]; then
     cd $BUILD_DIR
     
     BUILDING_NOW=0
+
+    if [ ! -d "onig-$ONIG_V" ]; then
+      echo "=== Downloading and extracting oniguruma source files"
+      if [ ! -f "onig-$ONIG_V.tar.gz" ]; then
+        wget "https://github.com/kkos/oniguruma/releases/download/v$ONIG_V/onig-$ONIG_V.tar.gz" -O onig-$ONIG_V.tar.gz
+      fi
+
+      tar xzf onig-$ONIG_V.tar.gz
+      cd onig-$ONIG_V
+
+      ./configure \
+          --prefix=/usr/src/oniguruma-static \
+          --disable-shared \
+          --enable-static
+
+      make -j"$(nproc)"
+      make install
+      cd ..
+    fi
+    if [ ! -f "/usr/src/oniguruma-static/lib/libonig.a" ]; then
+      echo "=== ERROR: Oniguruma library not found, exiting..."
+      exit 1
+    else
+      echo "=== Oniguruma library found"
+      export ONIG_CFLAGS="-I/usr/src/oniguruma-static/include"
+      export ONIG_LIBS="-L/usr/src/oniguruma-static/lib -l:libonig.a"
+    fi
+
     # Check if target directory exist
     if [ ! -d "$BUILD_DIR/php-$PHP_V" ]; then
       BUILDING_NOW=1
@@ -629,7 +659,9 @@ if [ "$PHP_B" = true ]; then
                   --with-mysqli \
                   --with-curl \
                   --enable-mbstring \
-                  --with-mysql-sock=/var/run/mysqld/mysqld.sock
+                  --with-mysql-sock=/var/run/mysqld/mysqld.sock \
+                  --without-sqlite3 \
+                  --without-pdo-sqlite
       
       # Check install directory and remove if exists
       if [ -d $INSTALL_DIR/php ]; then
