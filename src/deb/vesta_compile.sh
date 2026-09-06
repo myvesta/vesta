@@ -65,6 +65,9 @@ PCRE_V='8.45'
 ZLIB_V='1.3.2'
 ONIG_V='6.9.10'
 
+VESTA_NGINX_V="$NGINX_V"
+VESTA_PHP_V="$PHP_V"
+
 # Generate Links for sourcecode
 NGINX='https://nginx.org/download/nginx-'$NGINX_V'.tar.gz'
 OPENSSL='https://www.openssl.org/source/openssl-'$OPENSSL_V'.tar.gz'
@@ -80,9 +83,9 @@ PHP='https://www.php.net/distributions/php-'$PHP_V'.tar.gz'
 release=$(cat /etc/debian_version | tr "." "\n" | head -n1)
 
 if [ "$release" -lt 12 ]; then
-    SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro dpkg-sig git rsync libonig-dev'
+    SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro dpkg-sig git rsync'
 else
-    SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro git rsync libonig-dev'
+    SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro git rsync'
 fi
 
 function press_enter {
@@ -94,29 +97,52 @@ function press_enter {
 }
 
 function make_deb_package {
-  press_enter "=== Press enter to build the package"
-  cd $BUILD_DIR
-  if [ -f "$1_$VESTA_V.deb" ]; then
-    rm $1_$VESTA_V.deb
+  if [ -z "$2" ]; then
+    VER=$VESTA_V
+  else
+    VER=$2
   fi
-  dpkg-deb --build $1_$VESTA_V
+  press_enter "=== Press enter to build the package"
+  echo "=== Changing to build directory: $BUILD_DIR"
+  cd $BUILD_DIR
+  if [ -f "$1_$VER.deb" ]; then
+    echo "=== Removing existing deb file: $1_$VER.deb"
+    rm $1_$VER.deb
+  fi
+  echo "=== Building deb package: $1_$VER.deb"
+  dpkg-deb --build $1_$VER
   echo "=== Building done."
-  echo "=== Your .deb package is here: $BUILD_DIR/$1_$VESTA_V.deb"
+  echo "=== Your .deb package is here: $BUILD_DIR/$1_$VER.deb"
 }
 
 function add_to_repo {  
+  if [ -z "$2" ]; then
+    VER=$VESTA_V
+  else
+    VER=$2
+  fi
   press_enter "=== Press enter to sign the package ==============================================================================="
+  echo "=== Changing to build directory: $BUILD_DIR"
   cd $BUILD_DIR
+  echo "=== Signing deb package: $1_$VER.deb"
   export GPG_TTY=$(tty)
-  dpkg-sig --sign builder $1_$VESTA_V.deb
+  dpkg-sig --sign builder $1_$VER.deb
   
   press_enter "=== Press enter to add to repo ==============================================================================="
     
+  echo "=== Creating apt repo directory: $PATH_OF_APT_REPO"
   mkdir -p $PATH_OF_APT_REPO
+
+  echo "=== Changing to apt repo directory: $PATH_OF_APT_REPO"
   cd $PATH_OF_APT_REPO
-  echo "=== cd $PATH_OF_APT_REPO"
+
+  echo "=== Removing existing deb package: $1_$VER.deb from $TARGET_DEB_NAME"
   reprepro --ask-passphrase -Vb . remove $TARGET_DEB_NAME $1
-  reprepro --ask-passphrase -Vb . includedeb $TARGET_DEB_NAME $BUILD_DIR/$1_$VESTA_V.deb
+
+  echo "=== Adding deb package: $1_$VER.deb to $TARGET_DEB_NAME"
+  reprepro --ask-passphrase -Vb . includedeb $TARGET_DEB_NAME $BUILD_DIR/$1_$VER.deb
+
+  echo "=== All done for adding to apt repo: $1_$VER.deb"
 }
 
 # Install needed software
@@ -228,10 +254,19 @@ fi
 
 if [ "$VESTAGIT_B" = true ]; then
   echo "======= Get latest vesta from git ======="
-  cd /root
-  rm -rf vesta/
-  git clone https://github.com/myvesta/vesta.git
-  echo "=== Git cloning done"
+  if [ -d "/root/vesta" ]; then
+    cd /root/vesta
+    git pull
+    if [ "$?" -ne 0 ]; then
+      cd /root
+      rm -rf vesta/
+      git clone https://github.com/myvesta/vesta.git
+      echo "=== Git cloning done"
+    fi
+  else
+    cd /root
+    git clone https://github.com/myvesta/vesta.git
+  fi
 fi
 
 #################################################################################
@@ -502,7 +537,7 @@ if [ "$NGINX_B" = true ]; then
   if [ $build_deb_package -eq 1 ]; then
     echo "======= Building vesta-nginx ======="
     
-    echo "=== Change to build directory"
+    echo "=== Change to build directory: $BUILD_DIR"
     cd $BUILD_DIR
     
     BUILDING_NOW=0
@@ -512,19 +547,36 @@ if [ "$NGINX_B" = true ]; then
       
       press_enter "=== Press enter to download and unpack source files"
     
+      echo "=== Removing existing nginx directory: nginx-$NGINX_V"
       rm -rf nginx-$NGINX_V
+      echo "=== Removing existing openssl directory: openssl-$OPENSSL_V"
       rm -rf openssl-$OPENSSL_V
+      echo "=== Removing existing pcre directory: pcre-$PCRE_V"
       rm -rf pcre-$PCRE_V
+      echo "=== Removing existing zlib directory: zlib-$ZLIB_V"
       rm -rf zlib-$ZLIB_V
-      wget -nv -qO- $NGINX | tar xz
-      wget -nv -qO- $OPENSSL | tar xz
-      wget -nv -qO- $PCRE | tar xz
-      wget -nv -qO- $ZLIB | tar xz
+      if [ ! -d "nginx-$NGINX_V" ]; then
+        echo "=== Downloading nginx source files from $NGINX and extracting it"
+        wget -nv -qO- $NGINX | tar xz
+      fi
+      if [ ! -d "openssl-$OPENSSL_V" ]; then
+        echo "=== Downloading openssl source files from $OPENSSL and extracting it"
+        wget -nv -qO- $OPENSSL | tar xz
+      fi
+      if [ ! -d "pcre-$PCRE_V" ]; then
+        echo "=== Downloading pcre source files from $PCRE and extracting it"
+        wget -nv -qO- $PCRE | tar xz
+      fi
+      if [ ! -d "zlib-$ZLIB_V" ]; then
+        echo "=== Downloading zlib source files from $ZLIB and extracting it"
+        wget -nv -qO- $ZLIB | tar xz
+      fi
       
-      echo "=== Change to nginx directory"
+      echo "=== Change to nginx directory to: nginx-$NGINX_V"
       cd nginx-$NGINX_V
       
       press_enter "=== Press enter to configure nginx"
+      echo "=== Configuring nginx"
       ./configure     --prefix=$INSTALL_DIR/nginx \
               --with-http_ssl_module \
               --with-openssl=../openssl-$OPENSSL_V \
@@ -537,63 +589,77 @@ if [ "$NGINX_B" = true ]; then
               --with-zlib=../zlib-$ZLIB_V
       
       # Check install directory and remove if exists
-      if [ -d $INSTALL_DIR/nginx ]; then
+      if [ -d "$INSTALL_DIR/nginx" ]; then
+          echo "=== Removing existing nginx directory: $INSTALL_DIR/nginx"
           rm -rf $INSTALL_DIR/nginx
       fi
       
       press_enter "=== Press enter to make && make install"
+      echo "=== Making (building) nginx"
       make && make install
     
     fi
     
     press_enter "=== Press enter to Prepare Deb Package Folder Structure"
-    if [ -d "$BUILD_DIR/vesta-nginx_$VESTA_V" ]; then
-      rm -rf $BUILD_DIR/vesta-nginx_$VESTA_V
+    if [ -d "$BUILD_DIR/vesta-nginx_$VESTA_NGINX_V" ]; then
+      echo "=== Removing existing vesta-nginx directory: $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V"
+      rm -rf $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V
     fi
-    echo "=== Create directory"
-    mkdir $BUILD_DIR/vesta-nginx_$VESTA_V
+    echo "=== Creating directory: $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V"
+    mkdir $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V
     
-    cd $BUILD_DIR/vesta-nginx_$VESTA_V/
+    echo "=== Changing to directory: $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V"
+    cd $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/
+    echo "=== Creating directories: usr/local/vesta/nginx etc/init.d and DEBIAN"
     mkdir -p usr/local/vesta/nginx etc/init.d DEBIAN
     
     press_enter "=== Press enter to Download control, postinst and postrm files"
+    echo "=== Copying control, postinst and postrm files to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN"
     # Copying control, postinst and postrm files
-    cp -rf /root/vesta/src/deb/nginx/* $BUILD_DIR/vesta-nginx_$VESTA_V/DEBIAN
+    cp -rf /root/vesta/src/deb/nginx/* $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN
     
     # Set version
-    sed -i "/Version: /c\Version: $VESTA_VER" $BUILD_DIR/vesta-nginx_$VESTA_V/DEBIAN/control
+    echo "=== Setting version: $VESTA_NGINX_V in $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN/control"
+    sed -i "/Version: /c\Version: $VESTA_NGINX_V" $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN/control
     
     # Set permission
-    chmod +x $BUILD_DIR/vesta-nginx_$VESTA_V/DEBIAN/postinst
+    echo "=== Setting permission: +x for $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN/postinst"
+    chmod +x $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN/postinst
     
-    echo "=== Copying nginx directory"
+    echo "=== Copying $INSTALL_DIR/nginx/* files to usr/local/vesta/nginx"
     cp -rf $INSTALL_DIR/nginx/* usr/local/vesta/nginx
     
-    echo "=== Get Service File"
-    cd $BUILD_DIR/vesta-nginx_$VESTA_V/etc/init.d
+    echo "=== Changing to directory: $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/etc/init.d"
+    cd $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/etc/init.d
+    echo "=== Copying vesta service file to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/etc/init.d/vesta"
     cp /root/vesta/src/deb/for-download/nginx/vesta vesta
+    echo "=== Setting permission: +x for $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/etc/init.d/vesta"
     chmod +x vesta
     
-    echo "=== Get nginx.conf"
-    cd $BUILD_DIR/vesta-nginx_$VESTA_V
+    echo "=== Changing to directory: $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V"
+    cd $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V
     if [ "$release" -lt 10 ]; then
-      cp /root/vesta/src/deb/for-download/nginx/nginx.conf $BUILD_DIR/vesta-nginx_$VESTA_V/usr/local/vesta/nginx/conf/nginx.conf
+       echo "=== Copying /root/vesta/src/deb/for-download/nginx/nginx.conf to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/conf/nginx.conf"
+      cp /root/vesta/src/deb/for-download/nginx/nginx.conf $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/conf/nginx.conf
     else
-      cp /root/vesta/src/deb/for-download/nginx/nginx-deb12.conf $BUILD_DIR/vesta-nginx_$VESTA_V/usr/local/vesta/nginx/conf/nginx.conf
+      echo "=== Copying /root/vesta/src/deb/for-download/nginx/nginx-deb12.conf to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/conf/nginx.conf"
+      cp /root/vesta/src/deb/for-download/nginx/nginx-deb12.conf $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/conf/nginx.conf
     fi
     
     # if [ $BUILDING_NOW -eq 1 ]; then
-    echo "=== copy binary"
-    cp $INSTALL_DIR/nginx/sbin/nginx $BUILD_DIR/vesta-nginx_$VESTA_V/usr/local/vesta/nginx/sbin/vesta-nginx
+    echo "=== Copying $INSTALL_DIR/nginx/sbin/nginx to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/sbin/vesta-nginx"
+    cp $INSTALL_DIR/nginx/sbin/nginx $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/sbin/vesta-nginx
     # fi
     
-    make_deb_package "vesta-nginx"
+    echo "=== Making deb package: vesta-nginx_$VESTA_NGINX_V"
+    make_deb_package "vesta-nginx" "$VESTA_NGINX_V"
   fi
   if [ $add_deb_to_apt_repo -eq 1 ]; then
-    add_to_repo "vesta-nginx"
+    echo "=== Adding deb to apt repo: vesta-nginx_$VESTA_NGINX_V"
+    add_to_repo "vesta-nginx" "$VESTA_NGINX_V"
   fi
 
-  echo "=== All done"
+  echo "=== All done for vesta-nginx_$VESTA_NGINX_V"
 fi
 
 #################################################################################
@@ -611,41 +677,58 @@ if [ "$PHP_B" = true ]; then
     BUILDING_NOW=0
 
     if [ ! -d "onig-$ONIG_V" ]; then
-      echo "=== Downloading and extracting oniguruma source files"
+      press_enter "=== Press enter to download and extract Oniguruma source files"
+      BUILDING_NOW=1
       if [ ! -f "onig-$ONIG_V.tar.gz" ]; then
+        echo "=== Downloading Oniguruma source files from https://github.com/kkos/oniguruma/releases/download/v$ONIG_V/onig-$ONIG_V.tar.gz"
         wget "https://github.com/kkos/oniguruma/releases/download/v$ONIG_V/onig-$ONIG_V.tar.gz" -O onig-$ONIG_V.tar.gz
       fi
 
+      echo "=== Extracting Oniguruma source files: onig-$ONIG_V.tar.gz"
       tar xzf onig-$ONIG_V.tar.gz
+
+      echo "=== Changing to directory: onig-$ONIG_V"
       cd onig-$ONIG_V
 
+      press_enter "=== Press enter to configure Oniguruma"
+
+      echo "=== Configuring Oniguruma"
       ./configure \
           --prefix=/usr/src/oniguruma-static \
           --disable-shared \
           --enable-static
 
+      echo "=== Making Oniguruma"
       make -j"$(nproc)"
+
+      echo "=== Making and installing Oniguruma"
       make install
+
+      echo "=== Changing to directory: .."
       cd ..
     fi
     if [ ! -f "/usr/src/oniguruma-static/lib/libonig.a" ]; then
       echo "=== ERROR: Oniguruma library not found, exiting..."
       exit 1
     else
-      echo "=== Oniguruma library found"
+      echo "=== Oniguruma library found at /usr/src/oniguruma-static/lib/libonig.a"
       export ONIG_CFLAGS="-I/usr/src/oniguruma-static/include"
       export ONIG_LIBS="-L/usr/src/oniguruma-static/lib -l:libonig.a"
     fi
+    press_enter "=== Press enter to continue ==============================================================================="
 
     # Check if target directory exist
     if [ ! -d "$BUILD_DIR/php-$PHP_V" ]; then
       BUILDING_NOW=1
       
-      echo "=== Download and unpack source files"
-      rm -rf php-$PHP_V
+      if [ ! -d "php-$PHP_V" ]; then
+        echo "=== Removing existing php directory: php-$PHP_V"
+        rm -rf php-$PHP_V
+      fi
+      echo "=== Download and unpack PHP source files from $PHP and extracting it"
       wget -nv -qO- $PHP | tar xz
       
-      echo "=== Change to php directory php-$PHP_V"
+      echo "=== Change to php directory to: php-$PHP_V"
       cd php-$PHP_V
       
       press_enter "=== Press enter to configure PHP ==============================================================================="
@@ -664,60 +747,75 @@ if [ "$PHP_B" = true ]; then
                   --without-pdo-sqlite
       
       # Check install directory and remove if exists
-      if [ -d $INSTALL_DIR/php ]; then
+      if [ -d "$INSTALL_DIR/php" ]; then
+          echo "=== Removing existing php directory: $INSTALL_DIR/php"
           rm -rf $INSTALL_DIR/php
       fi
     
       press_enter "=== Press enter to compile PHP ==============================================================================="
 
-      make && make install
+      echo "=== Making PHP"
+      make
+      echo "=== Making and installing PHP"
+      make install
       
       press_enter "=== Press enter to continue ==============================================================================="
     fi
-    
+
+    echo "=== Changing to build directory: $BUILD_DIR"
     cd $BUILD_DIR
-    if [ -d "vesta-php_$VESTA_V" ]; then
-      rm -rf vesta-php_$VESTA_V
+    if [ -d "vesta-php_$VESTA_PHP_V" ]; then
+      echo "=== Removing existing vesta-php directory: vesta-php_$VESTA_PHP_V"
+      rm -rf vesta-php_$VESTA_PHP_V
     fi
-    echo "=== Create directory: $BUILD_DIR/vesta-php_$VESTA_V"
-    mkdir -p $BUILD_DIR/vesta-php_$VESTA_V
+    echo "=== Create directory: $BUILD_DIR/vesta-php_$VESTA_PHP_V"
+    mkdir -p $BUILD_DIR/vesta-php_$VESTA_PHP_V
     
-    echo "=== Prepare Deb Package Folder Structure: $BUILD_DIR/vesta-php_$VESTA_V/usr/local/vesta/php and $BUILD_DIR/vesta-php_$VESTA_V/DEBIAN"
-    cd $BUILD_DIR/vesta-php_$VESTA_V/
+    echo "=== Changing to directory: $BUILD_DIR/vesta-php_$VESTA_PHP_V"
+    cd $BUILD_DIR/vesta-php_$VESTA_PHP_V/
+    echo "=== Creating directories: usr/local/vesta/php and DEBIAN"
     mkdir -p usr/local/vesta/php DEBIAN
     
     # Copying control, postinst and postrm files
-    cp -rf /root/vesta/src/deb/php/* $BUILD_DIR/vesta-php_$VESTA_V/DEBIAN
+    echo "=== Copying /root/vesta/src/deb/php/* files to $BUILD_DIR/vesta-php_$VESTA_PHP_V/DEBIAN"
+    cp -rf /root/vesta/src/deb/php/* $BUILD_DIR/vesta-php_$VESTA_PHP_V/DEBIAN
     
     # Set version
-    sed -i "/Version: /c\Version: $VESTA_VER" $BUILD_DIR/vesta-php_$VESTA_V/DEBIAN/control
+    echo "=== Setting version: $VESTA_PHP_V in $BUILD_DIR/vesta-php_$VESTA_PHP_V/DEBIAN/control"
+    sed -i "/Version: /c\Version: $VESTA_PHP_V" $BUILD_DIR/vesta-php_$VESTA_PHP_V/DEBIAN/control
     
     # Set permission
-    chmod +x $BUILD_DIR/vesta-php_$VESTA_V/DEBIAN/postinst
+    echo "=== Setting permission: +x for $BUILD_DIR/vesta-php_$VESTA_PHP_V/DEBIAN/postinst"
+    chmod +x $BUILD_DIR/vesta-php_$VESTA_PHP_V/DEBIAN/postinst
     
     press_enter "=== Press enter to copy builded php ==============================================================================="
+
+    echo "=== Changing to directory: .."
     cd ..
     
     # if [ $BUILDING_NOW -eq 1 ]; then
-    echo "=== Copying php directory"
-    cp -rf $INSTALL_DIR/php/* $BUILD_DIR/vesta-php_$VESTA_V/usr/local/vesta/php/
+    echo "=== Copying $INSTALL_DIR/php/* files to $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/"
+    cp -rf $INSTALL_DIR/php/* $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/
     press_enter "=== Done, press enter to copy php-fpm.conf and vesta-php binary ==============================================================================="
     # fi
     
-    echo "=== Get php-fpm.conf"
-    cp /root/vesta/src/deb/for-download/php/php-fpm.conf $BUILD_DIR/vesta-php_$VESTA_V/usr/local/vesta/php/etc/php-fpm.conf
-    cp /root/vesta/src/deb/for-download/php/php.ini $BUILD_DIR/vesta-php_$VESTA_V/usr/local/vesta/php/lib/php.ini
+    echo "=== Copying /root/vesta/src/deb/for-download/php/php-fpm.conf to $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/etc/php-fpm.conf"
+    cp /root/vesta/src/deb/for-download/php/php-fpm.conf $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/etc/php-fpm.conf
+    echo "=== Copying /root/vesta/src/deb/for-download/php/php.ini to $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/lib/php.ini"
+    cp /root/vesta/src/deb/for-download/php/php.ini $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/lib/php.ini
     
-    echo "=== copy binary"
-    cp $INSTALL_DIR/php/sbin/php-fpm $BUILD_DIR/vesta-php_$VESTA_V/usr/local/vesta/php/sbin/vesta-php
-  
-    make_deb_package "vesta-php"
+    echo "=== Copying $INSTALL_DIR/php/sbin/php-fpm to $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/sbin/vesta-php"
+    cp $INSTALL_DIR/php/sbin/php-fpm $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/sbin/vesta-php
+
+    echo "=== Making deb package: vesta-php_$VESTA_PHP_V"
+    make_deb_package "vesta-php" "$VESTA_PHP_V"
   fi
   if [ $add_deb_to_apt_repo -eq 1 ]; then
-    add_to_repo "vesta-php"
+    echo "=== Adding deb to apt repo: vesta-php_$VESTA_PHP_V"
+    add_to_repo "vesta-php" "$VESTA_PHP_V"
   fi
     
-  echo "=== All done"
+  echo "=== All done for vesta-php_$VESTA_PHP_V"
 fi
 
 #################################################################################
