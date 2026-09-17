@@ -58,7 +58,7 @@ BUILD_DATE=$(date +"%d-%b-%Y")
 # Set Version for compiling
 VESTA_V=$VESTA_VER"_amd64"
 
-NGINX_V='1.31.5'
+NGINX_V='1.31.6'
 PHP_V='8.5.10'
 OPENSSL_V='1.1.1w'
 PCRE_V='8.45'
