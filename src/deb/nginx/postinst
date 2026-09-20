@@ -16,7 +16,7 @@ if [ ! -e "/usr/local/vesta/data/users/admin" ]; then
 fi
 
 release=$(cat /etc/debian_version | tr "." "\n" | head -n1)
-if [ "$release" -ge 10 ]; then
+if [ "$release" -ge 9 ]; then
     NGINX_CONF='/usr/local/vesta/nginx/conf/nginx.conf'
 
     if grep -qE '^[[:space:]]*ssl[[:space:]]+on[[:space:]]*;' "$NGINX_CONF"; then

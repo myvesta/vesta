@@ -694,7 +694,7 @@ if [ "$PHP_B" = true ]; then
 
       echo "=== Configuring Oniguruma"
       ./configure \
-          --prefix=/usr/src/oniguruma-static \
+          --prefix=$BUILD_DIR/oniguruma-static \
           --disable-shared \
           --enable-static
 
@@ -707,18 +707,141 @@ if [ "$PHP_B" = true ]; then
       echo "=== Changing to directory: .."
       cd ..
     fi
-    if [ ! -f "/usr/src/oniguruma-static/lib/libonig.a" ]; then
+    if [ ! -f "$BUILD_DIR/oniguruma-static/lib/libonig.a" ]; then
       echo "=== ERROR: Oniguruma library not found, exiting..."
       exit 1
     else
-      echo "=== Oniguruma library found at /usr/src/oniguruma-static/lib/libonig.a"
-      export ONIG_CFLAGS="-I/usr/src/oniguruma-static/include"
-      export ONIG_LIBS="-L/usr/src/oniguruma-static/lib -l:libonig.a"
+      echo "=== Oniguruma library found at $BUILD_DIR/oniguruma-static/lib/libonig.a"
+      export ONIG_CFLAGS="-I$BUILD_DIR/oniguruma-static/include"
+      export ONIG_LIBS="-L$BUILD_DIR/oniguruma-static/lib -l:libonig.a"
     fi
     press_enter "=== Press enter to continue ==============================================================================="
 
-    # Check if target directory exist
-    if [ ! -d "$BUILD_DIR/php-$PHP_V" ]; then
+    if [ "$TARGET_DEB_VER" -lt 10 ]; then
+      if [ ! -f "/opt/zlib-$ZLIB_V-static/lib/libz.a" ]; then
+        echo "=== Downloading zlib source files from $ZLIB and extracting it"
+        cd $BUILD_DIR
+        if [ ! -f "zlib-$ZLIB_V.tar.gz" ]; then
+          wget https://zlib.net/zlib-$ZLIB_V.tar.gz -O zlib-$ZLIB_V.tar.gz
+        fi
+        if [ ! -d "zlib-$ZLIB_V" ]; then
+          echo "=== Extracting zlib source files: zlib-$ZLIB_V.tar.gz"
+          tar xzf zlib-$ZLIB_V.tar.gz
+        fi
+        echo "=== Changing to directory: zlib-$ZLIB_V"
+        cd zlib-$ZLIB_V
+        ZLIB_PREFIX="/opt/zlib-$ZLIB_V-static"
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Configuring zlib"
+        CFLAGS="-O2 -fPIC" ./configure \
+          --static \
+          --prefix="$ZLIB_PREFIX"
+        press_enter "=== Press enter to continue ==============================================================================="
+        make -j$(nproc)
+        press_enter "=== Press enter to continue ==============================================================================="
+        make test
+        press_enter "=== Press enter to continue ==============================================================================="
+        make install
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Checking $ZLIB_PREFIX for libz* files (expecting: libz.a)"
+        find "$ZLIB_PREFIX" -maxdepth 2 -type f -name 'libz*' -ls
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Checking zlib version (expecting: $ZLIB_V)"
+        PKG_CONFIG_PATH="$ZLIB_PREFIX/lib/pkgconfig" \
+        pkg-config --modversion zlib
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Checking $ZLIB_PREFIX/lib/pkgconfig/zlib.pc file content"
+        cat "$ZLIB_PREFIX/lib/pkgconfig/zlib.pc"
+        press_enter "=== Press enter to continue ==============================================================================="
+        cd ..
+        echo "=== Changing to directory: .."
+      else
+        echo "=== zlib library found at /opt/zlib-$ZLIB_V-static/lib/libz.a"
+      fi
+
+      CURL_V='8.17.0'
+      if [ ! -f "/opt/curl-$CURL_V-static/lib/libcurl.a" ]; then
+        cd $BUILD_DIR
+        if [ ! -f "curl-$CURL_V.tar.gz" ]; then
+          echo "=== Downloading curl source files from $CURL and extracting it"
+          wget https://curl.se/download/curl-$CURL_V.tar.gz
+        fi
+        if [ ! -d "curl-$CURL_V" ]; then
+          echo "=== Extracting curl source files: curl-$CURL_V.tar.gz"
+          tar xzf curl-$CURL_V.tar.gz
+        fi
+        echo "=== Changing to directory: curl-$CURL_V"
+        cd curl-$CURL_V
+        CURL_PREFIX="/opt/curl-$CURL_V-static"
+        echo "=== Setting CURL_PREFIX: $CURL_PREFIX"
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Configuring curl"
+        CFLAGS="-O2 -fPIC" \
+          CPPFLAGS="-I$ZLIB_PREFIX/include" \
+          LDFLAGS="-L$ZLIB_PREFIX/lib" \
+          ./configure \
+              --prefix="$CURL_PREFIX" \
+              --disable-shared \
+              --enable-static \
+              --with-openssl \
+              --with-zlib="$ZLIB_PREFIX" \
+              --without-brotli \
+              --without-zstd \
+              --without-libpsl \
+              --without-libidn2 \
+              --without-nghttp2 \
+              --without-libssh2 \
+              --without-librtmp \
+              --disable-ldap \
+              --disable-ldaps
+        echo "=== I hope you see above something like this:"
+        echo "SSL:              enabled (OpenSSL)"
+        echo "zlib:             enabled"
+        echo "Build libcurl:    Shared=no, Static=yes"
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Making curl"
+        make -j$(nproc)
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Making and installing curl"
+        make install
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Below should be libcurl.a, libcurl.la and libcurl.so and pkgconfig/ :"
+        ls -la "$CURL_PREFIX/lib/"
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Below the output should be empty:"
+        find "$CURL_PREFIX/lib" -maxdepth 1 -name 'libcurl.so*' -ls
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Below should be libcurl.a:"
+        ls -lh "$CURL_PREFIX/lib/libcurl.a"
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Below should be the version of libcurl: $CURL_V"
+        PKG_CONFIG_PATH="$CURL_PREFIX/lib/pkgconfig" \
+        pkg-config --modversion libcurl
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Below should be the static libraries (something like: -L/opt/curl-$CURL_V-static/lib -lcurl -lssl -lcrypto -lz ...):"
+        "$CURL_PREFIX/bin/curl-config" --static-libs
+        echo "---"
+        PKG_CONFIG_PATH="$CURL_PREFIX/lib/pkgconfig:$ZLIB_PREFIX/lib/pkgconfig" \
+        pkg-config --static --libs libcurl
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== In previous command, I hope you don't see something like this:"
+        echo "-lbrotlidec"
+        echo "-lzstd"
+        echo "-lpsl"
+        echo "-lidn2"
+        echo "-lnghttp2"
+        echo "-lssh2"
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Changing to directory: .."
+        cd ..
+      else
+        echo "=== curl library found at /opt/curl-$CURL_V-static/lib/libcurl.a"
+      fi
+    fi
+
+    # Check if php-fpm binary exists
+    if [ ! -f "$INSTALL_DIR/php/sbin/php-fpm" ]; then
+      cd $BUILD_DIR
       BUILDING_NOW=1
       
       if [ ! -d "php-$PHP_V" ]; then
@@ -732,6 +855,98 @@ if [ "$PHP_B" = true ]; then
       cd php-$PHP_V
       
       press_enter "=== Press enter to configure PHP ==============================================================================="
+
+      if [ "$TARGET_DEB_VER" -lt 10 ]; then
+        if [ -f "/opt/zlib-$ZLIB_V-static/lib/libz.a" ]; then
+          ZLIB_PREFIX="/opt/zlib-$ZLIB_V-static"
+          echo "=== Value of ZLIB_PREFIX: $ZLIB_PREFIX"
+          export ZLIB_CFLAGS="-I$ZLIB_PREFIX/include"
+          echo "=== Value of ZLIB_CFLAGS: $ZLIB_CFLAGS"
+          export ZLIB_LIBS="-L$ZLIB_PREFIX/lib -l:libz.a"
+          echo "=== Value of ZLIB_LIBS: $ZLIB_LIBS"
+          export PKG_CONFIG_PATH="$ZLIB_PREFIX/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+          echo "=== Value of PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
+          press_enter "=== Press enter to continue ==============================================================================="
+        else
+          echo "=== ERROR: zlib library not found, exiting..."
+          exit 1
+        fi
+
+        if [ -f "/opt/curl-$CURL_V-static/lib/libcurl.a" ]; then
+          CURL_PREFIX="/opt/curl-$CURL_V-static"
+          export CURL_CFLAGS="-I$CURL_PREFIX/include"
+          CURL_LIBS="$CURL_PREFIX/lib/libcurl.a"
+          export PKG_CONFIG_PATH="$CURL_PREFIX/lib/pkgconfig:$ZLIB_PREFIX/lib/pkgconfig"
+          echo "=== Value of CURL_CFLAGS: $CURL_CFLAGS"
+          echo "=== Value of CURL_PREFIX: $CURL_PREFIX"
+          echo "=== Value of CURL_LIBS: $CURL_LIBS"
+          echo "=== Value of PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
+          press_enter "=== Press enter to continue ==============================================================================="
+          echo "=== Below should be the static libraries (something like: -L/opt/curl-8.17.0-static/lib -lcurl -lssl -lcrypto -L/opt/zlib-1.3.2-static/lib -lz):"
+          pkg-config --static --libs libcurl
+          press_enter "=== Press enter to continue ==============================================================================="
+          CURL_STATIC_LIBS="$(pkg-config --static --libs libcurl)"
+          # CURL_STATIC_LIBS="${CURL_STATIC_LIBS/-lcurl/$CURL_PREFIX\/lib\/libcurl.a}"
+          echo "=== Value of CURL_STATIC_LIBS: $CURL_STATIC_LIBS"
+          press_enter "=== Press enter to continue ==============================================================================="
+          CURL_LIBS=""
+          for lib in $CURL_STATIC_LIBS; do
+              case "$lib" in
+                  -lcurl)
+                      lib="-l:libcurl.a"
+                      ;;
+                  -lz)
+                      lib="-l:libz.a"
+                      ;;
+              esac
+
+              CURL_LIBS+=" $lib"
+          done
+
+          CURL_LIBS="${CURL_LIBS# }"
+
+          export CURL_LIBS
+
+          # echo "=== After the replacement loop, the values are as follows:"
+          # echo "=== Value of CURL_STATIC_LIBS: $CURL_STATIC_LIBS"
+          # echo "=== Value of CURL_LIBS: $CURL_LIBS"
+
+          # echo "=== Replacing -lz with $ZLIB_PREFIX\/lib\/libz.a"
+          # echo "After the replacement, the values are as follows:"
+          # CURL_STATIC_LIBS="${CURL_STATIC_LIBS/-lz/$ZLIB_PREFIX\/lib\/libz.a}"
+          # export CURL_LIBS="$CURL_STATIC_LIBS"
+          echo "=== FINAL VALUES ==="
+          echo "ZLIB_CFLAGS: $ZLIB_CFLAGS"
+          echo "ZLIB_LIBS:   $ZLIB_LIBS"
+          echo "CURL_CFLAGS: $CURL_CFLAGS"
+          echo "CURL_LIBS:   $CURL_LIBS"
+          if [[ "$CURL_LIBS" != *"-l:libcurl.a"* ]]; then
+              echo "ERROR: CURL_LIBS does not contain -l:libcurl.a"
+              exit 1
+          fi
+
+          if [[ "$CURL_LIBS" != *"-l:libz.a"* ]]; then
+              echo "ERROR: CURL_LIBS does not contain -l:libz.a"
+              exit 1
+          fi
+
+          if [[ "$CURL_LIBS" == *"/lib/libcurl.a"* ]]; then
+              echo "ERROR: CURL_LIBS contains absolute libcurl.a path"
+              exit 1
+          fi
+
+          if [[ "$CURL_LIBS" == *"/lib/libz.a"* ]]; then
+              echo "ERROR: CURL_LIBS contains absolute libz.a path"
+              exit 1
+          fi
+
+          echo "=== We will start the PHP configure process now"
+          press_enter "=== Press enter to continue ==============================================================================="
+        else
+          echo "=== ERROR: curl library not found, exiting..."
+          exit 1
+        fi
+      fi
       
       echo "=== Configure PHP"
       ./configure --prefix=$INSTALL_DIR/php \
@@ -744,8 +959,31 @@ if [ "$PHP_B" = true ]; then
                   --enable-mbstring \
                   --with-mysql-sock=/var/run/mysqld/mysqld.sock \
                   --without-sqlite3 \
-                  --without-pdo-sqlite
+                  --without-pdo-sqlite \
+                  --disable-rpath
       
+      if [ "$TARGET_DEB_VER" -lt 10 ]; then
+        echo "=== Running: grep '^EXTRA_LIBS =' Makefile"
+        grep '^EXTRA_LIBS =' Makefile
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Running: grep '^EXTRA_LIBS =' Makefile | grep -o -- '-l:libcurl\.a'"
+        grep '^EXTRA_LIBS =' Makefile | grep -o -- '-l:libcurl\.a'
+        echo "=== The output above should be: -l:libcurl.a"
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Running: grep '^EXTRA_LIBS =' Makefile | grep -o -- '-l:libz\.a'"
+        grep '^EXTRA_LIBS =' Makefile | grep -o -- '-l:libz\.a'
+        echo "=== The output above should be: -l:libz.a"
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Running: grep '^EXTRA_LIBS =' Makefile | tr ' ' '\n' | grep -E 'curl|libz|ssl|crypto'"
+        grep '^EXTRA_LIBS =' Makefile | tr ' ' '\n' | grep -E 'curl|libz|ssl|crypto'
+        echo "=== The output above should be: "
+        echo "-l:libcurl.a"
+        echo "-lssl"
+        echo "-lcrypto"
+        echo "-l:libz.a"
+        echo "..."
+      fi
+
       # Check install directory and remove if exists
       if [ -d "$INSTALL_DIR/php" ]; then
           echo "=== Removing existing php directory: $INSTALL_DIR/php"
@@ -756,6 +994,35 @@ if [ "$PHP_B" = true ]; then
 
       echo "=== Making PHP"
       make
+
+      echo "=== Making done"
+      press_enter "=== Press enter to continue ==============================================================================="
+
+      if [ "$TARGET_DEB_VER" -lt 10 ]; then
+        echo "=== Below should be a empty output:"
+        readelf -d sapi/fpm/php-fpm | grep -i curl
+        readelf -d sapi/cli/php | grep -i curl
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Below should be the version of curl: $CURL_V"
+        sapi/cli/php -r 'print_r(curl_version());'
+        sapi/cli/php -r 'echo curl_version()["version"], PHP_EOL;'
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Below should be something like this:"
+        echo "cURL support => enabled"
+        echo "cURL Information => $CURL_V"
+        echo "---"
+        sapi/cli/php -i | grep -A10 '^cURL support'
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Running /opt/curl-$CURL_V-static/bin/curl-config --static-libs"
+        /opt/curl-$CURL_V-static/bin/curl-config --static-libs
+        echo "=== Above should be the static libraries (something like: /opt/curl-8.17.0-static/lib/libcurl.a -L/lib -lssl -lcrypto -lssl -lcrypto -lz -pthread)"
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Running: PKG_CONFIG_PATH=\"/opt/curl-$CURL_V-static/lib/pkgconfig:/opt/zlib-$ZLIB_V-static/lib/pkgconfig\" pkg-config --static --libs libcurl"
+        PKG_CONFIG_PATH="/opt/curl-$CURL_V-static/lib/pkgconfig:/opt/zlib-$ZLIB_V-static/lib/pkgconfig" pkg-config --static --libs libcurl
+        echo "=== Above should be the static libraries (something like: -L/opt/curl-8.17.0-static/lib -L/opt/zlib-1.3.2-static/lib -lcurl -lssl -lcrypto -lssl -lcrypto -lz -pthread -lssl -lcrypto -lssl -lcrypto -lz -pthread -lz -lssl -lcrypto -ldl -pthread)"
+        press_enter "=== Press enter to continue ==============================================================================="
+      fi
+
       echo "=== Making and installing PHP"
       make install
       
