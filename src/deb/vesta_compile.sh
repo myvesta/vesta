@@ -68,6 +68,9 @@ ONIG_V='6.9.10'
 VESTA_NGINX_V="$NGINX_V"
 VESTA_PHP_V="$PHP_V"
 
+# Only for Debian 8 and 9
+CURL_V='8.17.0'
+
 # Generate Links for sourcecode
 NGINX='https://nginx.org/download/nginx-'$NGINX_V'.tar.gz'
 OPENSSL='https://www.openssl.org/source/openssl-'$OPENSSL_V'.tar.gz'
@@ -154,10 +157,10 @@ if [ $run_apt_update_and_install -eq 1 ]; then
   apt-get -qq install -y $SOFTWARE
   
   # Fix for Debian PHP Envroiment
-  if [ ! -e /usr/local/include/curl ] && [ "$release" -lt 12 ]; then
+  if [ ! -e /usr/local/include/curl ] && [ ! -L /usr/local/include/curl ] && [ "$release" -lt 12 ]; then
       ln -s /usr/include/x86_64-linux-gnu/curl /usr/local/include/curl
   fi
-  if [ ! -e /usr/local/include/curl ] && [ "$release" -eq 13 ]; then
+  if [ ! -e /usr/local/include/curl ] && [ ! -L /usr/local/include/curl ] && [ "$release" -eq 13 ]; then
       ln -s /usr/include/x86_64-linux-gnu/curl /usr/local/include/curl
   fi
   press_enter "=== Press enter to continue ==============================================================================="
@@ -614,7 +617,7 @@ if [ "$NGINX_B" = true ]; then
     mkdir -p usr/local/vesta/nginx etc/init.d DEBIAN
     
     press_enter "=== Press enter to Download control, postinst and postrm files"
-    echo "=== Copying control, postinst and postrm files to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN"
+    echo "=== Copying control, preinst, postinst and postrm files to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN"
     # Copying control, postinst and postrm files
     cp -rf /root/vesta/src/deb/nginx/* $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN
     
@@ -623,6 +626,8 @@ if [ "$NGINX_B" = true ]; then
     sed -i "/Version: /c\Version: $VESTA_NGINX_V" $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN/control
     
     # Set permission
+    echo "=== Setting permission: +x for $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN/preinst"
+    chmod +x $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN/preinst
     echo "=== Setting permission: +x for $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN/postinst"
     chmod +x $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/DEBIAN/postinst
     
@@ -638,13 +643,13 @@ if [ "$NGINX_B" = true ]; then
     
     echo "=== Changing to directory: $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V"
     cd $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V
-    if [ "$release" -lt 10 ]; then
-       echo "=== Copying /root/vesta/src/deb/for-download/nginx/nginx.conf to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/conf/nginx.conf"
-      cp /root/vesta/src/deb/for-download/nginx/nginx.conf $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/conf/nginx.conf
-    else
+    # if [ "$release" -lt 10 ]; then
+    #    echo "=== Copying /root/vesta/src/deb/for-download/nginx/nginx.conf to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/conf/nginx.conf"
+    #   cp /root/vesta/src/deb/for-download/nginx/nginx.conf $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/conf/nginx.conf
+    # else
       echo "=== Copying /root/vesta/src/deb/for-download/nginx/nginx-deb12.conf to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/conf/nginx.conf"
       cp /root/vesta/src/deb/for-download/nginx/nginx-deb12.conf $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/conf/nginx.conf
-    fi
+    # fi
     
     # if [ $BUILDING_NOW -eq 1 ]; then
     echo "=== Copying $INSTALL_DIR/nginx/sbin/nginx to $BUILD_DIR/vesta-nginx_$VESTA_NGINX_V/usr/local/vesta/nginx/sbin/vesta-nginx"
@@ -759,7 +764,6 @@ if [ "$PHP_B" = true ]; then
         echo "=== zlib library found at /opt/zlib-$ZLIB_V-static/lib/libz.a"
       fi
 
-      CURL_V='8.17.0'
       if [ ! -f "/opt/curl-$CURL_V-static/lib/libcurl.a" ]; then
         cd $BUILD_DIR
         if [ ! -f "curl-$CURL_V.tar.gz" ]; then
@@ -882,7 +886,7 @@ if [ "$PHP_B" = true ]; then
           echo "=== Value of CURL_LIBS: $CURL_LIBS"
           echo "=== Value of PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
           press_enter "=== Press enter to continue ==============================================================================="
-          echo "=== Below should be the static libraries (something like: -L/opt/curl-8.17.0-static/lib -lcurl -lssl -lcrypto -L/opt/zlib-1.3.2-static/lib -lz):"
+          echo "=== Below should be the static libraries (something like: -L/opt/curl-$CURL_V-static/lib -lcurl -lssl -lcrypto -L/opt/zlib-1.3.2-static/lib -lz):"
           pkg-config --static --libs libcurl
           press_enter "=== Press enter to continue ==============================================================================="
           CURL_STATIC_LIBS="$(pkg-config --static --libs libcurl)"
@@ -1015,11 +1019,11 @@ if [ "$PHP_B" = true ]; then
         press_enter "=== Press enter to continue ==============================================================================="
         echo "=== Running /opt/curl-$CURL_V-static/bin/curl-config --static-libs"
         /opt/curl-$CURL_V-static/bin/curl-config --static-libs
-        echo "=== Above should be the static libraries (something like: /opt/curl-8.17.0-static/lib/libcurl.a -L/lib -lssl -lcrypto -lssl -lcrypto -lz -pthread)"
+        echo "=== Above should be the static libraries (something like: /opt/curl-$CURL_V-static/lib/libcurl.a -L/lib -lssl -lcrypto -lssl -lcrypto -lz -pthread)"
         press_enter "=== Press enter to continue ==============================================================================="
         echo "=== Running: PKG_CONFIG_PATH=\"/opt/curl-$CURL_V-static/lib/pkgconfig:/opt/zlib-$ZLIB_V-static/lib/pkgconfig\" pkg-config --static --libs libcurl"
         PKG_CONFIG_PATH="/opt/curl-$CURL_V-static/lib/pkgconfig:/opt/zlib-$ZLIB_V-static/lib/pkgconfig" pkg-config --static --libs libcurl
-        echo "=== Above should be the static libraries (something like: -L/opt/curl-8.17.0-static/lib -L/opt/zlib-1.3.2-static/lib -lcurl -lssl -lcrypto -lssl -lcrypto -lz -pthread -lssl -lcrypto -lssl -lcrypto -lz -pthread -lz -lssl -lcrypto -ldl -pthread)"
+        echo "=== Above should be the static libraries (something like: -L/opt/curl-$CURL_V-static/lib -L/opt/zlib-1.3.2-static/lib -lcurl -lssl -lcrypto -lssl -lcrypto -lz -pthread -lssl -lcrypto -lssl -lcrypto -lz -pthread -lz -lssl -lcrypto -ldl -pthread)"
         press_enter "=== Press enter to continue ==============================================================================="
       fi
 
