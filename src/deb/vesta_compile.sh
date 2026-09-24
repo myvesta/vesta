@@ -600,7 +600,9 @@ if [ "$NGINX_B" = true ]; then
       press_enter "=== Press enter to make && make install"
       echo "=== Making (building) nginx"
       make && make install
-    
+
+      echo "=== Stripping nginx binary"
+      strip --strip-unneeded $INSTALL_DIR/nginx/sbin/nginx    
     fi
     
     press_enter "=== Press enter to Prepare Deb Package Folder Structure"
@@ -1029,7 +1031,28 @@ if [ "$PHP_B" = true ]; then
 
       echo "=== Making and installing PHP"
       make install
-      
+
+      if [ -f "$INSTALL_DIR/php/sbin/vesta-php" ] && [ ! -L "$INSTALL_DIR/php/sbin/vesta-php" ]; then
+        echo "=== Symlinking php-fpm to vesta-php"
+        rm -f $INSTALL_DIR/php/sbin/vesta-php
+        ln -s $INSTALL_DIR/php/sbin/php-fpm $INSTALL_DIR/php/sbin/vesta-php
+      fi
+
+      echo "=== Stripping php-fpm binary"
+      strip --strip-unneeded $INSTALL_DIR/php/sbin/php-fpm
+      echo "=== Stripping phar.phar binary"
+      strip --strip-unneeded $INSTALL_DIR/php/bin/phar.phar
+      echo "=== Stripping php binary"
+      strip --strip-unneeded $INSTALL_DIR/php/bin/php
+      echo "=== Stripping php-cgi binary"
+      strip --strip-unneeded $INSTALL_DIR/php/bin/php-cgi
+      echo "=== Stripping php-config binary"
+      strip --strip-unneeded $INSTALL_DIR/php/bin/php-config
+      echo "=== Stripping php-dbg binary"
+      strip --strip-unneeded $INSTALL_DIR/php/bin/php-dbg
+      echo "=== Stripping phpize binary"
+      strip --strip-unneeded $INSTALL_DIR/php/bin/phpize
+     
       press_enter "=== Press enter to continue ==============================================================================="
     fi
 
