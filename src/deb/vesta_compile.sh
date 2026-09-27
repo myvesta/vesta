@@ -555,39 +555,67 @@ if [ "$NGINX_B" = true ]; then
     
     BUILDING_NOW=0
     # Check if target directory exist
-    if [ ! -d "$BUILD_DIR/nginx-$NGINX_V" ] || [ ! -d "$INSTALL_DIR/nginx" ]; then
+    if [ ! -d "$INSTALL_DIR/nginx" ] || [ ! -d "$BUILD_DIR/nginx-$NGINX_V" ]; then
       BUILDING_NOW=1
       
       press_enter "=== Press enter to download and unpack source files"
     
-      echo "=== Removing existing nginx directory: nginx-$NGINX_V"
-      rm -rf nginx-$NGINX_V
-      echo "=== Removing existing openssl directory: openssl-$OPENSSL_V"
-      rm -rf openssl-$OPENSSL_V
-      echo "=== Removing existing pcre directory: pcre-$PCRE_V"
-      rm -rf pcre-$PCRE_V
-      echo "=== Removing existing zlib directory: zlib-$ZLIB_V"
-      rm -rf zlib-$ZLIB_V
-
-      if [ ! -d "nginx-$NGINX_V" ]; then
-        echo "=== Downloading nginx source files from $NGINX and extracting it"
-        wget -nv -qO- $NGINX | tar xz
+      if [ -d "nginx-$NGINX_V" ]; then
+        echo "=== Removing existing nginx directory: nginx-$NGINX_V"
+        rm -rf nginx-$NGINX_V/
       fi
-      if [ ! -d "openssl-$OPENSSL_V" ]; then
+      if [ -d "openssl-$OPENSSL_V" ]; then
+        echo "=== Removing existing openssl directory: openssl-$OPENSSL_V"
+        rm -rf openssl-$OPENSSL_V/
+      fi
+      if [ -d "pcre-$PCRE_V" ]; then
+        echo "=== Removing existing pcre directory: pcre-$PCRE_V"
+        rm -rf pcre-$PCRE_V/
+      fi
+      if [ -d "zlib-$ZLIB_V" ]; then
+        echo "=== Removing existing zlib directory: zlib-$ZLIB_V"
+        rm -rf zlib-$ZLIB_V/
+      fi
+
+      if [ ! -f "nginx-$NGINX_V.tar.gz" ]; then
+        echo "=== Downloading nginx source files from $NGINX and extracting it"
+        wget -nv $NGINX -O nginx-$NGINX_V.tar.gz
+      fi
+      if [ ! -f "nginx-$NGINX_V.tar.gz" ]; then
+        echo "=== ERROR: nginx source files not found, exiting..."
+        exit 1
+      fi
+      tar xzf nginx-$NGINX_V.tar.gz
+
+      if [ ! -f "openssl-$OPENSSL_V.tar.gz" ]; then
         echo "=== Downloading openssl source files from $OPENSSL and extracting it"
         wget -nv $OPENSSL -O openssl-$OPENSSL_V.tar.gz
-        tar xzf openssl-$OPENSSL_V.tar.gz
       fi
-      if [ ! -d "pcre-$PCRE_V" ]; then
+      if [ ! -f "openssl-$OPENSSL_V.tar.gz" ]; then
+        echo "=== ERROR: openssl source files not found, exiting..."
+        exit 1
+      fi
+      tar xzf openssl-$OPENSSL_V.tar.gz
+
+      if [ ! -f "pcre-$PCRE_V.tar.gz" ]; then
         echo "=== Downloading pcre source files from $PCRE and extracting it"
         wget -nv $PCRE -O pcre-$PCRE_V.tar.gz
-        tar xzf pcre-$PCRE_V.tar.gz
       fi
-      if [ ! -d "zlib-$ZLIB_V" ]; then
+      if [ ! -f "pcre-$PCRE_V.tar.gz" ]; then
+        echo "=== ERROR: pcre source files not found, exiting..."
+        exit 1
+      fi
+      tar xzf pcre-$PCRE_V.tar.gz
+
+      if [ ! -f "zlib-$ZLIB_V.tar.gz" ]; then
         echo "=== Downloading zlib source files from $ZLIB and extracting it"
         wget -nv $ZLIB -O zlib-$ZLIB_V.tar.gz
-        tar xzf zlib-$ZLIB_V.tar.gz
       fi
+      if [ ! -f "zlib-$ZLIB_V.tar.gz" ]; then
+        echo "=== ERROR: zlib source files not found, exiting..."
+        exit 1
+      fi
+      tar xzf zlib-$ZLIB_V.tar.gz
       
       echo "=== Change to nginx directory to: nginx-$NGINX_V"
       cd nginx-$NGINX_V
@@ -707,6 +735,11 @@ if [ "$PHP_B" = true ]; then
         wget "https://github.com/kkos/oniguruma/releases/download/v$ONIG_V/onig-$ONIG_V.tar.gz" -O onig-$ONIG_V.tar.gz
       fi
 
+      if [ -d "onig-$ONIG_V" ]; then
+        echo "=== Removing existing oniguruma directory: onig-$ONIG_V"
+        rm -rf onig-$ONIG_V/
+      fi
+
       echo "=== Extracting Oniguruma source files: onig-$ONIG_V.tar.gz"
       tar xzf onig-$ONIG_V.tar.gz
 
@@ -750,12 +783,10 @@ if [ "$PHP_B" = true ]; then
         fi
         if [ -d "zlib-$ZLIB_V" ]; then
           echo "=== Removing existing zlib directory: zlib-$ZLIB_V"
-          rm -rf zlib-$ZLIB_V
+          rm -rf zlib-$ZLIB_V/
         fi
-        if [ ! -d "zlib-$ZLIB_V" ]; then
-          echo "=== Extracting zlib source files: zlib-$ZLIB_V.tar.gz"
-          tar xzf zlib-$ZLIB_V.tar.gz
-        fi
+        echo "=== Extracting zlib source files: zlib-$ZLIB_V.tar.gz"
+        tar xzf zlib-$ZLIB_V.tar.gz
         echo "=== Changing to directory: zlib-$ZLIB_V"
         cd zlib-$ZLIB_V
         ZLIB_PREFIX="/opt/zlib-$ZLIB_V-static"
@@ -805,7 +836,7 @@ if [ "$PHP_B" = true ]; then
 
               if [ -d "libxml2-$LIBXML_V" ]; then
                   echo "=== Removing existing libxml2 directory: libxml2-$LIBXML_V"
-                  rm -rf "libxml2-$LIBXML_V"
+                  rm -rf libxml2-$LIBXML_V/
               fi
 
               echo "=== Extracting libxml2 source files"
@@ -884,14 +915,14 @@ if [ "$PHP_B" = true ]; then
 
           if [ -d "openssl-$OPENSSL_V" ]; then
               echo "=== Removing existing OpenSSL directory: openssl-$OPENSSL_V"
-              rm -rf "openssl-$OPENSSL_V"
+              rm -rf openssl-$OPENSSL_V/
           fi
 
           echo "=== Extracting OpenSSL source files"
           tar xzf "openssl-$OPENSSL_V.tar.gz"
 
           echo "=== Changing to directory: openssl-$OPENSSL_V"
-          cd "openssl-$OPENSSL_V"
+          cd openssl-$OPENSSL_V
 
           echo "=== Configuring static OpenSSL"
           ./config \
@@ -931,10 +962,12 @@ if [ "$PHP_B" = true ]; then
           echo "=== Downloading curl source files from https://curl.se/download/curl-$CURL_V.tar.gz and extracting it"
           wget https://curl.se/download/curl-$CURL_V.tar.gz
         fi
-        if [ ! -d "curl-$CURL_V" ]; then
-          echo "=== Extracting curl source files: curl-$CURL_V.tar.gz"
-          tar xzf curl-$CURL_V.tar.gz
+        if [ -d "curl-$CURL_V" ]; then
+          echo "=== Removing existing curl directory: curl-$CURL_V"
+          rm -rf curl-$CURL_V/
         fi
+        echo "=== Extracting curl source files: curl-$CURL_V.tar.gz"
+        tar xzf curl-$CURL_V.tar.gz
         echo "=== Changing to directory: curl-$CURL_V"
         cd curl-$CURL_V
         CURL_PREFIX="/opt/curl-$CURL_V-static"
@@ -1006,20 +1039,21 @@ if [ "$PHP_B" = true ]; then
     fi
 
     # Check if php-fpm binary exists
-    if [ ! -f "$INSTALL_DIR/php/sbin/php-fpm" ]; then
+    if [ ! -f "$INSTALL_DIR/php/sbin/php-fpm" ] || [ ! -d "$BUILD_DIR/php-$PHP_V" ]; then
       cd $BUILD_DIR
       BUILDING_NOW=1
       
-      if [ ! -d "php-$PHP_V" ]; then
-        echo "=== Removing existing php directory: php-$PHP_V"
-        rm -rf php-$PHP_V
-      fi
-
       if [ ! -f "php-$PHP_V.tar.gz" ]; then
         echo "=== Download and unpack PHP source files from $PHP and extracting it"
         wget -nv $PHP -O php-$PHP_V.tar.gz
       fi
 
+      if [ -d "php-$PHP_V" ]; then
+        echo "=== Removing existing php directory: php-$PHP_V"
+        rm -rf php-$PHP_V/
+      fi
+
+      echo "=== Extracting PHP source files: php-$PHP_V.tar.gz"
       tar xzf php-$PHP_V.tar.gz
       
       echo "=== Change to php directory to: php-$PHP_V"
