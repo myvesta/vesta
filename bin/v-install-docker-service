@@ -1,5 +1,23 @@
 #!/bin/bash
 
+install_compose() {
+	echo "= Installing docker-compose"
+	if [ "$release" -gt 8 ]; then
+		curl --insecure -s https://api.github.com/repos/docker/compose/releases/latest | grep browser_download_url | grep docker-compose-linux-x86_64 | cut -d '"' -f 4 | wget -qi - && \
+		chmod +x docker-compose-linux-x86_64 && \
+		mv docker-compose-linux-x86_64 /usr/local/bin/docker-compose
+	else
+	    wget -O /usr/local/bin/docker-compose 'https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64'
+		chmod +x /usr/local/bin/docker-compose
+	fi
+	if [ -f /usr/local/bin/docker-compose ]; then
+		echo "= Docker-compose installed successfully"
+	else
+		echo "*** ERROR: Installing docker-compose failed !!!";
+	fi
+	# docker-compose version
+}
+
 echo "= Checking for Docker..."
 if ! command -v docker &> /dev/null; then
 	echo "= Docker not found. Starting Docker installation."
@@ -20,23 +38,55 @@ if ! command -v docker &> /dev/null; then
 		apt-get install -y docker-buildx-plugin docker-compose-plugin
 	else
 		# Debian < 11
-		apt install apt-transport-https ca-certificates curl gnupg2 software-properties-common lsb-release
-		curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+		apt-get install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common lsb-release
+		curl -fsSL --insecure https://download.docker.com/linux/debian/gpg | sudo apt-key add -
 		echo "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
 		apt-get update > /dev/null 2>&1
-		apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+		if [ "$release" -gt 9 ]; then
+			apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+		else
+		    if [ "$release" -eq 9 ]; then
+				apt-get -y install docker-ce docker-ce-cli containerd.io
+				install_compose
+				mkdir -p /usr/local/lib/docker/cli-plugins
+				cp "$(command -v docker-compose)" /usr/local/lib/docker/cli-plugins/docker-compose
+				chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+			fi
+		    if [ "$release" -eq 8 ]; then
+				rm -f /etc/apt/sources.list.d/docker.list
+				cd ~
+				wget https://download.docker.com/linux/debian/dists/jessie/pool/stable/amd64/docker-ce_18.06.3~ce~3-0~debian_amd64.deb
+				dpkg -i docker-ce_18.06.3~ce~3-0~debian_amd64.deb || true
+				apt-get -f -y install
+				install_compose
+				grep -qF '# docker compose -> docker-compose compatibility' /root/.bashrc || cat >> /root/.bashrc <<'EOF'
+
+# docker compose -> docker-compose compatibility
+docker() {
+    if [ "$1" = "compose" ]; then
+        shift
+        command docker-compose "$@"
+    else
+        command docker "$@"
+    fi
+}
+EOF
+				echo "=============================================================="
+				echo "= Plesae run the following command to finish the installation:"
+				echo "source /root/.bashrc"
+				echo "=============================================================="
+			fi
+		fi
 	fi
 	if ! command -v docker &> /dev/null; then
 		echo "- Error installing docker !!!";
 		exit 1;
 	fi
+	if [ "$release" -gt 9 ]; then
+		install_compose
+	fi
 	# echo "= Creating docker group"
 	# newgrp docker
-	echo "= Installing docker-compose"
-	curl -s https://api.github.com/repos/docker/compose/releases/latest | grep browser_download_url | grep docker-compose-linux-x86_64 | cut -d '"' -f 4 | wget -qi - && \
-	chmod +x docker-compose-linux-x86_64 && \
-	mv docker-compose-linux-x86_64 /usr/local/bin/docker-compose
-	# docker-compose version
 	systemctl restart docker
 	echo "= Docker installation completed."
 else
