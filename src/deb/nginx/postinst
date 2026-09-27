@@ -15,4 +15,8 @@ if [ ! -e "/usr/local/vesta/data/users/admin" ]; then
     exit
 fi
 
+echo "=== Restarting vesta services after vesta-nginx update"
+service vesta stop
+service vesta start
+
 exit 0

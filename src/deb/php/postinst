@@ -5,4 +5,13 @@
 #     /usr/local/vesta/ioncube/ioncube.sh add
 # fi
 
+# Run triggers only on updates
+if [ ! -e "/usr/local/vesta/data/users/admin" ]; then
+    exit
+fi
+
+echo "=== Restarting vesta services after vesta-php update"
+service vesta stop
+service vesta start
+
 exit 0

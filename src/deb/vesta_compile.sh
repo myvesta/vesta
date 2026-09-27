@@ -9,6 +9,10 @@ add_deb_to_apt_repo=0
 TARGET_DEB_NAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
 TARGET_DEB_VER=$(cat /etc/debian_version | tr "." "\n" | head -n1)
 
+if [ $TARGET_DEB_VER = "8" ] && [ -z "$TARGET_DEB_NAME" ] ; then
+  TARGET_DEB_NAME="jessie"
+fi
+
 run_apt_update_and_install=1
 wait_to_press_enter=1
 
@@ -32,6 +36,10 @@ MAINTAINER_EMAIL='info@myvestacp.com'
 
 TARGET_DEB_NAME_MAIN=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
 TARGET_DEB_VER_MAIN=$(cat /etc/debian_version | tr "." "\n" | head -n1)
+
+if [ $TARGET_DEB_VER_MAIN = "8" ] && [ -z "$TARGET_DEB_NAME_MAIN" ] ; then
+  TARGET_DEB_NAME_MAIN="jessie"
+fi
 
 # Set compiling directory
 BUILD_DIR="/usr/src/$TARGET_DEB_NAME"
@@ -70,6 +78,8 @@ VESTA_PHP_V="$PHP_V"
 
 # Only for Debian 8 and 9
 CURL_V='8.17.0'
+LIBXML_V='2.12.10'
+LIBXML="https://download.gnome.org/sources/libxml2/2.12/libxml2-$LIBXML_V.tar.xz"
 
 # Generate Links for sourcecode
 NGINX='https://nginx.org/download/nginx-'$NGINX_V'.tar.gz'
@@ -86,7 +96,7 @@ PHP='https://www.php.net/distributions/php-'$PHP_V'.tar.gz'
 release=$(cat /etc/debian_version | tr "." "\n" | head -n1)
 
 if [ "$release" -lt 12 ]; then
-    SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro dpkg-sig git rsync'
+    SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro dpkg-sig git rsync xz-utils'
 else
     SOFTWARE='build-essential libxml2-dev libz-dev libcurl4-gnutls-dev unzip openssl libssl-dev pkg-config reprepro git rsync'
 fi
@@ -558,21 +568,25 @@ if [ "$NGINX_B" = true ]; then
       rm -rf pcre-$PCRE_V
       echo "=== Removing existing zlib directory: zlib-$ZLIB_V"
       rm -rf zlib-$ZLIB_V
+
       if [ ! -d "nginx-$NGINX_V" ]; then
         echo "=== Downloading nginx source files from $NGINX and extracting it"
         wget -nv -qO- $NGINX | tar xz
       fi
       if [ ! -d "openssl-$OPENSSL_V" ]; then
         echo "=== Downloading openssl source files from $OPENSSL and extracting it"
-        wget -nv -qO- $OPENSSL | tar xz
+        wget -nv $OPENSSL -O openssl-$OPENSSL_V.tar.gz
+        tar xzf openssl-$OPENSSL_V.tar.gz
       fi
       if [ ! -d "pcre-$PCRE_V" ]; then
         echo "=== Downloading pcre source files from $PCRE and extracting it"
-        wget -nv -qO- $PCRE | tar xz
+        wget -nv $PCRE -O pcre-$PCRE_V.tar.gz
+        tar xzf pcre-$PCRE_V.tar.gz
       fi
       if [ ! -d "zlib-$ZLIB_V" ]; then
         echo "=== Downloading zlib source files from $ZLIB and extracting it"
-        wget -nv -qO- $ZLIB | tar xz
+        wget -nv $ZLIB -O zlib-$ZLIB_V.tar.gz
+        tar xzf zlib-$ZLIB_V.tar.gz
       fi
       
       echo "=== Change to nginx directory to: nginx-$NGINX_V"
@@ -679,7 +693,9 @@ fi
 if [ "$PHP_B" = true ]; then
   if [ $build_deb_package -eq 1 ]; then
     echo "======= Building vesta-php package ======="
+
     cd $BUILD_DIR
+    echo "=== Changing to directory: $BUILD_DIR"
     
     BUILDING_NOW=0
 
@@ -700,6 +716,7 @@ if [ "$PHP_B" = true ]; then
       press_enter "=== Press enter to configure Oniguruma"
 
       echo "=== Configuring Oniguruma"
+      CFLAGS="-O2 -fPIC" \
       ./configure \
           --prefix=$BUILD_DIR/oniguruma-static \
           --disable-shared \
@@ -731,6 +748,10 @@ if [ "$PHP_B" = true ]; then
         if [ ! -f "zlib-$ZLIB_V.tar.gz" ]; then
           wget https://zlib.net/zlib-$ZLIB_V.tar.gz -O zlib-$ZLIB_V.tar.gz
         fi
+        if [ -d "zlib-$ZLIB_V" ]; then
+          echo "=== Removing existing zlib directory: zlib-$ZLIB_V"
+          rm -rf zlib-$ZLIB_V
+        fi
         if [ ! -d "zlib-$ZLIB_V" ]; then
           echo "=== Extracting zlib source files: zlib-$ZLIB_V.tar.gz"
           tar xzf zlib-$ZLIB_V.tar.gz
@@ -740,7 +761,12 @@ if [ "$PHP_B" = true ]; then
         ZLIB_PREFIX="/opt/zlib-$ZLIB_V-static"
         press_enter "=== Press enter to continue ==============================================================================="
         echo "=== Configuring zlib"
-        CFLAGS="-O2 -fPIC" ./configure \
+        ADDITIONAL_CFLAGS="-O2 -fPIC"
+        if [ $TARGET_DEB_VER -eq 8 ]; then
+          ADDITIONAL_CFLAGS="-O2 -fPIC -std=gnu99"
+        fi
+        echo "=== Value of ADDITIONAL_CFLAGS: $ADDITIONAL_CFLAGS"
+        CFLAGS="$ADDITIONAL_CFLAGS" ./configure \
           --static \
           --prefix="$ZLIB_PREFIX"
         press_enter "=== Press enter to continue ==============================================================================="
@@ -766,10 +792,143 @@ if [ "$PHP_B" = true ]; then
         echo "=== zlib library found at /opt/zlib-$ZLIB_V-static/lib/libz.a"
       fi
 
+      if [ "$TARGET_DEB_VER" -eq 8 ]; then
+          LIBXML_PREFIX="/opt/libxml2-$LIBXML_V-static"
+
+          if [ ! -f "$LIBXML_PREFIX/lib/libxml2.a" ]; then
+              cd "$BUILD_DIR"
+
+              if [ ! -f "libxml2-$LIBXML_V.tar.xz" ]; then
+                  echo "=== Downloading libxml2 $LIBXML_V"
+                  wget "$LIBXML" -O "libxml2-$LIBXML_V.tar.xz"
+              fi
+
+              if [ -d "libxml2-$LIBXML_V" ]; then
+                  echo "=== Removing existing libxml2 directory: libxml2-$LIBXML_V"
+                  rm -rf "libxml2-$LIBXML_V"
+              fi
+
+              echo "=== Extracting libxml2 source files"
+              tar xJf "libxml2-$LIBXML_V.tar.xz"
+
+              echo "=== Changing to directory: libxml2-$LIBXML_V"
+              cd "libxml2-$LIBXML_V"
+
+              echo "=== Configuring static libxml2"
+
+              CFLAGS="-O2 -fPIC" \
+              CPPFLAGS="-I$ZLIB_PREFIX/include" \
+              LDFLAGS="-L$ZLIB_PREFIX/lib" \
+              PKG_CONFIG_PATH="$ZLIB_PREFIX/lib/pkgconfig" \
+              ./configure \
+                  --prefix="$LIBXML_PREFIX" \
+                  --disable-shared \
+                  --enable-static \
+                  --without-python \
+                  --without-lzma \
+                  --with-zlib="$ZLIB_PREFIX"
+
+              if [ $? -ne 0 ]; then
+                  echo "=== ERROR: libxml2 configuration failed, exiting..."
+                  exit 1
+              fi
+
+              press_enter "=== Press enter to compile libxml2 ==============================================================================="
+
+              make -j$(nproc)
+
+              if [ $? -ne 0 ]; then
+                  echo "=== ERROR: libxml2 compilation failed, exiting..."
+                  exit 1
+              fi
+
+              press_enter "=== Press enter to install libxml2 ==============================================================================="
+
+              make install
+
+              if [ $? -ne 0 ]; then
+                  echo "=== ERROR: libxml2 installation failed, exiting..."
+                  exit 1
+              fi
+
+              echo "=== Checking static libxml2 library"
+              ls -lh "$LIBXML_PREFIX/lib/libxml2.a"
+
+              echo "=== Checking for shared libxml2 libraries; output should be empty:"
+              find "$LIBXML_PREFIX/lib" -maxdepth 1 -name 'libxml2.so*' -ls
+
+              echo "=== Checking libxml2 version (expecting: $LIBXML_V)"
+              PKG_CONFIG_PATH="$LIBXML_PREFIX/lib/pkgconfig" \
+                  pkg-config --modversion libxml-2.0
+
+              echo "=== Static libxml2 libraries:"
+              PKG_CONFIG_PATH="$LIBXML_PREFIX/lib/pkgconfig:$ZLIB_PREFIX/lib/pkgconfig" \
+                  pkg-config --static --libs libxml-2.0
+
+              press_enter "=== Press enter to continue ==============================================================================="
+
+              cd ..
+          else
+              echo "=== libxml2 static library found at $LIBXML_PREFIX/lib/libxml2.a"
+          fi
+      fi
+      
+      OPENSSL_PREFIX="/opt/openssl-$OPENSSL_V-static"
+      if [ ! -f "$OPENSSL_PREFIX/lib/libssl.a" ] || [ ! -f "$OPENSSL_PREFIX/lib/libcrypto.a" ]; then
+          cd "$BUILD_DIR"
+
+          if [ ! -f "openssl-$OPENSSL_V.tar.gz" ]; then
+              echo "=== Downloading OpenSSL $OPENSSL_V"
+              wget "$OPENSSL" -O "openssl-$OPENSSL_V.tar.gz"
+          fi
+
+          if [ -d "openssl-$OPENSSL_V" ]; then
+              echo "=== Removing existing OpenSSL directory: openssl-$OPENSSL_V"
+              rm -rf "openssl-$OPENSSL_V"
+          fi
+
+          echo "=== Extracting OpenSSL source files"
+          tar xzf "openssl-$OPENSSL_V.tar.gz"
+
+          echo "=== Changing to directory: openssl-$OPENSSL_V"
+          cd "openssl-$OPENSSL_V"
+
+          echo "=== Configuring static OpenSSL"
+          ./config \
+              --prefix="$OPENSSL_PREFIX" \
+              --openssldir="$OPENSSL_PREFIX/ssl" \
+              no-shared \
+              no-tests \
+              -fPIC
+
+          press_enter "=== Press enter to compile OpenSSL ==============================================================================="
+
+          make -j$(nproc)
+
+          press_enter "=== Press enter to install OpenSSL ==============================================================================="
+
+          make install_sw
+
+          echo "=== Checking static OpenSSL libraries"
+          ls -lh "$OPENSSL_PREFIX/lib/libssl.a"
+          ls -lh "$OPENSSL_PREFIX/lib/libcrypto.a"
+
+          echo "=== Checking OpenSSL version"
+          "$OPENSSL_PREFIX/bin/openssl" version
+
+          press_enter "=== Press enter to continue ==============================================================================="
+
+          cd ..
+      else
+          echo "=== OpenSSL static libraries found:"
+          echo "$OPENSSL_PREFIX/lib/libssl.a"
+          echo "$OPENSSL_PREFIX/lib/libcrypto.a"
+      fi
+
       if [ ! -f "/opt/curl-$CURL_V-static/lib/libcurl.a" ]; then
         cd $BUILD_DIR
         if [ ! -f "curl-$CURL_V.tar.gz" ]; then
-          echo "=== Downloading curl source files from $CURL and extracting it"
+          echo "=== Downloading curl source files from https://curl.se/download/curl-$CURL_V.tar.gz and extracting it"
           wget https://curl.se/download/curl-$CURL_V.tar.gz
         fi
         if [ ! -d "curl-$CURL_V" ]; then
@@ -783,13 +942,14 @@ if [ "$PHP_B" = true ]; then
         press_enter "=== Press enter to continue ==============================================================================="
         echo "=== Configuring curl"
         CFLAGS="-O2 -fPIC" \
-          CPPFLAGS="-I$ZLIB_PREFIX/include" \
-          LDFLAGS="-L$ZLIB_PREFIX/lib" \
+          CPPFLAGS="-I$OPENSSL_PREFIX/include -I$ZLIB_PREFIX/include" \
+          LDFLAGS="-L$OPENSSL_PREFIX/lib -L$ZLIB_PREFIX/lib" \
+          PKG_CONFIG_PATH="$OPENSSL_PREFIX/lib/pkgconfig:$ZLIB_PREFIX/lib/pkgconfig" \
           ./configure \
               --prefix="$CURL_PREFIX" \
               --disable-shared \
               --enable-static \
-              --with-openssl \
+              --with-openssl="$OPENSSL_PREFIX" \
               --with-zlib="$ZLIB_PREFIX" \
               --without-brotli \
               --without-zstd \
@@ -854,8 +1014,13 @@ if [ "$PHP_B" = true ]; then
         echo "=== Removing existing php directory: php-$PHP_V"
         rm -rf php-$PHP_V
       fi
-      echo "=== Download and unpack PHP source files from $PHP and extracting it"
-      wget -nv -qO- $PHP | tar xz
+
+      if [ ! -f "php-$PHP_V.tar.gz" ]; then
+        echo "=== Download and unpack PHP source files from $PHP and extracting it"
+        wget -nv $PHP -O php-$PHP_V.tar.gz
+      fi
+
+      tar xzf php-$PHP_V.tar.gz
       
       echo "=== Change to php directory to: php-$PHP_V"
       cd php-$PHP_V
@@ -878,11 +1043,117 @@ if [ "$PHP_B" = true ]; then
           exit 1
         fi
 
+        if [ "$TARGET_DEB_VER" -eq 8 ]; then
+            LIBXML_PREFIX="/opt/libxml2-$LIBXML_V-static"
+
+            if [ -f "$LIBXML_PREFIX/lib/libxml2.a" ]; then
+                echo "=== libxml2 static library found:"
+                echo "$LIBXML_PREFIX/lib/libxml2.a"
+
+                export LIBXML_CFLAGS="-I$LIBXML_PREFIX/include/libxml2"
+
+                LIBXML_STATIC_LIBS="$(
+                    PKG_CONFIG_PATH="$LIBXML_PREFIX/lib/pkgconfig:$ZLIB_PREFIX/lib/pkgconfig" \
+                        pkg-config --static --libs libxml-2.0
+                )"
+
+                echo "=== libxml2 static libs reported by pkg-config:"
+                echo "$LIBXML_STATIC_LIBS"
+
+                LIBXML_LIBS=""
+
+                for lib in $LIBXML_STATIC_LIBS; do
+                    case "$lib" in
+                        -lxml2)
+                            lib="-l:libxml2.a"
+                            ;;
+                        -lz)
+                            lib="-l:libz.a"
+                            ;;
+                    esac
+
+                    LIBXML_LIBS+=" $lib"
+                done
+
+                LIBXML_LIBS="${LIBXML_LIBS# }"
+
+                export LIBXML_LIBS
+
+                echo "=== Value of LIBXML_PREFIX: $LIBXML_PREFIX"
+                echo "=== Value of LIBXML_CFLAGS: $LIBXML_CFLAGS"
+                echo "=== Value of LIBXML_LIBS: $LIBXML_LIBS"
+
+                if [[ "$LIBXML_LIBS" != *"-l:libxml2.a"* ]]; then
+                    echo "=== ERROR: LIBXML_LIBS does not contain -l:libxml2.a"
+                    exit 1
+                fi
+
+                if [[ "$LIBXML_LIBS" != *"-l:libz.a"* ]]; then
+                    echo "=== ERROR: LIBXML_LIBS does not contain -l:libz.a"
+                    exit 1
+                fi
+
+                press_enter "=== Press enter to continue ==============================================================================="        
+            else
+                echo "=== ERROR: static libxml2 library not found, exiting..."
+                exit 1
+            fi
+        fi
+
+        OPENSSL_PREFIX="/opt/openssl-$OPENSSL_V-static"
+        if [ -f "$OPENSSL_PREFIX/lib/libssl.a" ] && [ -f "$OPENSSL_PREFIX/lib/libcrypto.a" ]; then
+            echo "=== OpenSSL static libraries found:"
+            echo "$OPENSSL_PREFIX/lib/libssl.a"
+            echo "$OPENSSL_PREFIX/lib/libcrypto.a"
+
+            export OPENSSL_CFLAGS="-I$OPENSSL_PREFIX/include"
+
+            OPENSSL_STATIC_LIBS="$(
+                PKG_CONFIG_PATH="$OPENSSL_PREFIX/lib/pkgconfig" \
+                pkg-config --static --libs openssl
+            )"
+
+            echo "=== OpenSSL static libs reported by pkg-config:"
+            echo "$OPENSSL_STATIC_LIBS"
+
+            OPENSSL_LIBS=""
+
+            for lib in $OPENSSL_STATIC_LIBS; do
+                case "$lib" in
+                    -lssl)
+                        lib="-l:libssl.a"
+                        ;;
+                    -lcrypto)
+                        lib="-l:libcrypto.a"
+                        ;;
+                esac
+
+                OPENSSL_LIBS+=" $lib"
+            done
+
+            OPENSSL_LIBS="${OPENSSL_LIBS# }"
+
+            export OPENSSL_LIBS
+
+            echo "=== Value of OPENSSL_PREFIX: $OPENSSL_PREFIX"
+            echo "=== Value of OPENSSL_CFLAGS: $OPENSSL_CFLAGS"
+            echo "=== Value of OPENSSL_LIBS: $OPENSSL_LIBS"
+
+            press_enter "=== Press enter to continue ==============================================================================="
+        else
+            echo "=== ERROR: static OpenSSL libraries not found, exiting..."
+            exit 1
+        fi
+
         if [ -f "/opt/curl-$CURL_V-static/lib/libcurl.a" ]; then
           CURL_PREFIX="/opt/curl-$CURL_V-static"
           export CURL_CFLAGS="-I$CURL_PREFIX/include"
           CURL_LIBS="$CURL_PREFIX/lib/libcurl.a"
-          export PKG_CONFIG_PATH="$CURL_PREFIX/lib/pkgconfig:$ZLIB_PREFIX/lib/pkgconfig"
+          if [ "$TARGET_DEB_VER" -eq 8 ]; then
+              export PKG_CONFIG_PATH="$LIBXML_PREFIX/lib/pkgconfig:$CURL_PREFIX/lib/pkgconfig:$OPENSSL_PREFIX/lib/pkgconfig:$ZLIB_PREFIX/lib/pkgconfig"
+          else
+              export PKG_CONFIG_PATH="$CURL_PREFIX/lib/pkgconfig:$ZLIB_PREFIX/lib/pkgconfig"
+          fi
           echo "=== Value of CURL_CFLAGS: $CURL_CFLAGS"
           echo "=== Value of CURL_PREFIX: $CURL_PREFIX"
           echo "=== Value of CURL_LIBS: $CURL_LIBS"
@@ -952,12 +1223,24 @@ if [ "$PHP_B" = true ]; then
           echo "=== ERROR: curl library not found, exiting..."
           exit 1
         fi
+
+        if [ "$TARGET_DEB_VER" -eq 8 ]; then
+            echo "=== Debian 8: enabling PIE for PHP build"
+            export CFLAGS="-O2 -fPIE"
+            export LDFLAGS="-pie"
+
+            echo "=== CFLAGS: $CFLAGS"
+            echo "=== LDFLAGS: $LDFLAGS"
+            press_enter "=== Press enter to continue ==============================================================================="
+        fi
+
       fi
       
       echo "=== Configure PHP"
       ./configure --prefix=$INSTALL_DIR/php \
                   --enable-fpm \
                   --with-zlib \
+                  --with-openssl \
                   --with-fpm-user=admin \
                   --with-fpm-group=admin \
                   --with-mysqli \
@@ -968,7 +1251,64 @@ if [ "$PHP_B" = true ]; then
                   --without-pdo-sqlite \
                   --disable-rpath
       
+
+      PHP_CONFIGURE_RESULT=$?
+
+      if [ "$TARGET_DEB_VER" -eq 8 ]; then
+          unset CFLAGS
+          unset LDFLAGS
+      fi
+
+      if [ "$PHP_CONFIGURE_RESULT" -ne 0 ]; then
+          echo "=== ERROR: PHP configuration failed, exiting..."
+          exit 1
+      fi
+
+      echo "=== Configuring PHP done"
+      press_enter "=== Press enter to continue ==============================================================================="
+
       if [ "$TARGET_DEB_VER" -lt 10 ]; then
+
+        if [ "$TARGET_DEB_VER" -eq 8 ]; then
+            echo "=== Checking PIE flags in PHP Makefile"
+
+            echo "=== CFLAGS_CLEAN:"
+            grep '^CFLAGS_CLEAN =' Makefile
+
+            echo "=== EXTRA_LDFLAGS_PROGRAM:"
+            grep '^EXTRA_LDFLAGS_PROGRAM =' Makefile
+
+            if ! grep '^CFLAGS_CLEAN =' Makefile | grep -q -- '-fPIE'; then
+                echo "=== ERROR: -fPIE not found in PHP CFLAGS_CLEAN"
+                exit 1
+            fi
+
+            if ! grep '^EXTRA_LDFLAGS_PROGRAM =' Makefile | grep -q -- '-pie'; then
+                echo "=== ERROR: -pie not found in PHP EXTRA_LDFLAGS_PROGRAM"
+                exit 1
+            fi
+
+            echo "=== PIE compile/link flags found successfully"
+
+            press_enter "=== Press enter to continue ==============================================================================="   
+            echo "=== Checking static libxml2 in PHP Makefile"
+
+            grep '^EXTRA_LIBS =' Makefile | tr ' ' '\n' | grep -E 'libxml|libz'
+
+            if ! grep '^EXTRA_LIBS =' Makefile | grep -q -- '-l:libxml2\.a'; then
+                echo "=== ERROR: PHP Makefile does not contain -l:libxml2.a"
+                exit 1
+            fi
+        fi
+        echo "=== Running: grep '^EXTRA_LIBS =' Makefile | tr ' ' '\n' | grep -E 'ssl|crypto'"
+        grep '^EXTRA_LIBS =' Makefile | tr ' ' '\n' | grep -E 'ssl|crypto'
+
+        echo "=== The output above should contain:"
+        echo "-l:libssl.a"
+        echo "-l:libcrypto.a"
+
+        press_enter "=== Press enter to continue ==============================================================================="
+
         echo "=== Running: grep '^EXTRA_LIBS =' Makefile"
         grep '^EXTRA_LIBS =' Makefile
         press_enter "=== Press enter to continue ==============================================================================="
@@ -1001,10 +1341,39 @@ if [ "$PHP_B" = true ]; then
       echo "=== Making PHP"
       make
 
+      if [ $? -ne 0 ]; then
+          echo "=== ERROR: PHP compilation failed, exiting..."
+          exit 1
+      fi
+
       echo "=== Making done"
       press_enter "=== Press enter to continue ==============================================================================="
 
       if [ "$TARGET_DEB_VER" -lt 10 ]; then
+        if [ "$TARGET_DEB_VER" -eq 8 ]; then
+          echo "=== libxml version used by compiled PHP:"
+          sapi/cli/php -r 'echo LIBXML_DOTTED_VERSION, PHP_EOL;'
+          press_enter "=== Press enter to continue ==============================================================================="
+
+          echo "=== Checking dynamic libxml2 dependency; output should be empty:"
+          readelf -d sapi/cli/php | grep -i libxml
+          readelf -d sapi/fpm/php-fpm | grep -i libxml
+          press_enter "=== Press enter to continue ==============================================================================="
+        fi
+        echo "=== OpenSSL used by compiled PHP:"
+        sapi/cli/php -i | grep -E '^OpenSSL (support|Library Version|Header Version)'
+        echo "---"
+        echo "The output above should contain:"
+        echo "OpenSSL support => enabled"
+        echo "OpenSSL Library Version => $OPENSSL_V"
+        echo "OpenSSL Header Version => $OPENSSL_V"
+        press_enter "=== Press enter to continue ==============================================================================="
+        echo "=== Checking dynamic OpenSSL dependencies; output should be empty:"
+        readelf -d sapi/cli/php | grep -Ei 'libssl|libcrypto'
+        press_enter "=== Press enter to continue ==============================================================================="
+        readelf -d sapi/fpm/php-fpm | grep -Ei 'libssl|libcrypto'
+        press_enter "=== Press enter to continue ==============================================================================="
+
         echo "=== Below should be a empty output:"
         readelf -d sapi/fpm/php-fpm | grep -i curl
         readelf -d sapi/cli/php | grep -i curl
@@ -1032,26 +1401,18 @@ if [ "$PHP_B" = true ]; then
       echo "=== Making and installing PHP"
       make install
 
-      if [ -f "$INSTALL_DIR/php/sbin/vesta-php" ] && [ ! -L "$INSTALL_DIR/php/sbin/vesta-php" ]; then
-        echo "=== Symlinking php-fpm to vesta-php"
-        rm -f $INSTALL_DIR/php/sbin/vesta-php
-        ln -s $INSTALL_DIR/php/sbin/php-fpm $INSTALL_DIR/php/sbin/vesta-php
-      fi
+      press_enter "=== Press enter to continue ==============================================================================="
 
       echo "=== Stripping php-fpm binary"
       strip --strip-unneeded $INSTALL_DIR/php/sbin/php-fpm
-      echo "=== Stripping phar.phar binary"
-      strip --strip-unneeded $INSTALL_DIR/php/bin/phar.phar
       echo "=== Stripping php binary"
       strip --strip-unneeded $INSTALL_DIR/php/bin/php
       echo "=== Stripping php-cgi binary"
       strip --strip-unneeded $INSTALL_DIR/php/bin/php-cgi
-      echo "=== Stripping php-config binary"
-      strip --strip-unneeded $INSTALL_DIR/php/bin/php-config
-      echo "=== Stripping php-dbg binary"
-      strip --strip-unneeded $INSTALL_DIR/php/bin/php-dbg
-      echo "=== Stripping phpize binary"
-      strip --strip-unneeded $INSTALL_DIR/php/bin/phpize
+      if [ -f "$INSTALL_DIR/php/bin/phpdbg" ]; then
+        echo "=== Stripping phpdbg binary"
+        strip --strip-unneeded $INSTALL_DIR/php/bin/phpdbg
+      fi
      
       press_enter "=== Press enter to continue ==============================================================================="
     fi
@@ -1098,8 +1459,11 @@ if [ "$PHP_B" = true ]; then
     echo "=== Copying /root/vesta/src/deb/for-download/php/php.ini to $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/lib/php.ini"
     cp /root/vesta/src/deb/for-download/php/php.ini $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/lib/php.ini
     
-    echo "=== Copying $INSTALL_DIR/php/sbin/php-fpm to $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/sbin/vesta-php"
-    cp $INSTALL_DIR/php/sbin/php-fpm $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/sbin/vesta-php
+    echo "=== Symlinking vesta-php to php-fpm"
+    cd $BUILD_DIR/vesta-php_$VESTA_PHP_V/usr/local/vesta/php/sbin/
+    ln -s php-fpm vesta-php
+
+    cd $BUILD_DIR
 
     echo "=== Making deb package: vesta-php_$VESTA_PHP_V"
     make_deb_package "vesta-php" "$VESTA_PHP_V"
