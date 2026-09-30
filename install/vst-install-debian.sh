@@ -798,9 +798,13 @@ if [ "$mysql8" = 'yes' ]; then
 	    rm -rf "${GNUPGHOME}"
 	    unset GNUPGHOME
      else
-            # check latest on: https://dev.mysql.com/downloads/repo/apt/
-	    wget https://dev.mysql.com/get/mysql-apt-config_0.8.34-1_all.deb
-            dpkg -i mysql-apt-config_0.8.34-1_all.deb
+        if [ ! -e '/usr/bin/lsb_release' ]; then
+            apt-get -y install lsb-release > /dev/null 2>&1
+            check_result $? "Can't install lsb-release package"
+        fi
+        # check latest on: https://dev.mysql.com/downloads/repo/apt/
+	    wget https://dev.mysql.com/get/mysql-apt-config_0.8.40-1_all.deb
+        dpkg -i mysql-apt-config_0.8.40-1_all.deb
      fi
     
     mpass=$(gen_pass)
