@@ -494,5 +494,8 @@ fi
 # Fixing php.ini files to have the correct disable_functions line
 /usr/local/vesta/bin/v-fix-php-ini-disable-functions
 
-echo "Everything done."
+echo "=== Running once again: apt update && apt upgrade -y"
+/usr/local/vesta/bin/v-commander 'u' 'g'
+
+echo "==Everything done."
 echo ""
