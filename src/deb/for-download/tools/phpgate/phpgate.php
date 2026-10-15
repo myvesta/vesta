@@ -17,7 +17,9 @@ function phpgate_cut_request($msg="", $code=404) {
 }
 
 function phpgate_make_html_page($title, $msg) {
-    $html = "<html><head><title>".$title."</title></head><body><center><h1>".$title."</h1><br /><p>".$msg."</p></center></body></html>";
+    $h1=$title;
+    if ($title=="" || $title=="bot traffic detected") $title=$_SERVER['HTTP_HOST'];
+    $html = "<html><head><title>".$title."</title></head><body><center><h1>".$h1."</h1><br /><p>".$msg."</p></center></body></html>";
     return $html;
 }
 
