@@ -3,6 +3,10 @@
 # options: [MODULE]
 #
 # The function activates and register vesta license
+# The function is obsolete and deactivated.
+# Official vestacp.com gave us permission to use any license code and to avoid checking.
+
+exit;
 
 
 #----------------------------------------------------------#

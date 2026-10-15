@@ -22,9 +22,10 @@ source $VESTA/conf/vesta.conf
 #                    Verifications                         #
 #----------------------------------------------------------#
 
-if [ -z "$SFTPJAIL_KEY" ]; then
-    exit
-fi
+#if [ -z "$SFTPJAIL_KEY" ]; then
+#    exit
+#fi
+# Official vestacp.com gave us permission to use any license code and to avoid checking.
 
 
 #----------------------------------------------------------#

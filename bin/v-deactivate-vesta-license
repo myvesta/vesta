@@ -3,6 +3,9 @@
 # options: MODULE LICENSE
 #
 # The function deactivates vesta license
+# 
+# The function is obsolete.
+# Official vestacp.com gave us permission to use any license code and to avoid checking.
 
 
 #----------------------------------------------------------#
@@ -34,15 +37,15 @@ check_args '2' "$#" 'MODULE LICENSE'
 #----------------------------------------------------------#
 
 # Activating license
-v_host='https://vestacp.com/checkout'
-answer=$(curl --max-time 60 -s $v_host/cancel.php?licence_key=$license)
-check_result $? "cant' connect to vestacp.com " $E_CONNECT
+# v_host='https://vestacp.com/checkout'
+# answer=$(curl --max-time 60 -s $v_host/cancel.php?licence_key=$license)
+# check_result $? "cant' connect to vestacp.com " $E_CONNECT
 
 # Checking server answer
-if [[ "$answer" != '0' ]]; then
-    echo "Error: $module license $license is invalid"
-    exit $E_INVALID
-fi
+# if [[ "$answer" != '0' ]]; then
+#     echo "Error: $module license $license is invalid"
+#     exit $E_INVALID
+# fi
 
 
 #----------------------------------------------------------#
