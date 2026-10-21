@@ -3,6 +3,10 @@
 build_date=$(curl -s http://c.myvestacp.com/build_date.txt)
 echo "$build_date" > /usr/local/vesta/build_date.txt
 
+echo "=== Stopping myVesta service (temporary, until we build the new version) ==="
+systemctl stop vesta
+chmod -x /usr/local/vesta/php/sbin/*
+
 release=$(cat /etc/debian_version | tr "." "\n" | head -n1)
 
 # Run triggers only on updates
