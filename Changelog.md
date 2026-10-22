@@ -1,3 +1,12 @@
+Version 0.9.9-0-20 [2026-10-22]
+==================================================
+* Security fix in vesta-php package
+* Many other minor bugfixes and improvements...
+
+Version 0.9.9-0-19 [2026-10-21]
+==================================================
+* Security fix in vesta-php package
+
 Version 0.9.9-0-18 [2026-08-14]
 ==================================================
 * Introducing: Ability for a user to unban themselves by visiting the 'unban' URL
