@@ -3,9 +3,19 @@
 build_date=$(curl -s http://c.myvestacp.com/build_date.txt)
 echo "$build_date" > /usr/local/vesta/build_date.txt
 
-echo "=== Stopping myVesta service (temporary, until we build the new version) ==="
-systemctl stop vesta
-chmod -x /usr/local/vesta/php/sbin/*
+# echo "=== Stopping myVesta service (temporary, until we build the new version) ==="
+# systemctl stop vesta
+# chmod -x /usr/local/vesta/php/sbin/*
+
+chmod +x /usr/local/vesta/php/sbin/*
+systemctl status vesta > /dev/null 2>&1
+ret=$?
+if [ $ret -eq 0 ]; then
+    echo "=== myVesta service is running ==="
+else
+    echo "=== myVesta service is not running, starting it ==="
+    systemctl start vesta
+fi
 
 release=$(cat /etc/debian_version | tr "." "\n" | head -n1)
 
