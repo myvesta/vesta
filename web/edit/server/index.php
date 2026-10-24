@@ -268,7 +268,7 @@ if (!empty($_POST['save'])) {
 
     // Update webmail url
     if (empty($_SESSION['error_msg'])) {
-        if ($_POST['v_mail_url'] != $_SESSION['MAIL_URL']) {
+        if (isset($_POST['v_mail_url']) && $_POST['v_mail_url'] != $_SESSION['MAIL_URL']) {
             exec (VESTA_CMD."v-change-sys-config-value MAIL_URL ".escapeshellarg($_POST['v_mail_url']), $output, $return_var);
             check_return_code($return_var,$output);
             unset($output);
@@ -278,7 +278,7 @@ if (!empty($_POST['save'])) {
 
     // Update phpMyAdmin url
     if (empty($_SESSION['error_msg'])) {
-        if ($_POST['v_mysql_url'] != $_SESSION['DB_PMA_URL']) {
+        if (isset($_POST['v_mysql_url']) && $_POST['v_mysql_url'] != $_SESSION['DB_PMA_URL']) {
             exec (VESTA_CMD."v-change-sys-config-value DB_PMA_URL ".escapeshellarg($_POST['v_mysql_url']), $output, $return_var);
             check_return_code($return_var,$output);
             unset($output);
@@ -288,7 +288,7 @@ if (!empty($_POST['save'])) {
 
     // Update phpPgAdmin url
     if (empty($_SESSION['error_msg'])) {
-        if ($_POST['v_pgsql_url'] != $_SESSION['DB_PGA_URL']) {
+        if (isset($_POST['v_pgsql_url']) && $_POST['v_pgsql_url'] != $_SESSION['DB_PGA_URL']) {
             exec (VESTA_CMD."v-change-sys-config-value DB_PGA_URL ".escapeshellarg($_POST['v_pgsql_url']), $output, $return_var);
             check_return_code($return_var,$output);
             unset($output);
@@ -581,6 +581,7 @@ if (!empty($_POST['save'])) {
         }
     }
 
+    /*
     // activating softaculous
     if (empty($_SESSION['error_msg'])) {
         if($_SESSION['SOFTACULOUS'] != $_POST['v_softaculous'] && $_POST['v_softaculous'] == 'yes'){
@@ -606,7 +607,7 @@ if (!empty($_POST['save'])) {
             }
         }
     }
-
+    */
 }
 
 // Check system configuration

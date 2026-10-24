@@ -86,7 +86,7 @@ function detect_user_language($fallback='en') {
         list($code, $q) = $div;
         if (preg_match('/^[\w\-]+$/', $code)) {
             // Acceptable language code
-            $accept_langs_sorted[$code] = (double)$q;
+            $accept_langs_sorted[$code] = (float)$q;
         }
     }
     if (!empty($accept_langs_sorted)) arsort($accept_langs_sorted);

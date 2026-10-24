@@ -355,50 +355,30 @@ function send_email($to,$subject,$mailtext,$from) {
 }
 
 function list_timezones() {
-    $tz = new DateTimeZone('HAST');
-    $timezone_offsets['HAST'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('HADT');
-    $timezone_offsets['HADT'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('AKST');
-    $timezone_offsets['AKST'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('AKDT');
-    $timezone_offsets['AKDT'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('PST');
-    $timezone_offsets['PST'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('PDT');
-    $timezone_offsets['PDT'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('MST');
-    $timezone_offsets['MST'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('MDT');
-    $timezone_offsets['MDT'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('CST');
-    $timezone_offsets['CST'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('CDT');
-    $timezone_offsets['CDT'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('EST');
-    $timezone_offsets['EST'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('EDT');
-    $timezone_offsets['EDT'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('AST');
-    $timezone_offsets['AST'] = $tz->getOffset(new DateTime);
-    $tz = new DateTimeZone('ADT');
-    $timezone_offsets['ADT'] = $tz->getOffset(new DateTime);
+	foreach (
+		["AKST", "AKDT", "PST", "PDT", "MST", "MDT", "CST", "CDT", "EST", "EDT", "AST", "ADT"]
+		as $timezone
+	) {
+		$tz = new DateTimeZone($timezone);
+		$timezone_offsets[$timezone] = $tz->getOffset(new DateTime());
+	}
 
-    foreach(DateTimeZone::listIdentifiers() as $timezone){
-        $tz = new DateTimeZone($timezone);
-        $timezone_offsets[$timezone] = $tz->getOffset(new DateTime);
-    }
+	foreach (DateTimeZone::listIdentifiers() as $timezone) {
+		$tz = new DateTimeZone($timezone);
+		$timezone_offsets[$timezone] = $tz->getOffset(new DateTime());
+	}
 
-    foreach($timezone_offsets as $timezone => $offset){
-        $offset_prefix = $offset < 0 ? '-' : '+';
-        $offset_formatted = gmdate( 'H:i', abs($offset) );
-        $pretty_offset = "UTC{$offset_prefix}{$offset_formatted}";
-        $t = new DateTimeZone($timezone);
-        $c = new DateTime(null, $t);
-        $current_time = $c->format('H:i:s');
-        $timezone_list[$timezone] = "$timezone [ $current_time ] {$pretty_offset}";
-    }
-    return $timezone_list;
+	foreach ($timezone_offsets as $timezone => $offset) {
+		$offset_prefix = $offset < 0 ? "-" : "+";
+		$offset_formatted = gmdate("H:i", abs($offset));
+		$pretty_offset = "UTC{$offset_prefix}{$offset_formatted}";
+		$c = new DateTime(gmdate("Y-M-d H:i:s"), new DateTimeZone("UTC"));
+		$c->setTimezone(new DateTimeZone($timezone));
+		$current_time = $c->format("H:i:s");
+		$timezone_list[$timezone] = "$timezone [ $current_time ] {$pretty_offset}";
+		#$timezone_list[$timezone] = "$timezone ${pretty_offset}";
+	}
+	return $timezone_list;
 }
 
 /**
