@@ -7,16 +7,6 @@ echo "$build_date" > /usr/local/vesta/build_date.txt
 # systemctl stop vesta
 # chmod -x /usr/local/vesta/php/sbin/*
 
-chmod +x /usr/local/vesta/php/sbin/*
-systemctl status vesta > /dev/null 2>&1
-ret=$?
-if [ $ret -eq 0 ]; then
-    echo "=== myVesta service is running ==="
-else
-    echo "=== myVesta service is not running, starting it ==="
-    systemctl start vesta
-fi
-
 release=$(cat /etc/debian_version | tr "." "\n" | head -n1)
 
 # Run triggers only on updates
@@ -27,6 +17,16 @@ if [ ! -e "/usr/local/vesta/data/users/admin" ]; then
     echo "=== myVesta build date: $build_date"
     echo "$version" > /usr/local/vesta/version.txt
     exit
+fi
+
+chmod +x /usr/local/vesta/php/sbin/*
+systemctl status vesta > /dev/null 2>&1
+ret=$?
+if [ $ret -eq 0 ]; then
+    echo "=== myVesta service is running ==="
+else
+    echo "=== myVesta service is not running, starting it ==="
+    systemctl start vesta
 fi
 
 /usr/local/vesta/bin/v-ensure-poold-folders-not-empty
