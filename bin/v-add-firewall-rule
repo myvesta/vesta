@@ -88,7 +88,7 @@ if [ "$WEB_SYSTEM" == 'nginx' ] || [ "$PROXY_SYSTEM" == 'nginx' ]; then
         touch /etc/nginx/conf.d/block-firewall.conf
         if ! grep -q "deny $ip;" /etc/nginx/conf.d/block-firewall.conf; then
             echo "deny $ip;" >> /etc/nginx/conf.d/block-firewall.conf
-            systemctl restart nginx
+            systemctl reload nginx
         fi
     fi
 fi
