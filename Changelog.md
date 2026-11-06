@@ -1,3 +1,8 @@
+Version 0.9.9-0-22 [2026-11-06]
+==================================================
+* Fix installer temporary error with 'vesta' service
+* Fix 'mysqlrepair -> mariadb-check' in v-backup-users for Debian 13
+
 Version 0.9.9-0-21 [2026-10-24]
 ==================================================
 * PHP syntax fixes for PHP 8.5
