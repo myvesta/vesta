@@ -16,6 +16,8 @@ source /etc/profile
 source $VESTA/func/main.sh
 source $VESTA/conf/vesta.conf
 
+release=$(/usr/local/vesta/bin/v-get-debian-version)
+
 scriptname="v-backup-users"
 for pid in $(pidof -x "$scriptname"); do
     if [ $pid != $$ ]; then
@@ -63,7 +65,12 @@ fi
 
 # Auto-repair all databases before backuping all accounts
 if [ $ALLOW_MYSQL_REPAIR -eq 1 ]; then
-    nice -n 19 ionice -c 3 mysqlrepair --all-databases --check --auto-repair >> $log 2>&1
+    echo "== Running mysqlrepair --all-databases --check --auto-repair" >> $log
+    if [ $release -lt 13 ]; then
+        nice -n 19 ionice -c 3 mysqlrepair --all-databases --check --auto-repair >> $log 2>&1
+    else
+        nice -n 19 ionice -c 3 mariadb-check --all-databases --check --auto-repair >> $log 2>&1
+    fi
 fi
 
 if [ -z "$BACKUP_SYSTEM" ]; then
