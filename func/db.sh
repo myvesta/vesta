@@ -439,11 +439,38 @@ dump_mysql_database() {
     mysql_query "$query" | grep -v "Grants for" > $grants
 }
 
+# Dump MySQL database empty
+dump_mysql_database_empty() {
+    mysql_connect $HOST
+
+    touch $dump
+
+    query="SHOW GRANTS FOR '$DBUSER'@'localhost'"
+    mysql_query "$query" | grep -v "Grants for" > $grants
+
+    query="SHOW GRANTS FOR '$DBUSER'@'%'"
+    mysql_query "$query" | grep -v "Grants for" > $grants
+
+}
+
 # Dump PostgreSQL database
 dump_pgsql_database() {
     psql_connect $HOST
 
     psql_dump $dump $database
+
+    query="SELECT rolpassword FROM pg_authid WHERE rolname='$DBUSER';"
+    md5=$(psql_query "$query" | head -n1 | cut -f 2 -d \ )
+    pw_str="UPDATE pg_authid SET rolpassword='$md5' WHERE rolname='$DBUSER';"
+    gr_str="GRANT ALL PRIVILEGES ON DATABASE $database to '$DBUSER'"
+    echo -e "$pw_str\n$gr_str" >> $grants
+}
+
+# Dump PostgreSQL database empty
+dump_pgsql_database_empty() {
+    psql_connect $HOST
+ 
+    touch $dump
 
     query="SELECT rolpassword FROM pg_authid WHERE rolname='$DBUSER';"
     md5=$(psql_query "$query" | head -n1 | cut -f 2 -d \ )

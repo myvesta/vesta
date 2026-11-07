@@ -34,15 +34,19 @@ check_args '1' "$#" 'USER [NOTIFY]'
 is_format_valid 'user'
 is_system_enabled "$BACKUP_SYSTEM" 'BACKUP_SYSTEM'
 is_object_valid 'user' 'USER' "$user"
-is_object_unsuspended 'user' 'USER' "$user"
-is_backup_enabled
+if [ -z "$EMPTY" ]; then
+    is_object_unsuspended 'user' 'USER' "$user"
+    is_backup_enabled
+fi
 
 
 #----------------------------------------------------------#
 #                       Action                             #
 #----------------------------------------------------------#
 
-wait_for_backup_if_it_is_not_time_for_backup
+if [ -z "$EMPTY" ]; then
+    wait_for_backup_if_it_is_not_time_for_backup
+fi
 
 # Override backup path
 if [ ! -z "$OVERRIDE_BACKUP_PATH" ]; then
@@ -67,17 +71,19 @@ if [ -L "$BACKUP" ]; then
     BACKUP_LOCATION=$(readlink -f $BACKUP)
 fi
 
-# Validate available disk space (take usage * 2, due to the backup handling)
-let u_account=$(grep "U_DISK=" $VESTA/data/users/$user/user.conf |cut -f 2 -d \')
-let u_disk=$(grep "U_DISK=" $VESTA/data/users/$user/user.conf |cut -f 2 -d \')*2
-let v_disk=$(($(stat -f --format="%a*%S" $BACKUP_LOCATION)))/1024/1024
-
-if [ "$u_disk" -gt "$v_disk" ]; then
-    echo "account size           : $u_account megabytes" |tee $BACKUP/$user.log
-    echo "available space on disk: $v_disk megabytes" |tee $BACKUP/$user.log
-    echo "needed space on disk   : $u_disk megabytes" |tee $BACKUP/$user.log
-    echo "not enough disk space available to perform the backup." |$SENDMAIL -s "$subj" $email $notify
-    check_result $E_LIMIT "not enough disk space available to perform the backup."
+if [ -z "$EMPTY" ]; then
+    # Validate available disk space (take usage * 2, due to the backup handling)
+    let u_account=$(grep "U_DISK=" $VESTA/data/users/$user/user.conf |cut -f 2 -d \')
+    let u_disk=$(grep "U_DISK=" $VESTA/data/users/$user/user.conf |cut -f 2 -d \')*2
+    let v_disk=$(($(stat -f --format="%a*%S" $BACKUP_LOCATION)))/1024/1024
+    
+    if [ "$u_disk" -gt "$v_disk" ]; then
+        echo "account size           : $u_account megabytes" |tee $BACKUP/$user.log
+        echo "available space on disk: $v_disk megabytes" |tee $BACKUP/$user.log
+        echo "needed space on disk   : $u_disk megabytes" |tee $BACKUP/$user.log
+        echo "not enough disk space available to perform the backup." |$SENDMAIL -s "$subj" $email $notify
+        check_result $E_LIMIT "not enough disk space available to perform the backup."
+    fi
 fi
 
 if [ -z "$BACKUP_TEMP" ]; then
@@ -148,7 +154,9 @@ if [ ! -z "$WEB_SYSTEM" ] && [ "$WEB" != '*' ]; then
     i=0
 
     for domain in $web_list; do
-        wait_for_backup_if_it_is_not_time_for_backup
+        if [ -z "$EMPTY" ]; then
+            wait_for_backup_if_it_is_not_time_for_backup
+        fi
         ((i ++))
         echo -e "$(date "+%F %T") $domain" |tee -a $BACKUP/$user.log
         mkdir -p $tmpdir/web/$domain/conf
@@ -169,7 +177,7 @@ if [ ! -z "$WEB_SYSTEM" ] && [ "$WEB" != '*' ]; then
                 cp $fpm_original_path $fpm_dest_path
             fi
         fi
-        
+
         # Backup web.conf
         cd $tmpdir/web/$domain/
         conf="$USER_DATA/web.conf"
@@ -270,7 +278,12 @@ if [ ! -z "$WEB_SYSTEM" ] && [ "$WEB" != '*' ]; then
         set +f
 
         # Backup files
-        tar --anchored -cpf- ${fargs[@]} --exclude={'./','../'} . |gzip -$BACKUP_GZIP - > $tmpdir/web/$domain/domain_data.tar.gz
+        if [ -z "$EMPTY" ]; then
+            tar --anchored -cpf- ${fargs[@]} --exclude={'./','../'} . |gzip -$BACKUP_GZIP - > $tmpdir/web/$domain/domain_data.tar.gz
+        else
+            tar -cf $tmpdir/web/$domain/domain_data.tar -T /dev/null
+            gzip $tmpdir/web/$domain/domain_data.tar
+        fi
     done
 
     # Print total
@@ -346,7 +359,9 @@ if [ ! -z "$MAIL_SYSTEM" ] && [ "$MAIL" != '*' ]; then
 
     i=0
     for domain in $mail_list; do
-        wait_for_backup_if_it_is_not_time_for_backup
+        if [ -z "$EMPTY" ]; then
+            wait_for_backup_if_it_is_not_time_for_backup
+        fi
         ((i ++))
         echo -e "$(date "+%F %T") $domain" |tee -a $BACKUP/$user.log
         mkdir -p $tmpdir/mail/$domain/conf
@@ -386,7 +401,12 @@ if [ ! -z "$MAIL_SYSTEM" ] && [ "$MAIL" != '*' ]; then
 
         # Compress archive
         if [ ${#accounts[@]} -gt 0 ]; then
-            tar -cpf- ${accounts[@]} |gzip -$BACKUP_GZIP - > $tmpdir/mail/$domain/accounts.tar.gz
+            if [ -z "$EMPTY" ]; then
+                tar -cpf- ${accounts[@]} |gzip -$BACKUP_GZIP - > $tmpdir/mail/$domain/accounts.tar.gz
+            else
+                tar -cf $tmpdir/mail/$domain/accounts.tar -T /dev/null
+                gzip $tmpdir/mail/$domain/accounts.tar
+            fi
         fi
     done
 
@@ -419,7 +439,9 @@ if [ ! -z "$DB_SYSTEM" ] && [ "$DB" != '*' ]; then
     conf="$USER_DATA/db.conf"
     db_list=$(echo "$db_list" |sed -e "s/  */\ /g" -e "s/^ //")
     for database in $db_list; do
-        wait_for_backup_if_it_is_not_time_for_backup
+        if [ -z "$EMPTY" ]; then
+            wait_for_backup_if_it_is_not_time_for_backup
+        fi
         ((i ++))
         get_database_values
 
@@ -434,7 +456,6 @@ if [ ! -z "$DB_SYSTEM" ] && [ "$DB" != '*' ]; then
         dumpgz="$tmpdir/db/$database/$database.$TYPE.sql.gz"
         grants="$tmpdir/db/$database/conf/$database.$TYPE.$DBUSER"
         if [ ! -f "$dumpgz" ]; then
-
             WAIT_LOOP_ENTERED=0
             while true
             do
@@ -451,10 +472,17 @@ if [ ! -z "$DB_SYSTEM" ] && [ "$DB" != '*' ]; then
                 fi
             done
 
-            case $TYPE in
-                mysql) dump_mysql_database ;;
-                pgsql) dump_pgsql_database ;;
-            esac
+            if [ -z "$EMPTY" ]; then
+                case $TYPE in
+                    mysql) dump_mysql_database ;;
+                    pgsql) dump_pgsql_database ;;
+                esac
+            else
+                case $TYPE in
+                    mysql) dump_mysql_database_empty ;;
+                    pgsql) dump_pgsql_database_empty ;;
+                esac
+            fi
 
             # Compress dump
             gzip -$BACKUP_GZIP $dump
@@ -499,54 +527,56 @@ fi
 if [ "$USER" != '*' ]; then
     echo -e "\n-- User Dir --" |tee -a $BACKUP/$user.log
     mkdir $tmpdir/user_dir
-    cd $HOMEDIR/$user
-
-    # Parsing directory exlusions
-    USER=''
-    if [ -e "$USER_DATA/backup-excludes.conf" ]; then
-        source $USER_DATA/backup-excludes.conf
-    fi
-    fargs=()
-    for xpath in $(echo "$USER" |tr ',' '\n'); do
-        if [ -d "$xpath" ]; then
-            fargs+=(--exclude=$xpath/*)
-            echo "$(date "+%F %T") excluding directory $xpath" |\
-            tee -a $BACKUP/$user.log
+    if [ -z "$EMPTY" ]; then
+        cd $HOMEDIR/$user
+    
+        # Parsing directory exlusions
+        USER=''
+        if [ -e "$USER_DATA/backup-excludes.conf" ]; then
+            source $USER_DATA/backup-excludes.conf
+        fi
+        fargs=()
+        for xpath in $(echo "$USER" |tr ',' '\n'); do
+            if [ -d "$xpath" ]; then
+                fargs+=(--exclude=$xpath/*)
+                echo "$(date "+%F %T") excluding directory $xpath" |\
+                tee -a $BACKUP/$user.log
+            else
+                echo "$(date "+%F %T") excluding file $xpath" |\
+                tee -a $BACKUP/$user.log
+                fargs+=(--exclude=$xpath)
+            fi
+        done
+    
+        IFS=$'\n'
+        set -f
+        i=0
+    
+        for udir in $(ls -a |egrep -v "^conf$|^web$|^dns$|^tmp$|^mail$|^\.\.$|^\.$"); do
+            exclusion=$(echo "$USER" |tr ',' '\n' |grep "^$udir$")
+            if [ -z "$exclusion" ]; then
+                ((i ++))
+                udir_str=$(echo "$udir" |sed -e "s|'|\\\'|g")
+                udir_list="$udir_list $udir_str"
+                echo -e "$(date "+%F %T") adding $udir" |tee -a $BACKUP/$user.log
+                
+                wait_for_backup_if_it_is_not_time_for_backup
+                
+                # Backup files and dirs
+                tar --anchored -cpf- ${fargs[@]} $udir |gzip -$BACKUP_GZIP - > $tmpdir/user_dir/$udir.tar.gz
+            fi
+        done
+        set +f
+        udir_list=$(echo "$udir_list" |sed -e "s/  */\ /g" -e "s/^ //")
+        
+        # Print total
+        if [ "$i" -eq 1 ]; then
+            echo -e "$(date "+%F %T") *** $i user directory ***" |\
+                tee -a $BACKUP/$user.log
         else
-            echo "$(date "+%F %T") excluding file $xpath" |\
-            tee -a $BACKUP/$user.log
-            fargs+=(--exclude=$xpath)
+            echo -e "$(date "+%F %T") *** $i directories ***" |\
+                tee -a $BACKUP/$user.log
         fi
-    done
-
-    IFS=$'\n'
-    set -f
-    i=0
-
-    for udir in $(ls -a |egrep -v "^conf$|^web$|^dns$|^tmp$|^mail$|^\.\.$|^\.$"); do
-        exclusion=$(echo "$USER" |tr ',' '\n' |grep "^$udir$")
-        if [ -z "$exclusion" ]; then
-            ((i ++))
-            udir_str=$(echo "$udir" |sed -e "s|'|\\\'|g")
-            udir_list="$udir_list $udir_str"
-            echo -e "$(date "+%F %T") adding $udir" |tee -a $BACKUP/$user.log
-
-            wait_for_backup_if_it_is_not_time_for_backup
-
-            # Backup files and dirs
-            tar --anchored -cpf- ${fargs[@]} $udir |gzip -$BACKUP_GZIP - > $tmpdir/user_dir/$udir.tar.gz
-        fi
-    done
-    set +f
-    udir_list=$(echo "$udir_list" |sed -e "s/  */\ /g" -e "s/^ //")
-
-    # Print total
-    if [ "$i" -eq 1 ]; then
-        echo -e "$(date "+%F %T") *** $i user directory ***" |\
-            tee -a $BACKUP/$user.log
-    else
-        echo -e "$(date "+%F %T") *** $i directories ***" |\
-            tee -a $BACKUP/$user.log
     fi
 fi
 
@@ -580,14 +610,16 @@ local_backup(){
         done
     fi
 
-    # Checking disk space
-    disk_usage=$(df $BACKUP |tail -n1 |tr ' ' '\n' |grep % |cut -f 1 -d %)
-    if [ "$disk_usage" -ge "$BACKUP_DISK_LIMIT" ]; then
-        rm -rf $tmpdir
-        rm -f $BACKUP/$user.log
-        sed -i "/ $user /d" $VESTA/data/queue/backup.pipe
-        echo "Not enough disk space" |$SENDMAIL -s "$subj" $email $notify
-        check_result "$E_DISK" "Not enough dsk space"
+    if [ -z "$EMPTY" ]; then
+        # Checking disk space
+        disk_usage=$(df $BACKUP |tail -n1 |tr ' ' '\n' |grep % |cut -f 1 -d %)
+        if [ "$disk_usage" -ge "$BACKUP_DISK_LIMIT" ]; then
+            rm -rf $tmpdir
+            rm -f $BACKUP/$user.log
+            sed -i "/ $user /d" $VESTA/data/queue/backup.pipe
+            echo "Not enough disk space" |$SENDMAIL -s "$subj" $email $notify
+            check_result "$E_DISK" "Not enough dsk space"
+        fi
     fi
 
     # Creating final tarball
@@ -952,6 +984,14 @@ google_backup() {
 
 
 echo -e "\n-- SUMMARY --" |tee -a $BACKUP/$user.log
+
+if [ -z "$BACKUPS" ]; then
+    BACKUPS=$(grep "^BACKUPS=" $VESTA/data/users/$user/user.conf |cut -f 2 -d \')
+fi
+
+if [ ! -z "$TARGET" ]; then
+    backup_type=$TARGET
+fi
 
 # Switching on backup system types
 for backup_type in $(echo -e "${BACKUP_SYSTEM//,/\\n}"); do
