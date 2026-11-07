@@ -1,0 +1,176 @@
+#!/bin/bash
+
+source "/usr/local/vesta/func/remote-ssh-rsync.sh"
+
+if [ $# -lt 4 ]; then
+    echo "Usage: $0 <DESTINATION_IP> <DESTINATION_PORT> <DESTINATION_USERNAME> <ACTION> [ARGUMENTS...]"
+    echo "ACTION: test, sync_empty_backup, sync_web, sync_mail, sync_db, switch_vhost"
+    echo "Examples: $0 192.168.1.100 22 root test"
+    echo "          $0 192.168.1.100 22 root sync_empty_backup <USERNAME>"
+    echo "          $0 192.168.1.100 22 root sync_web <USERNAME> <DOMAIN>"
+    echo "          $0 192.168.1.100 22 root sync_mail <USERNAME> <DOMAIN>"
+    echo "          $0 192.168.1.100 22 root sync_db <DATABASE_NAME>"
+    echo "          $0 192.168.1.100 22 root switch_vhost <USERNAME> <DOMAIN>"
+    exit 1
+fi
+
+DESTINATION_IP=$1
+DESTINATION_PORT=$2
+DESTINATION_USERNAME=$3
+ACTION=$4
+
+if [ "$ACTION" == "test" ]; then
+    ssh_output=''
+    execute_remote_test_connection_func "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+    return_code=$?
+    if [ $return_code -eq 0 ]; then
+        echo "Success: Connection to remote server $DESTINATION_IP established"
+        # echo "SSH output: $ssh_output"
+        # echo "Return code: $return_code"
+        exit 0
+    else
+        echo "Error: Failed to test connection to remote server"
+        echo "SSH output: $ssh_output"
+        echo "Return code: $return_code"
+        exit 1
+    fi
+fi
+
+if [ "$ACTION" == "sync_empty_backup" ]; then
+    if [ $# -lt 5 ]; then
+        echo "Error: Not enough arguments"
+        echo "Usage: $0 <DESTINATION_IP> <DESTINATION_PORT> <DESTINATION_USERNAME> sync_empty_backup <USERNAME> [BACKUP_FOLDER]"
+        echo "Example: $0 192.168.1.100 22 root sync_empty_backup testaccount"
+        exit 1
+    fi
+    USERNAME=$5
+    BACKUP_FOLDER=${6:-"/backup"}
+
+    echo_local_comment "##########################################################################"
+    echo_local_comment "###### Exporting, rsyncing and importing empty backup for: $USERNAME #####"
+    echo_local_comment "##########################################################################"
+
+    export_rsync_import_empty_backup_func "$USERNAME" "$BACKUP_FOLDER" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+    return_code=$?
+    if [ $return_code -ne 0 ]; then
+        echo "Error: Failed to sync empty backup to remote server $DESTINATION_IP"
+        echo "Return code: $return_code"
+        exit 1
+    fi
+
+    echo_local_comment "###### Done exporting, rsyncing and importing empty backup for: $USERNAME #####"
+    exit 0
+fi
+
+if [ "$ACTION" == "sync_web" ]; then
+    if [ $# -lt 6 ]; then
+        echo "Error: Not enough arguments"
+        echo "Usage: $0 <DESTINATION_IP> <DESTINATION_PORT> <DESTINATION_USERNAME> sync_web <USERNAME> <DOMAIN>"
+        echo "Example: $0 192.168.1.100 22 root sync_web testaccount testdomain.com"
+        exit 1
+    fi
+    USERNAME=$5
+    DOMAIN=$6
+
+    echo_local_comment "########################################################"
+    echo_local_comment "###### Rsyncing web vhost for: $USERNAME / $DOMAIN #####"
+    echo_local_comment "########################################################"
+
+    rsync_vhost_web_func "$USERNAME" "$DOMAIN" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+    return_code=$?
+    if [ $return_code -ne 0 ]; then
+        echo "Error: Failed to sync web to remote server $DESTINATION_IP"
+        echo "Return code: $return_code"
+        exit 1
+    fi
+
+    echo_local_comment "###### Done rsyncing web vhost for: $USERNAME / $DOMAIN #####"
+    exit 0
+fi
+
+if [ "$ACTION" == "sync_mail" ]; then
+    if [ $# -lt 6 ]; then
+        echo "Error: Not enough arguments"
+        echo "Usage: $0 <DESTINATION_IP> <DESTINATION_PORT> <DESTINATION_USERNAME> sync_mail <USERNAME> <DOMAIN>"
+        echo "Example: $0 192.168.1.100 22 root sync_mail testaccount testdomain.com"
+        exit 1
+    fi
+    USERNAME=$5
+    DOMAIN=$6
+
+    echo_local_comment "#########################################################"
+    echo_local_comment "###### Rsyncing mail vhost for: $USERNAME / $DOMAIN #####"
+    echo_local_comment "#########################################################"
+
+    rsync_vhost_mail_func "$USERNAME" "$DOMAIN" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+    return_code=$?
+    if [ $return_code -ne 0 ]; then
+        echo "Error: Failed to sync mail to remote server $DESTINATION_IP"
+        echo "Return code: $return_code"
+        exit 1
+    fi
+
+    echo_local_comment "###### Done rsyncing mail vhost for: $USERNAME / $DOMAIN #####"
+    exit 0
+fi
+
+if [ "$ACTION" == "sync_db" ]; then
+    if [ $# -lt 5 ]; then
+        echo "Error: Not enough arguments"
+        echo "Usage: $0 <DESTINATION_IP> <DESTINATION_PORT> <DESTINATION_USERNAME> sync_db <DATABASE_NAME>"
+        echo "Example: $0 192.168.1.100 22 root sync_db testaccount_testdatabase"
+        exit 1
+    fi
+    DATABASE_NAME=$5
+
+    echo_local_comment "#######################################################################"
+    echo_local_comment "###### Exporting, rsyncing and importing database: $DATABASE_NAME #####"
+    echo_local_comment "#######################################################################"
+
+    export_rsync_import_databases_func "$DATABASE_NAME" "/database" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+    return_code=$?
+    if [ $return_code -ne 0 ]; then
+        echo "Error: Failed to sync SQL to remote server $DESTINATION_IP"
+        echo "Return code: $return_code"
+        exit 1
+    fi
+
+    echo_local_comment "###### Done exporting, rsyncing and importing database: $DATABASE_NAME #####"
+    exit 0
+fi
+
+if [ "$ACTION" == "switch_vhost" ]; then
+    if [ $# -lt 6 ]; then
+        echo "Error: Not enough arguments"
+        echo "Usage: $0 <DESTINATION_IP> <DESTINATION_PORT> <DESTINATION_USERNAME> switch_vhost <USERNAME> <SOURCE_DOMAIN> <DESTINATION_DOMAIN>"
+        echo "Example: $0 192.168.1.100 22 root switch_vhost testaccount testdomain.com testdomain2.com"
+        exit 1
+    fi
+    USERNAME=$5
+    DOMAIN=$6
+
+    echo_local_comment "########################################################"
+    echo_local_comment "###### Switching vhost for: $USERNAME / $DOMAIN ########"
+    echo_local_comment "########################################################"
+
+    switch_vhost_prepare_func
+    
+    switch_vhost_func "$USERNAME" "$DOMAIN" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+    return_code=$?
+    if [ $return_code -ne 0 ]; then
+        echo "Error: Failed to switch vhost to remote server $DESTINATION_IP"
+        echo "Return code: $return_code"
+        exit 1
+    fi
+
+    switch_vhost_finish_func "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+    return_code=$?
+    if [ $return_code -ne 0 ]; then
+        echo "Error: Failed to finish vhost switching on remote server $DESTINATION_IP"
+        echo "Return code: $return_code"
+        exit 1
+    fi
+
+    echo_local_comment "###### Done switching vhost for: $USERNAME / $DOMAIN #####"
+    exit 0
+fi
