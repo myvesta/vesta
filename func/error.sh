@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+myvesta_error_sh_loaded=1
+export myvesta_error_sh_loaded
+
 # Library of functions for error handling and interactive mode prompting
 
 check_if_interactive() {

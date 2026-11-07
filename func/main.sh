@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+myvesta_main_sh_loaded=1
+export myvesta_main_sh_loaded
+
 # Internal variables
 HOMEDIR='/home'
 BACKUP='/backup'
@@ -41,11 +45,9 @@ E_UPDATE=19
 E_RESTART=20
 E_TEAPOT=418
 
-if [ -z "$myvesta_main_sh_loaded" ]; then
-    source /usr/local/vesta/func/error.sh
+if [ -z "$myvesta_error_sh_loaded" ]; then
+    source "/usr/local/vesta/func/error.sh" 
 fi
-myvesta_main_sh_loaded=1
-export myvesta_main_sh_loaded
 
 # Event string for logger
 for ((I=1; I <= $# ; I++)); do
