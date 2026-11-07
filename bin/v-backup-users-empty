@@ -1,0 +1,8 @@
+#!/bin/bash
+
+export ALLOW_BACKUP_ANYTIME='yes'
+export NOW='yes'
+export EMPTY='yes'
+export TARGET='empty'
+
+/usr/local/vesta/bin/v-backup-users
