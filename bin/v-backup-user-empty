@@ -3,6 +3,6 @@
 export ALLOW_BACKUP_ANYTIME='yes'
 export NOW='yes'
 export EMPTY='yes'
-export TARGET='empty'
+export TARGET='local'
 
 nice -n 19 ionice -c 3 /usr/local/vesta/bin/v-backup-user $1

@@ -3,6 +3,6 @@
 export ALLOW_BACKUP_ANYTIME='yes'
 export NOW='yes'
 export EMPTY='yes'
-export TARGET='empty'
+export TARGET='local'
 
 /usr/local/vesta/bin/v-backup-users
