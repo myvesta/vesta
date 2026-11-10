@@ -56,27 +56,17 @@ csv_list() {
 HOSTNAME=$(hostname)
 
 # Check OS/Release
-if [ -d '/etc/sysconfig' ]; then
-    if [ -e '/etc/redhat-release' ]; then
-        OS='CentOS'
-        VERSION=$(cat /etc/redhat-release |tr ' ' '\n' |grep [0-9])
-    else
-        OS="Amazon"
-        VERSION=$(cat /etc/issue |tr ' ' '\n' |grep [0-9])
-    fi
+if [ "$(lsb_release -si)" == "Ubuntu" ] && [ -e '/etc/debian_version' ]; then
+    OS="Ubuntu"
+    VERSION=$(grep DISTRIB_RELEASE /etc/lsb-release |cut -f 2 -d '=')
 else
-    if [ "$(lsb_release -si)" == "Ubuntu" ] && [ -e '/etc/debian_version' ]; then
-        OS="Ubuntu"
-        VERSION=$(grep DISTRIB_RELEASE /etc/lsb-release |cut -f 2 -d '=')
+    distro=$(head -n1 /etc/issue |cut -f 1 -d ' ')
+    if [ "$distro" = 'Debian' ]; then
+        OS="Debian"
+        VERSION=$(cat /etc/debian_version)
     else
-        distro=$(head -n1 /etc/issue |cut -f 1 -d ' ')
-        if [ "$distro" = 'Debian' ]; then
-            OS="Debian"
-            VERSION=$(cat /etc/debian_version)
-        else
-            OS='UNKNOWN'
-            VERSION='UNKNOWN'
-        fi
+        OS='UNKNOWN'
+        VERSION='UNKNOWN'
     fi
 fi
 
