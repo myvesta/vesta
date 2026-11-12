@@ -1763,6 +1763,19 @@ if [ "$fail2ban" = 'yes' ]; then
         fline=$(echo "$fline" |grep enabled |tail -n1 |cut -f 1 -d -)
         sed -i "${fline}s/true/false/" /etc/fail2ban/jail.local
     fi
+    if [ "$exim" = 'yes' ]; then
+        # Debian's exim4-base logrotate rotates /var/log/exim4/mainlog with 'nocreate':
+        # exim only recreates it on its next log line. While it is absent, fail2ban
+        # rejects its whole configuration ("Have not found any log file for
+        # exim-iptables jail") and does not start, e.g. after a reboot.
+        # Create the empty log before fail2ban starts.
+        mkdir -p /etc/systemd/system/fail2ban.service.d
+        cat <<'F2BEOF' > /etc/systemd/system/fail2ban.service.d/vesta-exim-log.conf
+[Service]
+ExecStartPre=/bin/sh -c '[ -e /var/log/exim4/mainlog ] || install -o Debian-exim -g adm -m 640 /dev/null /var/log/exim4/mainlog'
+F2BEOF
+        systemctl daemon-reload
+    fi
     if [ "$vsftpd" = 'yes' ]; then
         #Create vsftpd Log File
         if [ ! -f "/var/log/vsftpd.log" ]; then
