@@ -1,0 +1,82 @@
+#!/bin/bash
+
+additional_log_search=0
+if [ ! -z "$1" ]; then
+    additional_log_search=1
+fi
+
+RUNNING_KERNEL=$(uname -r)
+INSTALLED_KERNEL=$(basename "$(readlink -f /vmlinuz)" | sed 's/^vmlinuz-//')
+
+required_reboot=0
+
+if [ "$RUNNING_KERNEL" != "$INSTALLED_KERNEL" ]; then
+    required_reboot=1
+    echo "=== Running kernel:   $RUNNING_KERNEL"
+    echo "=== Installed kernel: $INSTALLED_KERNEL"
+fi
+
+if [ -f /run/reboot-required ]; then
+    required_reboot=1
+    echo "=== /run/reboot-required file exists"
+    echo "=== Output of /run/reboot-required.pkgs:"
+    echo "==========================================="
+    cat /run/reboot-required.pkgs 2>/dev/null
+    echo "==========================================="
+fi
+
+if [ -f /var/run/reboot-required ]; then
+    required_reboot=1
+    echo "=== /var/run/reboot-required file exists"
+    echo "=== Output of /var/run/reboot-required.pkgs:"
+    echo "==========================================="
+    cat /var/run/reboot-required.pkgs 2>/dev/null
+    echo "==========================================="
+fi
+
+if [ $additional_log_search -eq 1 ]; then
+    kernelupdate=0
+    dbusupdate=0
+    microcodeupdate=0
+    initramfsupdate=0
+    rebootrequired=0
+
+    if [ -f /var/log/apt/history.log ]; then
+        kernelupdate=$(grep -c 'linux-image-' /var/log/apt/history.log)
+        dbusupdate=$(grep -c ' dbus:a' /var/log/apt/history.log)
+        microcodeupdate=$(grep -c '\-microcode:amd64' /var/log/apt/history.log)
+    fi
+    if [ -f /var/log/apt/term.log ]; then
+        initramfsupdate=$(grep -c 'update-initramfs: Generating /boot/' /var/log/apt/term.log)
+        rebootrequired=$(grep -c 'A reboot is required' /var/log/apt/term.log)
+    fi
+
+    if [ ! -z "$kernelupdate" ]; then
+        required_reboot=1
+        echo "=== 'linux-image-' found in /var/log/apt/history.log"
+    fi
+    if [ ! -z "$dbusupdate" ]; then
+        required_reboot=1
+        echo "=== ' dbus:a' found in /var/log/apt/history.log"
+    fi
+    if [ ! -z "$microcodeupdate" ]; then
+        required_reboot=1
+        echo "=== '\-microcode:amd64' found in /var/log/apt/history.log"
+    fi
+    if [ ! -z "$initramfsupdate" ]; then
+        required_reboot=1
+        echo "=== 'update-initramfs: Generating /boot/' found in /var/log/apt/term.log"
+    fi
+    if [ ! -z "$rebootrequired" ]; then
+        required_reboot=1
+        echo "=== 'A reboot is required' found in /var/log/apt/term.log"
+    fi
+fi
+
+if [ $required_reboot -eq 1 ]; then
+    echo "=== REBOOT REQUIRED"
+    exit 1
+else
+    echo "=== Kernel is up to date - no kernel reboot required"
+    exit 0
+fi
