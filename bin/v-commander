@@ -131,8 +131,10 @@ apt_update() {
     echo "== running: apt-get update"
     if [ "$release" -lt 10 ]; then
         apt-get update
+        check_error
     else
         apt-get update --allow-releaseinfo-change
+        check_error
     fi
     apt_updated=1
 }
@@ -220,7 +222,6 @@ do
 
     if [ "$answer" = 'u' ] || [ "$answer" = 'U' ]; then
         apt_update
-        check_error
     fi
 
     if [ "$answer" = 'g' ] || [ "$answer" = 'G' ]; then
