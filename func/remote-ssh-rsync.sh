@@ -1,8 +1,6 @@
 #!/bin/bash
 
-if [ -z "$myvesta_error_sh_loaded" ]; then
-    source "/usr/local/vesta/func/error.sh" 
-fi
+source /usr/local/vesta/func/error.sh
 
 DRY_RUN=0
 WAIT_FOR_INPUT=1

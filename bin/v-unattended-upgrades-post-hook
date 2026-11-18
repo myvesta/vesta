@@ -1,0 +1,19 @@
+#!/bin/bash
+
+/usr/local/vesta/bin/v-list-sys-services | tail -n +3 | awk '{ print $1, $2 }' > /usr/local/vesta/data/unattended-upgrades-post-hook.log 2>&1
+
+if ! cmp -s /usr/local/vesta/data/unattended-upgrades-pre-hook.log /usr/local/vesta/data/unattended-upgrades-post-hook.log; then
+    changed=$(awk '
+        NR==FNR { before[$1]=$2; next }
+        ($1 in before) && before[$1]!=$2 { printf "%s ", $1 }
+    ' /usr/local/vesta/data/unattended-upgrades-pre-hook.log \
+    /usr/local/vesta/data/unattended-upgrades-post-hook.log)
+
+    changed="${changed% }"
+    
+    /usr/local/vesta/bin/v-message-center-add "high" "error" "unattended-upgrades" "Service states changed during unattended-upgrades: $changed"
+    echo "Service states changed during unattended-upgrades: $changed"
+    exit 1
+fi
+
+exit 0

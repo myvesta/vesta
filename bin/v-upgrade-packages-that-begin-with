@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source /usr/local/vesta/func/error.sh 
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <package_prefix>"
+    echo "Example: $0 roundcube"
+    echo "Example: $0 php5"
+    echo "Example: $0 php7"
+    echo "Example: $0 php8"
+    echo "Example: $0 nginx"
+    exit 1
+fi
+
+/usr/local/vesta/bin/v-run-apt-update
+
+package="$1"
+
+mapfile -t packages < <(
+    dpkg-query -W -f='${db:Status-Abbrev} ${binary:Package}\n' "$package*" 2>/dev/null |
+    awk 'substr($1,2,1)=="i" {print $2}'
+)
+
+if ((${#packages[@]})); then
+    echo "=== Upgrading packages that begin with $package"
+    echo "=== Packages to upgrade: ${packages[@]}"
+
+    DEBIAN_FRONTEND=noninteractive apt-get -y \
+        --only-upgrade \
+        --no-remove \
+        -o Dpkg::Options::="--force-confold" \
+        install "${packages[@]}"
+    return_code=$?
+    check_error $return_code
+fi
+
+echo "=== Done"
+
+exit 0

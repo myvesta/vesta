@@ -1,0 +1,49 @@
+#!/bin/bash
+
+source /usr/local/vesta/conf/vesta.conf
+
+if [ $# -ne 4 ]; then
+    echo "Usage: $0 <severity> <type> <component> <message>"
+    echo ""
+    echo "Severity: high, medium, low"
+    echo "Type: error, warning, message, info, debug"
+    echo "Component: package, service, type of service, system, user"
+    echo "Message: description of what happened"
+    echo ""
+    echo "Example: $0 'high' 'error' 'nginx' 'Service nginx failed to start'"
+    exit 1
+fi
+
+severity="$1"
+type="$2"
+component="$3"
+message="$4"
+
+date=$(date '+%Y-%m-%d %H:%M:%S')
+
+escape_log() {
+    local value="$1"
+    value=${value//\\/\\\\}
+    value=${value//$'\n'/\\n}
+    value=${value//$'\r'/\\r}
+    value=${value//$'\t'/\\t}
+    value=${value//|/\\|}
+    printf '%s' "$value"
+}
+
+# Safe logging
+printf '%s | %s | %s | %s | %s\n' \
+    "$date" \
+    "$(escape_log "$severity")" \
+    "$(escape_log "$type")" \
+    "$(escape_log "$component")" \
+    "$(escape_log "$message")" \
+    >> /usr/local/vesta/data/message-center.log
+
+# Execute custom hook
+if [ -n "${RUN_CUSTOM_MESSAGE_CENTER_HOOK:-}" ]; then
+    printf -v hook_args '%q ' "$date" "$severity" "$type" "$component" "$message"
+    eval "$RUN_CUSTOM_MESSAGE_CENTER_HOOK $hook_args"
+fi
+
+exit 0

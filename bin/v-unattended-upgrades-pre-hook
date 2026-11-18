@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/usr/local/vesta/bin/v-list-sys-services | tail -n +3 | awk '{ print $1, $2 }' > /usr/local/vesta/data/unattended-upgrades-pre-hook.log 2>&1

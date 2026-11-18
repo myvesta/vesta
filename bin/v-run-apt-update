@@ -1,0 +1,15 @@
+#!/bin/bash
+
+source /usr/local/vesta/func/error.sh
+
+release=$(/usr/local/vesta/bin/v-get-debian-version)
+
+echo "=== running: apt-get update"
+if [ "$release" -lt 10 ]; then
+    apt-get update
+    check_error
+else
+    apt-get update --allow-releaseinfo-change
+    check_error
+fi
+apt_updated=1

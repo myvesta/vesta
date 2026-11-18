@@ -1,0 +1,90 @@
+#!/bin/bash
+
+apt update
+apt install -y unattended-upgrades
+
+cat > /etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+EOF
+
+cat > /etc/apt/apt.conf.d/52unattended-upgrades-local <<'EOF'
+#clear Unattended-Upgrade::Origins-Pattern;
+
+Unattended-Upgrade::Origins-Pattern {
+
+    // Debian Security
+    "origin=Debian,codename=${distro_codename},label=Debian-Security";
+    "origin=Debian,codename=${distro_codename}-security,label=Debian-Security";
+
+    // nginx.org
+    "site=nginx.org";
+
+    // myVesta
+    "site=apt.myvestacp.com";
+
+    // Docker CE
+    "site=download.docker.com";
+
+    // Sury PHP
+    "site=packages.sury.org";
+
+    // Freexian Extended LTS
+    "site=deb.freexian.com";
+
+    // Freexian PHP LTS
+    "site=php.freexian.com";
+    
+    // imunify360
+    "origin=imunify360.com";
+    "origin=tuxcare.com";
+};
+
+Unattended-Upgrade::Automatic-Reboot "false";
+
+Dpkg::Options {
+    "--force-confold";
+};
+EOF
+
+mkdir -p /etc/systemd/system/apt-daily.timer.d
+
+cat > /etc/systemd/system/apt-daily.timer.d/myvesta-override.conf <<'EOF'
+[Timer]
+OnCalendar=
+OnCalendar=*-*-* 13:00:00
+RandomizedDelaySec=3h
+Persistent=false
+EOF
+
+mkdir -p /etc/systemd/system/apt-daily-upgrade.timer.d
+
+cat > /etc/systemd/system/apt-daily-upgrade.timer.d/myvesta-override.conf <<'EOF'
+[Service]
+ExecStartPre=/usr/local/vesta/bin/v-unattended-upgrades-pre-hook
+ExecStopPost=-/usr/local/vesta/bin/v-unattended-upgrades-post-hook
+
+[Timer]
+OnCalendar=
+OnCalendar=*-*-* 16:00:00
+RandomizedDelaySec=5h
+Persistent=false
+EOF
+
+systemctl daemon-reload
+systemctl restart apt-daily.timer apt-daily-upgrade.timer
+
+echo "=== Checking apt-config dump | grep pattern:"
+apt-config dump | grep -A 20 'Unattended-Upgrade::Origins-Pattern'
+echo "-------"
+echo ""
+
+echo "=== Running: unattended-upgrade --dry-run --debug"
+unattended-upgrade --dry-run --debug
+echo "-------"
+echo ""
+
+echo "=== Checking unattended-upgrades timers:"
+systemctl list-timers --all 'apt-daily*'
+echo "-------"
+echo ""
