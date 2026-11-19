@@ -215,7 +215,13 @@ fi
 
 # Checking WEB Backend
 if [ "$WEB_BACKEND" != 'remote' ]; then
-    php_versions=$(ls /usr/sbin/php*fpm* | cut -d'/' -f4 | sed 's|php-fpm||')
+    php_versions=""
+    for file in /usr/sbin/php*fpm*; do
+        [ -e "$file" ] || continue
+        version="${file##*/}"
+        php_versions+="${version#php-fpm}"$'\n'
+    done
+    php_versions="${php_versions%$'\n'}"
     for version in $php_versions; do
         proc_name="php-fpm${version}"
         service_name="php${version}-fpm"
