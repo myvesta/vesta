@@ -218,6 +218,7 @@ if [ "$WEB_BACKEND" != 'remote' ]; then
     php_versions=""
     for file in /usr/sbin/php*fpm*; do
         [ -e "$file" ] || continue
+        [[ "$file" == *dpkg-new* ]] && continue
         version="${file##*/}"
         php_versions+="${version#php-fpm}"$'\n'
     done
