@@ -29,6 +29,13 @@ else
     systemctl start vesta
 fi
 
+if [ $(systemctl is-enabled vesta) = "enabled" ]; then
+    echo "=== myVesta service is enabled ==="
+else
+    echo "=== myVesta service is not enabled, enabling it ==="
+    systemctl enable vesta
+fi
+
 /usr/local/vesta/bin/v-ensure-poold-folders-not-empty
 
 if [ ! -d "/usr/local/vesta/data/upgrades" ]; then
