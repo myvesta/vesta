@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source /usr/local/vesta/conf/vesta.conf
+source /usr/local/vesta/func/main.sh
 
 if [ $# -ne 4 ]; then
     echo "Usage: $0 <severity> <type> <component> <message>"
@@ -39,6 +40,8 @@ printf '%s | %s | %s | %s | %s\n' \
     "$(escape_log "$component")" \
     "$(escape_log "$message")" \
     >> /usr/local/vesta/data/message-center.log
+
+send_email_to_admin "myVesta Message Center: $severity / $type / $component" "$message"
 
 # Execute custom hook
 if [ -n "${RUN_CUSTOM_MESSAGE_CENTER_HOOK:-}" ]; then

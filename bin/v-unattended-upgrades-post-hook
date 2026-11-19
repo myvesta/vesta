@@ -5,12 +5,18 @@
 if ! cmp -s /usr/local/vesta/data/unattended-upgrades-pre-hook.log /usr/local/vesta/data/unattended-upgrades-post-hook.log; then
     changed=$(awk '
         NR==FNR { before[$1]=$2; next }
-        ($1 in before) && before[$1]!=$2 { printf "%s ", $1 }
+        ($1 in before) && before[$1]!=$2 {
+            printf "%s%s %s", (count++ ? ", " : ""), $1, $2
+        }
     ' /usr/local/vesta/data/unattended-upgrades-pre-hook.log \
     /usr/local/vesta/data/unattended-upgrades-post-hook.log)
 
-    changed="${changed% }"
-    
+    if [ -z "$changed" ]; then
+        timestamp=$(date +%s)
+        cp "/usr/local/vesta/data/unattended-upgrades-post-hook.log" "/usr/local/vesta/data/unattended-upgrades-post-hook.log.$timestamp"
+        cp "/usr/local/vesta/data/unattended-upgrades-pre-hook.log" "/usr/local/vesta/data/unattended-upgrades-pre-hook.log.$timestamp"
+    fi
+
     /usr/local/vesta/bin/v-message-center-add "high" "error" "unattended-upgrades" "Service states changed during unattended-upgrades: $changed"
     echo "Service states changed during unattended-upgrades: $changed"
     exit 1

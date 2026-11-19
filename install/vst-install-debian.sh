@@ -2033,6 +2033,8 @@ command="sudo $VESTA/bin/v-df-snapshot-logs-cleaner"
 $VESTA/bin/v-add-cron-job 'admin' '10' '04' '*' '*' '*' "$command"
 command="sudo $VESTA/bin/v-cron-system-fixes"
 $VESTA/bin/v-add-cron-job 'admin' '50' '04' '*' '*' '*' "$command"
+command="sudo $VESTA/bin/v-cron-detect-services-state-change 1"
+$VESTA/bin/v-add-cron-job 'admin' '*/5' '*' '*' '*' '*' "$command"
 systemctl restart cron.service
 
 echo "== Building inititall rrd images"
@@ -2226,6 +2228,7 @@ touch /usr/local/vesta/data/upgrades/v-df-snapshot-make
 touch /usr/local/vesta/data/upgrades/fix-website-permissions-for-all-websites-only-php
 touch /usr/local/vesta/data/upgrades/fixssl.conf
 touch /usr/local/vesta/data/upgrades/fixssl.conf2
+touch /usr/local/vesta/data/upgrades/detect-services-state-change
 
 # Secret URL
 secretquery=''

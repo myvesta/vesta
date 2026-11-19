@@ -755,7 +755,7 @@ do
     fi
 
     if [ "$answer" = "inst nginx-from-debian-repo" ] || [ "$answer" = "INST NGINX-FROM-DEBIAN-REPO" ]; then
-        if [ "$release" -eq 9 ] || [ "$release" -eq 10 ] || [ "$release" -eq 11 ] || [ "$release" -eq 12 ]; then
+        if [ "$release" -eq 9 ] || [ "$release" -eq 10 ] || [ "$release" -eq 11 ]; then
             if [ -f "/etc/apt/sources.list.d/nginx.list" ]; then
                 mv /etc/apt/sources.list.d/nginx.list "/root/nginx.list.backup.$(date +%Y%m%d%H%M%S)"
             else
@@ -838,6 +838,8 @@ do
             else
                 check_error $EXIT_CODE "'nginx -t' returned error code $EXIT_CODE"
             fi
+        else
+            echo "== No need to install nginx from Debian repository"
         fi
     fi
 

@@ -57,6 +57,14 @@ if [ ! -f "/usr/local/vesta/data/upgrades/fixssl3.conf" ]; then
     fi
 fi
 
+# Adding cron job for detecting services state change
+if [ ! -f "/usr/local/vesta/data/upgrades/detect-services-state-change" ]; then
+    echo "== Adding cron job for detecting services state change"
+    command="sudo $VESTA/bin/v-cron-detect-services-state-change 1"
+    $VESTA/bin/v-add-cron-job 'admin' '*/5' '*' '*' '*' '*' "$command"
+    touch /usr/local/vesta/data/upgrades/detect-services-state-change
+fi
+
 # Adding cron job for disk usage snapshot
 if [ ! -f "/usr/local/vesta/data/upgrades/v-df-snapshot-make" ]; then
     if ! grep -q "v-df-snapshot-make" /usr/local/vesta/data/users/admin/cron.conf; then

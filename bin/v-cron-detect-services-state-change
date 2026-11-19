@@ -1,0 +1,48 @@
+#!/bin/bash
+
+export VESTA='/usr/local/vesta';
+
+if [ ! -z "$1" ]; then
+    SILENT="$1"
+else
+    SILENT="0"
+fi
+
+if [ -f /usr/local/vesta/data/services-state-change.log ]; then
+    cp /usr/local/vesta/data/services-state-change.log /usr/local/vesta/data/services-state-change.log.old
+fi
+
+/usr/local/vesta/bin/v-list-sys-services | tail -n +3 | awk '{ print $1, $2 }' > /usr/local/vesta/data/services-state-change.log 2>&1
+
+if [ ! -f /usr/local/vesta/data/services-state-change.log.old ]; then
+    exit 0
+fi
+
+if ! cmp -s /usr/local/vesta/data/services-state-change.log.old /usr/local/vesta/data/services-state-change.log; then
+    changed=$(awk '
+        NR==FNR { before[$1]=$2; next }
+        ($1 in before) && before[$1]!=$2 {
+            printf "%s%s %s", (count++ ? ", " : ""), $1, $2
+        }
+    ' /usr/local/vesta/data/services-state-change.log.old \
+    /usr/local/vesta/data/services-state-change.log)
+
+    if [ -z "$changed" ]; then
+        timestamp=$(date +%s)
+        # echo "-------------- DIFF ------------"
+        # cat /usr/local/vesta/data/services-state-change.log
+        # echo "--------------------------------"
+        # cat /usr/local/vesta/data/services-state-change.log.old
+        # echo "--------------------------------"
+        cp "/usr/local/vesta/data/services-state-change.log" "/usr/local/vesta/data/services-state-change.log.$timestamp"
+        cp "/usr/local/vesta/data/services-state-change.log.old" "/usr/local/vesta/data/services-state-change.log.old.$timestamp"
+    fi
+
+    /usr/local/vesta/bin/v-message-center-add "medium" "info" "services-state-change" "Service states changed: $changed"
+    if [ "$SILENT" -eq "0" ]; then
+        echo "Service states changed: $changed"
+    fi
+    exit 1
+fi
+
+exit 0
