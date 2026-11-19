@@ -51,23 +51,23 @@ if [ $additional_log_search -eq 1 ]; then
         rebootrequired=$(grep -c 'A reboot is required' /var/log/apt/term.log)
     fi
 
-    if [ ! -z "$kernelupdate" ]; then
+    if [ "$kernelupdate" -gt 0 ]; then
         required_reboot=1
         echo "=== 'linux-image-' found in /var/log/apt/history.log"
     fi
-    if [ ! -z "$dbusupdate" ]; then
+    if [ "$dbusupdate" -gt 0 ]; then
         required_reboot=1
         echo "=== ' dbus:a' found in /var/log/apt/history.log"
     fi
-    if [ ! -z "$microcodeupdate" ]; then
+    if [ "$microcodeupdate" -gt 0 ]; then
         required_reboot=1
         echo "=== '\-microcode:amd64' found in /var/log/apt/history.log"
     fi
-    if [ ! -z "$initramfsupdate" ]; then
+    if [ "$initramfsupdate" -gt 0 ]; then
         required_reboot=1
         echo "=== 'update-initramfs: Generating /boot/' found in /var/log/apt/term.log"
     fi
-    if [ ! -z "$rebootrequired" ]; then
+    if [ "$rebootrequired" -gt 0 ]; then
         required_reboot=1
         echo "=== 'A reboot is required' found in /var/log/apt/term.log"
     fi
