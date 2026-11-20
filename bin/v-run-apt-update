@@ -2,14 +2,26 @@
 
 source /usr/local/vesta/func/error.sh
 
+skip_error_check=0
+if [ ! -z "$1" ]; then
+    skip_error_check=1
+fi
+
 release=$(/usr/local/vesta/bin/v-get-debian-version)
 
 echo "=== running: apt-get update"
 if [ "$release" -lt 10 ]; then
     apt-get update
-    check_error
+    return_code=$?
+    if [ $skip_error_check -eq 0 ]; then
+        check_error $return_code
+    fi
 else
     apt-get update --allow-releaseinfo-change
-    check_error
+    return_code=$?
+    if [ $skip_error_check -eq 0 ]; then
+        check_error $return_code
+    fi
 fi
-apt_updated=1
+
+exit $return_code
