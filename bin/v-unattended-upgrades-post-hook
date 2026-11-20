@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ -f /usr/local/vesta/data/unattended-upgrades.lock ]; then
+    rm -f /usr/local/vesta/data/unattended-upgrades.lock
+fi
+
 if [ ! -f /usr/local/vesta/data/unattended-upgrades-pre-hook.log ]; then
     exit 0
 fi
