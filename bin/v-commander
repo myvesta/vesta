@@ -831,10 +831,11 @@ do
             echo "== Checking nginx configuration"
             nginx -t
             EXIT_CODE=$?
-            if [ $EXIT_CODE -ne 0 ]; then
+            if [ $EXIT_CODE -eq 0 ]; then
                 echo "== nginx looks good, restarting nginx"
                 systemctl restart nginx
                 EXIT_CODE=$?
+                check_error $EXIT_CODE "nginx restart failed"
             else
                 check_error $EXIT_CODE "'nginx -t' returned error code $EXIT_CODE"
             fi
