@@ -6,12 +6,27 @@ if [ ! -z "$1" ]; then
 fi
 
 RUNNING_KERNEL=$(uname -r)
-INSTALLED_KERNEL=$(basename "$(readlink -f /vmlinuz)" | sed 's/^vmlinuz-//')
+INSTALLED_KERNEL=""
+
+if [ -L /vmlinuz ]; then
+    INSTALLED_KERNEL=$(basename "$(readlink -f /vmlinuz)" | sed 's/^vmlinuz-//')
+else
+    INSTALLED_KERNEL=$(find /boot -maxdepth 1 -type f -name 'vmlinuz-*' -printf '%f\n' \
+        | sed 's/^vmlinuz-//' \
+        | sort -V \
+        | tail -n 1)
+fi
 
 required_reboot=0
 
-if [ "$RUNNING_KERNEL" != "$INSTALLED_KERNEL" ]; then
+if [ -n "$INSTALLED_KERNEL" ] && [ "$RUNNING_KERNEL" != "$INSTALLED_KERNEL" ]; then
     required_reboot=1
+fi
+
+if [ -z "$INSTALLED_KERNEL" ]; then
+    echo "=== ERROR: Could not determine installed kernel"
+    additional_log_search=1
+else
     echo "=== Running kernel:   $RUNNING_KERNEL"
     echo "=== Installed kernel: $INSTALLED_KERNEL"
 fi
