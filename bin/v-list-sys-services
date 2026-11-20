@@ -319,6 +319,20 @@ if [ ! -z "$DB_SYSTEM" ] && [ "$DB_SYSTEM" != 'remote' ]; then
                     service='mariadb'
                 fi
             fi
+            list_of_processes=$(ps -ef | awk '{ print $8 }')
+            if [ "$proc_name" == "mysqld" ]; then
+                if [[ $'\n'"$list_of_processes"$'\n' != *$'mysqld'* ]]; then
+                    if [[ $'\n'"$list_of_processes"$'\n' == *$'mariadbd'* ]]; then
+                        proc_name='mariadbd'
+                    fi
+                fi
+            else
+                if [[ $'\n'"$list_of_processes"$'\n' != *$'mariadbd'* ]]; then
+                    if [[ $'\n'"$list_of_processes"$'\n' == *$'mysqld'* ]]; then
+                        proc_name='mysqld'
+                    fi
+                fi
+            fi
         fi
         if [ "$service" == 'pgsql' ]; then
             service='postgresql'
