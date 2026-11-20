@@ -18,6 +18,13 @@ if [ ! -f /usr/local/vesta/data/services-state-change.log.old ]; then
     exit 0
 fi
 
+file_size_new=$(stat -c %s /usr/local/vesta/data/services-state-change.log)
+file_size_old=$(stat -c %s /usr/local/vesta/data/services-state-change.log.old)
+
+if [ "$file_size_new" -eq "0" ] || [ "$file_size_old" -eq "0" ]; then
+    exit 0
+fi
+
 if ! cmp -s /usr/local/vesta/data/services-state-change.log.old /usr/local/vesta/data/services-state-change.log; then
     changed=$(awk '
         NR==FNR { before[$1]=$2; next }

@@ -1,6 +1,25 @@
 #!/bin/bash
 
+if [ ! -f /usr/local/vesta/data/unattended-upgrades-pre-hook.log ]; then
+    exit 0
+fi
+
 /usr/local/vesta/bin/v-list-sys-services | tail -n +3 | awk '{ print $1, $2 }' > /usr/local/vesta/data/unattended-upgrades-post-hook.log 2>&1
+
+file_size_new=$(stat -c %s /usr/local/vesta/data/unattended-upgrades-post-hook.log)
+file_size_old=$(stat -c %s /usr/local/vesta/data/unattended-upgrades-pre-hook.log)
+
+if [ "$file_size_new" -eq "0" ]; then
+    /usr/local/vesta/bin/v-message-center-add "high" "error" "unattended-upgrades" "Unattended upgrades post-hook file is empty"
+    echo "Unattended upgrades post-hook file is empty"
+    exit 1
+fi
+
+if [ "$file_size_old" -eq "0" ]; then
+    /usr/local/vesta/bin/v-message-center-add "high" "error" "unattended-upgrades" "Unattended upgrades pre-hook file is empty, but post-hook file is not empty"
+    echo "Unattended upgrades pre-hook file is empty, but post-hook file is not empty"
+    exit 1
+fi
 
 if ! cmp -s /usr/local/vesta/data/unattended-upgrades-pre-hook.log /usr/local/vesta/data/unattended-upgrades-post-hook.log; then
     changed=$(awk '
