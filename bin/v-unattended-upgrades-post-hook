@@ -5,7 +5,9 @@ if [ -f /usr/local/vesta/data/unattended-upgrades.lock ]; then
 fi
 
 if [ ! -f /usr/local/vesta/data/unattended-upgrades-pre-hook.log ]; then
-    exit 0
+    /usr/local/vesta/bin/v-message-center-add "high" "error" "unattended-upgrades" "Unattended upgrades pre-hook file is missing"
+    echo "Unattended upgrades pre-hook file is missing"
+    exit 1
 fi
 
 /usr/local/vesta/bin/v-list-sys-services | tail -n +3 | awk '{ print $1, $2 }' > /usr/local/vesta/data/unattended-upgrades-post-hook.log 2>&1
