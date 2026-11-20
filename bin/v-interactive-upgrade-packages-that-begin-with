@@ -2,8 +2,8 @@
 
 source /usr/local/vesta/func/error.sh 
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <package_prefix>"
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <package_prefix> [skip_apt_update]"
     echo "Example: $0 roundcube"
     echo "Example: $0 php5"
     echo "Example: $0 php7"
@@ -12,7 +12,14 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-/usr/local/vesta/bin/v-run-apt-update
+skip_apt_update=0
+if [ ! -z "$2" ]; then
+    skip_apt_update=1
+fi
+
+if [ $skip_apt_update -eq 0 ]; then
+    /usr/local/vesta/bin/v-run-apt-update
+fi
 
 package="$1"
 
