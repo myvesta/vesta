@@ -265,28 +265,29 @@ fi
 
 # Checking MAIL ANTIVIRUS
 if [ ! -z "$ANTIVIRUS_SYSTEM" ] && [ "$ANTIVIRUS_SYSTEM" != 'remote' ]; then
-    if [ -d "/etc/sysconfig" ]; then
-        if [ "$ANTIVIRUS_SYSTEM" == 'clamav' ];then
-            ANTIVIRUS_SYSTEM='clamd'
-        fi
-        get_srv_state $ANTIVIRUS_SYSTEM
-    else
+    # if [ -d "/etc/sysconfig" ]; then
+    #     if [ "$ANTIVIRUS_SYSTEM" == 'clamav' ];then
+    #         ANTIVIRUS_SYSTEM='clamd'
+    #     fi
+    #     get_srv_state $ANTIVIRUS_SYSTEM
+    # else
         if [ "$ANTIVIRUS_SYSTEM" == 'clamav-daemon' ];then
             proc_name='clamd'
         fi
         get_srv_state $ANTIVIRUS_SYSTEM $proc_name '' 'clamav' 'clamd'
-    fi
+    # fi
+
     data="$data\nNAME='$ANTIVIRUS_SYSTEM' SYSTEM='email antivirus'"
     data="$data STATE='$state' CPU='$cpu' MEM='$mem' RTIME='$rtime'"
     proc_name=''
-    if [ ! -d "/etc/sysconfig" ]; then
+    # if [ ! -d "/etc/sysconfig" ]; then
         if [ "$ANTIVIRUS_SYSTEM" == 'clamav-daemon' ];then
             get_srv_state "clamav-freshclam" "freshclam"
             data="$data\nNAME='clamav-freshclam' SYSTEM='email antivirus updater'"
             data="$data STATE='$state' CPU='$cpu' MEM='$mem' RTIME='$rtime'"
             proc_name=''
         fi
-    fi
+    # fi
 fi
 
 # Checking MAIL ANTISPAM
