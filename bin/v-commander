@@ -756,6 +756,7 @@ do
 
     if [ "$answer" = "inst nginx-from-debian-repo" ] || [ "$answer" = "INST NGINX-FROM-DEBIAN-REPO" ]; then
         if [ "$release" -eq 9 ] || [ "$release" -eq 10 ] || [ "$release" -eq 11 ]; then
+            echo "== Installing nginx from Debian repository"
             if [ -f "/etc/apt/sources.list.d/nginx.list" ]; then
                 mv /etc/apt/sources.list.d/nginx.list "/root/nginx.list.backup.$(date +%Y%m%d%H%M%S)"
             else
@@ -771,8 +772,7 @@ do
 
             /usr/local/vesta/bin/v-commander "freexian"
             if [ "$release" -eq 9 ] || [ "$release" -eq 10 ]; then
-                sed -i 's/ delay=.;/;/' /usr/local/vesta/data/templates/web/nginx/*
-                sed -i 's/ delay=..;/;/' /usr/local/vesta/data/templates/web/nginx/*
+                find /usr/local/vesta/data/templates/web/nginx/ -maxdepth 1 -type f -exec sed -i -e 's/ delay=.;/;/' -e 's/ delay=..;/;/' {} +
                 sed -i 's/ delay=.;/;/' /home/*/conf/web/*.nginx.conf
                 sed -i 's/ delay=.;/;/' /home/*/conf/web/*.nginx.ssl.conf
                 sed -i 's/ delay=..;/;/' /home/*/conf/web/*.nginx.conf
@@ -794,7 +794,7 @@ do
             apt-get update
             check_error
 
-            nginx_version=$(apt-cache madison nginx | grep 'freexian' | awk '{ print $3 }')
+            nginx_version=$(apt-cache madison nginx | grep 'freexian' | head -n 1 | awk '{ print $3 }')
 
             if [ -z "$nginx_version" ]; then
                 EXIT_CODE=1
@@ -804,7 +804,7 @@ do
 
             echo "== Simulating nginx downgrade to $nginx_version"
 
-            apt-get -s install --allow-downgrades nginx=$nginx_version
+            apt-get -y -s install --allow-downgrades nginx=$nginx_version
             EXIT_CODE=$?
             if [ $EXIT_CODE -ne 0 ]; then
                 check_error $EXIT_CODE "nginx downgrade simulation failed"
@@ -815,10 +815,10 @@ do
 
             echo "== Installing nginx $nginx_version"
 
-            apt-get install --allow-downgrades nginx=$nginx_version
+            apt-get install -y --allow-downgrades nginx=$nginx_version
             EXIT_CODE=$?
             if [ $EXIT_CODE -ne 0 ]; then
-                apt-get -f install
+                apt-get -y -f install
                 check_error
             fi
 
@@ -836,6 +836,11 @@ do
                 systemctl restart nginx
                 EXIT_CODE=$?
                 check_error $EXIT_CODE "nginx restart failed"
+                echo "== Waiting 5 seconds for nginx to restart"
+                sleep 5
+                echo "== Checking nginx status"
+                systemctl status nginx
+                check_error
             else
                 check_error $EXIT_CODE "'nginx -t' returned error code $EXIT_CODE"
             fi
