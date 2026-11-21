@@ -1,7 +1,14 @@
 #!/bin/bash
 
-apt update
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/vesta/bin
+
+source /usr/local/vesta/func/error.sh
+
+/usr/local/vesta/bin/v-run-apt-update
+
+echo "== Installing unattended-upgrades"
 apt install -y unattended-upgrades
+check_error
 
 cat > /etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
 APT::Periodic::Update-Package-Lists "1";
@@ -72,15 +79,20 @@ Persistent=false
 EOF
 
 systemctl daemon-reload
+
+echo "== Restarting apt-daily.timer and apt-daily-upgrade.timer"
 systemctl restart apt-daily.timer apt-daily-upgrade.timer
+check_error
 
 echo "=== Checking apt-config dump | grep pattern:"
 apt-config dump | grep -A 20 'Unattended-Upgrade::Origins-Pattern'
+check_error
 echo "-------"
 echo ""
 
 echo "=== Running: unattended-upgrade --dry-run --debug"
 unattended-upgrade --dry-run --debug
+check_error
 echo "-------"
 echo ""
 
