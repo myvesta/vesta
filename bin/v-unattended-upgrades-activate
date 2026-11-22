@@ -55,7 +55,6 @@ Dpkg::Options {
 EOF
 
 mkdir -p /etc/systemd/system/apt-daily.timer.d
-
 cat > /etc/systemd/system/apt-daily.timer.d/myvesta-override.conf <<'EOF'
 [Timer]
 OnCalendar=
@@ -65,17 +64,19 @@ Persistent=false
 EOF
 
 mkdir -p /etc/systemd/system/apt-daily-upgrade.timer.d
-
 cat > /etc/systemd/system/apt-daily-upgrade.timer.d/myvesta-override.conf <<'EOF'
-[Service]
-ExecStartPre=/usr/local/vesta/bin/v-unattended-upgrades-pre-hook
-ExecStopPost=-/usr/local/vesta/bin/v-unattended-upgrades-post-hook
-
 [Timer]
 OnCalendar=
 OnCalendar=*-*-* 16:00:00
 RandomizedDelaySec=5h
 Persistent=false
+EOF
+
+mkdir -p /etc/systemd/system/apt-daily-upgrade.service.d
+cat > /etc/systemd/system/apt-daily-upgrade.service.d/myvesta-override.conf <<'EOF'
+[Service]
+ExecStartPre=/usr/local/vesta/bin/v-unattended-upgrades-pre-hook
+ExecStopPost=-/usr/local/vesta/bin/v-unattended-upgrades-post-hook
 EOF
 
 systemctl daemon-reload
