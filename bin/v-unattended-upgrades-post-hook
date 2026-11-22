@@ -28,13 +28,8 @@ if [ "$file_size_old" -eq "0" ]; then
 fi
 
 if ! cmp -s /usr/local/vesta/data/unattended-upgrades-pre-hook.log /usr/local/vesta/data/unattended-upgrades-post-hook.log; then
-    changed=$(awk '
-        NR==FNR { before[$1]=$2; next }
-        ($1 in before) && before[$1]!=$2 {
-            printf "%s%s %s", (count++ ? ", " : ""), $1, $2
-        }
-    ' /usr/local/vesta/data/unattended-upgrades-pre-hook.log \
-    /usr/local/vesta/data/unattended-upgrades-post-hook.log)
+    source /usr/local/vesta/func/services-state-change.sh
+    changed=$(compare_service_states /usr/local/vesta/data/unattended-upgrades-pre-hook.log /usr/local/vesta/data/unattended-upgrades-post-hook.log)
 
     if [ -z "$changed" ]; then
         timestamp=$(date +%s)

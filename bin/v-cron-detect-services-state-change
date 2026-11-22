@@ -25,14 +25,10 @@ if [ "$file_size_new" -eq "0" ] || [ "$file_size_old" -eq "0" ]; then
     exit 0
 fi
 
+
 if ! cmp -s /usr/local/vesta/data/services-state-change.log.old /usr/local/vesta/data/services-state-change.log; then
-    changed=$(awk '
-        NR==FNR { before[$1]=$2; next }
-        ($1 in before) && before[$1]!=$2 {
-            printf "%s%s %s", (count++ ? ", " : ""), $1, $2
-        }
-    ' /usr/local/vesta/data/services-state-change.log.old \
-    /usr/local/vesta/data/services-state-change.log)
+    source /usr/local/vesta/func/services-state-change.sh
+    changed=$(compare_service_states /usr/local/vesta/data/services-state-change.log.old /usr/local/vesta/data/services-state-change.log)
 
     if [ -z "$changed" ]; then
         timestamp=$(date +%s)
