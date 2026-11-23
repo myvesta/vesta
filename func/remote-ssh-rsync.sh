@@ -672,30 +672,46 @@ switch_vhost_func() {
 
     echo_local_comment "Switching web proxy for: $vhost"
 
-    execute="if grep -q \"$SOURCE_IP\" /home/$USERNAME/conf/dns/$vhost.db; then sed -i \"s#$SOURCE_IP#$TARGET_IP#g\" /home/$USERNAME/conf/dns/$vhost.db; fi"
-    comment="Replacing $SOURCE_IP with $TARGET_IP in /home/$USERNAME/conf/dns/$vhost.db"
-    execute_local "$execute" "$comment"
-    execute_remote "$execute" "$comment"
-    
-    execute="if grep -q \"$SOURCE_IP\" /usr/local/vesta/data/users/$USERNAME/dns/$vhost.conf; then sed -i \"s#$SOURCE_IP#$TARGET_IP#g\" /usr/local/vesta/data/users/$USERNAME/dns/$vhost.conf; fi"
-    comment="Replacing $SOURCE_IP with $TARGET_IP in /usr/local/vesta/data/users/$USERNAME/dns/$vhost.conf"
-    execute_local "$execute" "$comment"
-    execute_remote "$execute" "$comment"
+    execute_local_impl "/usr/local/vesta/bin/v-list-dns-domain '$USERNAME' '$vhost' > /dev/null 2>&1"
+    dns_exists=$?
+    if [ $dns_exists -eq 0 ]; then
+        execute="if grep -q \"$SOURCE_IP\" /home/$USERNAME/conf/dns/$vhost.db; then sed -i \"s#$SOURCE_IP#$TARGET_IP#g\" /home/$USERNAME/conf/dns/$vhost.db; fi"
+        comment="Replacing $SOURCE_IP with $TARGET_IP in /home/$USERNAME/conf/dns/$vhost.db"
+        execute_local "$execute" "$comment"
+        execute_remote "$execute" "$comment"
+        
+        execute="if grep -q \"$SOURCE_IP\" /usr/local/vesta/data/users/$USERNAME/dns/$vhost.conf; then sed -i \"s#$SOURCE_IP#$TARGET_IP#g\" /usr/local/vesta/data/users/$USERNAME/dns/$vhost.conf; fi"
+        comment="Replacing $SOURCE_IP with $TARGET_IP in /usr/local/vesta/data/users/$USERNAME/dns/$vhost.conf"
+        execute_local "$execute" "$comment"
+        execute_remote "$execute" "$comment"
 
-    execute="/usr/local/vesta/bin/v-change-dns-domain-ip  '$USERNAME' '$vhost' '$TARGET_IP' 'no'"
-    comment="Changing DNS domain IP for $vhost to $TARGET_IP on local machine"
-    execute_local "$execute" "$comment"
-    execute="source /etc/profile; PATH=$PATH:/usr/local/vesta/bin; export PATH; /usr/local/vesta/bin/v-change-dns-domain-ip  '$USERNAME' '$vhost' '$TARGET_IP' 'no'"
-    comment="Changing DNS domain IP for $vhost to $TARGET_IP on remote server $DESTINATION_IP"
-    execute_remote "$execute" "$comment"
+        execute="/usr/local/vesta/bin/v-change-dns-domain-ip  '$USERNAME' '$vhost' '$TARGET_IP' 'no'"
+        comment="Changing DNS domain IP for $vhost to $TARGET_IP on local machine"
+        execute_local "$execute" "$comment"
+        execute="source /etc/profile; PATH=$PATH:/usr/local/vesta/bin; export PATH; /usr/local/vesta/bin/v-change-dns-domain-ip  '$USERNAME' '$vhost' '$TARGET_IP' 'no'"
+        comment="Changing DNS domain IP for $vhost to $TARGET_IP on remote server $DESTINATION_IP"
+        execute_remote "$execute" "$comment"
+    fi
 
-    execute="echo \"$TARGET_IP\" > /home/$USERNAME/conf/web/forward-$vhost.txt"
-    comment="Writing $TARGET_IP to /home/$USERNAME/conf/web/forward-$vhost.txt"
-    execute_local "$execute" "$comment"
+    execute_local_impl "/usr/local/vesta/bin/v-list-web-domain '$USERNAME' '$vhost' > /dev/null 2>&1"
+    web_exists=$?
+    if [ $web_exists -eq 0 ]; then
+        execute="echo \"$TARGET_IP\" > /home/$USERNAME/conf/web/forward-$vhost.txt"
+        comment="Writing $TARGET_IP to /home/$USERNAME/conf/web/forward-$vhost.txt"
+        execute_local "$execute" "$comment"
 
-    execute="/usr/local/vesta/bin/v-change-web-domain-proxy-tpl '$USERNAME' '$vhost' 'forward' 'txt' 'no'"
-    comment="Changing web domain proxy template for $vhost to 'forward'"
-    execute_local "$execute" "$comment"
+        execute="/usr/local/vesta/bin/v-change-web-domain-proxy-tpl '$USERNAME' '$vhost' 'forward' 'txt' 'no'"
+        comment="Changing web domain proxy template for $vhost to 'forward'"
+        execute_local "$execute" "$comment"
+    fi
+
+    execute_local_impl "/usr/local/vesta/bin/v-list-mail-domain '$USERNAME' '$vhost' > /dev/null 2>&1"
+    mail_exists=$?
+    if [ $mail_exists -eq 0 ]; then
+        execute="/usr/local/vesta/bin/v-suspend-mail-domain '$USERNAME' '$vhost'"
+        comment="Suspending mail domain $vhost for $USERNAME"
+        execute_local "$execute" "$comment"
+    fi
 }
 
 switch_vhost_finish_func() {
@@ -728,5 +744,139 @@ switch_vhost_finish_func() {
     execute_local "$execute" "$comment"
     comment="Reloading bind9 on remote server $DESTINATION_IP"
     execute_remote "$execute" "$comment" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+    return 0
+}
+
+export_rsync_import_whole_account_func() {
+    # function parameters: 1: $USERNAME, 2: $SWITCH, 3: $BACKUP_FOLDER, 4: $DESTINATION_IP, 5: $DESTINATION_PORT, 6: $DESTINATION_USERNAME
+    if [ ! -z "$1" ]; then
+        USERNAME=$1
+    fi
+    if [ ! -z "$2" ]; then
+        SWITCH=$2
+    else
+        SWITCH="0"
+    fi
+    if [ ! -z "$3" ]; then
+        BACKUP_FOLDER=$3
+    else
+        BACKUP_FOLDER="$BACKUP_FOLDER_DEFAULT"
+    fi
+    if [ ! -z "$4" ]; then
+        DESTINATION_IP=$4
+    fi
+    if [ ! -z "$5" ]; then
+        DESTINATION_PORT=$5
+    else
+        DESTINATION_PORT="22"
+    fi
+    if [ ! -z "$6" ]; then
+        DESTINATION_USERNAME=$6
+    else
+        DESTINATION_USERNAME="root"
+    fi
+
+    if [ -z "$USERNAME" ]; then
+        echo_local_error "USERNAME is not set"
+        return 101
+    fi
+    if [ -z "$BACKUP_FOLDER" ]; then
+        echo_local_error "BACKUP_FOLDER is not set"
+        return 102
+    fi
+    if [ -z "$DESTINATION_IP" ]; then
+        echo_local_error "DESTINATION_IP is not set"
+        return 110
+    fi
+
+    echo_local_comment "##################################################################################"
+    echo_local_comment "###### Exporting, rsyncing and importing empty backup for account: $USERNAME #####"
+    echo_local_comment "##################################################################################"
+
+    export_rsync_import_empty_backup_func "$USERNAME" "$BACKUP_FOLDER" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+    return_code=$?
+    if [ $return_code -ne 0 ]; then
+        echo "Error: Failed to sync empty backup to remote server $DESTINATION_IP"
+        echo "Return code: $return_code"
+        return 1
+    fi
+
+    echo_local_comment "###### Done exporting, rsyncing and importing empty backup for account: $USERNAME #####"
+    echo_local_comment ""
+
+    echo_local_comment "#######################################################"
+    echo_local_comment "###### Rsyncing web vhosts for account: $USERNAME #####"
+    echo_local_comment "#######################################################"
+
+    for domain in $(/usr/local/vesta/bin/v-list-web-domains $USERNAME plain |cut -f 1); do
+        echo_local_comment ""
+        echo_local_comment "Rsyncing web vhost for: $domain"
+        rsync_vhost_web_func "$USERNAME" "$domain" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+        return_code=$?
+        if [ $return_code -ne 0 ]; then
+            echo "Error: Failed to sync web to remote server $DESTINATION_IP"
+            echo "Return code: $return_code"
+            return 2
+        fi
+    done
+
+    echo_local_comment "###### Done rsyncing web vhosts for account: $USERNAME #####"
+    echo_local_comment ""
+
+    echo_local_comment "########################################################"
+    echo_local_comment "###### Rsyncing mail vhosts for account: $USERNAME #####"
+    echo_local_comment "########################################################"
+
+    for domain in $(/usr/local/vesta/bin/v-list-mail-domains $USERNAME plain |cut -f 1); do
+        echo_local_comment ""
+        echo_local_comment "Rsyncing mail vhost for: $domain"
+        rsync_vhost_mail_func "$USERNAME" "$domain" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+        return_code=$?
+        if [ $return_code -ne 0 ]; then
+            echo "Error: Failed to sync mail to remote server $DESTINATION_IP"
+            echo "Return code: $return_code"
+            return 3
+        fi
+    done
+
+    echo_local_comment "###### Done rsyncing mail vhosts for account: $USERNAME #####"
+    echo_local_comment ""
+
+    for database in $(/usr/local/vesta/bin/v-list-databases $USERNAME plain |cut -f 1); do
+        echo_local_comment ""
+        echo_local_comment "Rsyncing database for: $database"
+        export_rsync_import_databases_func "$database" "" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+        return_code=$?
+        if [ $return_code -ne 0 ]; then
+            echo "Error: Failed to sync database to remote server $DESTINATION_IP"
+            echo "Return code: $return_code"
+            return 4
+        fi
+    done
+
+    echo_local_comment "###### Done rsyncing databases for account: $USERNAME #####"
+    echo_local_comment ""
+
+    if [ $SWITCH -eq 1 ]; then
+        echo_local_comment "####################################################"
+        echo_local_comment "###### Switching vhosts for account: $USERNAME #####"
+        echo_local_comment "####################################################"
+        switch_vhost_prepare_func
+        for domain in $(/usr/local/vesta/bin/v-list-web-domains $USERNAME plain |cut -f 1); do
+            echo_local_comment ""
+            echo_local_comment "Switching vhost for: $domain"
+            switch_vhost_func "$USERNAME" "$domain" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+            return_code=$?
+            if [ $return_code -ne 0 ]; then
+                echo "Error: Failed to switch vhost to remote server $DESTINATION_IP"
+                echo "Return code: $return_code"
+                return 4
+            fi
+        done
+        switch_vhost_finish_func "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+        echo_local_comment "###### Done switching vhosts for account: $USERNAME #####"
+        echo_local_comment ""
+    fi
+
     return 0
 }

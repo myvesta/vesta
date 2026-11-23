@@ -4,13 +4,15 @@ source "/usr/local/vesta/func/remote-ssh-rsync.sh"
 
 if [ $# -lt 4 ]; then
     echo "Usage: $0 <DESTINATION_IP> <DESTINATION_PORT> <DESTINATION_USERNAME> <ACTION> [ARGUMENTS...]"
-    echo "ACTION: test, sync_empty_backup, sync_web, sync_mail, sync_db, switch_vhost"
+    echo "ACTION: test, sync_empty_backup, sync_web, sync_mail, sync_db, sync_whole_account, switch_vhost"
     echo "Examples: $0 192.168.1.100 22 root test"
     echo "          $0 192.168.1.100 22 root sync_empty_backup <USERNAME>"
     echo "          $0 192.168.1.100 22 root sync_web <USERNAME> <DOMAIN>"
     echo "          $0 192.168.1.100 22 root sync_mail <USERNAME> <DOMAIN>"
     echo "          $0 192.168.1.100 22 root sync_db <DATABASE_NAME>"
+    echo "          $0 192.168.1.100 22 root sync_whole_account <USERNAME>"
     echo "          $0 192.168.1.100 22 root switch_vhost <USERNAME> <DOMAIN>"
+    echo "          $0 192.168.1.100 22 root sync_whole_account <USERNAME> [SWITCH] [BACKUP_FOLDER]"
     exit 1
 fi
 
@@ -32,7 +34,7 @@ if [ "$ACTION" == "test" ]; then
         echo "Error: Failed to test connection to remote server"
         echo "SSH output: $ssh_output"
         echo "Return code: $return_code"
-        exit 1
+        exit $return_code
     fi
 fi
 
@@ -47,7 +49,7 @@ if [ "$ACTION" == "sync_empty_backup" ]; then
     BACKUP_FOLDER=${6:-"/backup"}
 
     echo_local_comment "##########################################################################"
-    echo_local_comment "###### Exporting, rsyncing and importing empty backup for: $USERNAME #####"
+    echo_local_comment "###### Exporting, rsyncing and importing empty backup for account: $USERNAME #####"
     echo_local_comment "##########################################################################"
 
     export_rsync_import_empty_backup_func "$USERNAME" "$BACKUP_FOLDER" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
@@ -55,10 +57,10 @@ if [ "$ACTION" == "sync_empty_backup" ]; then
     if [ $return_code -ne 0 ]; then
         echo "Error: Failed to sync empty backup to remote server $DESTINATION_IP"
         echo "Return code: $return_code"
-        exit 1
+        exit $return_code
     fi
 
-    echo_local_comment "###### Done exporting, rsyncing and importing empty backup for: $USERNAME #####"
+    echo_local_comment "###### Done exporting, rsyncing and importing empty backup for account: $USERNAME #####"
     exit 0
 fi
 
@@ -73,7 +75,7 @@ if [ "$ACTION" == "sync_web" ]; then
     DOMAIN=$6
 
     echo_local_comment "########################################################"
-    echo_local_comment "###### Rsyncing web vhost for: $USERNAME / $DOMAIN #####"
+    echo_local_comment "###### Rsyncing web vhost for account: $USERNAME / $DOMAIN #####"
     echo_local_comment "########################################################"
 
     rsync_vhost_web_func "$USERNAME" "$DOMAIN" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
@@ -81,10 +83,10 @@ if [ "$ACTION" == "sync_web" ]; then
     if [ $return_code -ne 0 ]; then
         echo "Error: Failed to sync web to remote server $DESTINATION_IP"
         echo "Return code: $return_code"
-        exit 1
+        exit $return_code
     fi
 
-    echo_local_comment "###### Done rsyncing web vhost for: $USERNAME / $DOMAIN #####"
+    echo_local_comment "###### Done rsyncing web vhost for account: $USERNAME / $DOMAIN #####"
     exit 0
 fi
 
@@ -99,7 +101,7 @@ if [ "$ACTION" == "sync_mail" ]; then
     DOMAIN=$6
 
     echo_local_comment "#########################################################"
-    echo_local_comment "###### Rsyncing mail vhost for: $USERNAME / $DOMAIN #####"
+    echo_local_comment "###### Rsyncing mail vhost for account: $USERNAME / $DOMAIN #####"
     echo_local_comment "#########################################################"
 
     rsync_vhost_mail_func "$USERNAME" "$DOMAIN" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
@@ -107,10 +109,10 @@ if [ "$ACTION" == "sync_mail" ]; then
     if [ $return_code -ne 0 ]; then
         echo "Error: Failed to sync mail to remote server $DESTINATION_IP"
         echo "Return code: $return_code"
-        exit 1
+        exit $return_code
     fi
 
-    echo_local_comment "###### Done rsyncing mail vhost for: $USERNAME / $DOMAIN #####"
+    echo_local_comment "###### Done rsyncing mail vhost for account: $USERNAME / $DOMAIN #####"
     exit 0
 fi
 
@@ -124,7 +126,7 @@ if [ "$ACTION" == "sync_db" ]; then
     DATABASE_NAME=$5
 
     echo_local_comment "#######################################################################"
-    echo_local_comment "###### Exporting, rsyncing and importing database: $DATABASE_NAME #####"
+    echo_local_comment "###### Exporting, rsyncing and importing database for account: $USERNAME, database: $DATABASE_NAME #####"
     echo_local_comment "#######################################################################"
 
     export_rsync_import_databases_func "$DATABASE_NAME" "/database" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
@@ -132,10 +134,10 @@ if [ "$ACTION" == "sync_db" ]; then
     if [ $return_code -ne 0 ]; then
         echo "Error: Failed to sync SQL to remote server $DESTINATION_IP"
         echo "Return code: $return_code"
-        exit 1
+        exit $return_code
     fi
 
-    echo_local_comment "###### Done exporting, rsyncing and importing database: $DATABASE_NAME #####"
+    echo_local_comment "###### Done exporting, rsyncing and importing database for account: $USERNAME, database: $DATABASE_NAME #####"
     exit 0
 fi
 
@@ -149,9 +151,9 @@ if [ "$ACTION" == "switch_vhost" ]; then
     USERNAME=$5
     DOMAIN=$6
 
-    echo_local_comment "########################################################"
-    echo_local_comment "###### Switching vhost for: $USERNAME / $DOMAIN ########"
-    echo_local_comment "########################################################"
+    echo_local_comment "########################################################################"
+    echo_local_comment "###### Switching vhost for account: $USERNAME, domain: $DOMAIN ########"
+    echo_local_comment "########################################################################"
 
     switch_vhost_prepare_func
     
@@ -168,9 +170,41 @@ if [ "$ACTION" == "switch_vhost" ]; then
     if [ $return_code -ne 0 ]; then
         echo "Error: Failed to finish vhost switching on remote server $DESTINATION_IP"
         echo "Return code: $return_code"
-        exit 1
+        exit $return_code
     fi
 
-    echo_local_comment "###### Done switching vhost for: $USERNAME / $DOMAIN #####"
+    echo_local_comment "###### Done switching vhost for account: $USERNAME, domain: $DOMAIN #####"
     exit 0
 fi
+
+if [ "$ACTION" == "sync_whole_account" ]; then
+    if [ $# -lt 5 ]; then
+        echo "Error: Not enough arguments"
+        echo "Usage: $0 <DESTINATION_IP> <DESTINATION_PORT> <DESTINATION_USERNAME> sync_whole_account <USERNAME> [SWITCH] [BACKUP_FOLDER]"
+        echo "Example: $0 192.168.1.100 22 root sync_whole_account testaccount 0 /backup"
+        echo "SWITCH: 0 = do not switch vhost, 1 = switch vhost"
+        echo "BACKUP_FOLDER: default is /backup"
+        exit 1
+    fi
+    USERNAME=$5
+    SWITCH=${6:-"0"}
+    BACKUP_FOLDER=${7:-"/backup"}
+
+    echo_local_comment "#########################################################"
+    echo_local_comment "###### Syncing whole account for account: $USERNAME #####"
+    echo_local_comment "#########################################################"
+    echo_local_comment ""
+
+    export_rsync_import_whole_account_func "$USERNAME" "$SWITCH" "$BACKUP_FOLDER" "$DESTINATION_IP" "$DESTINATION_PORT" "$DESTINATION_USERNAME"
+    return_code=$?
+    if [ $return_code -ne 0 ]; then
+        echo "Error: Failed to sync whole account to remote server $DESTINATION_IP"
+        echo "Return code: $return_code"
+        exit $return_code
+    fi
+
+    echo_local_comment "###### Done syncing whole account for account: $USERNAME #####"
+    exit 0
+fi
+
+exit 0
