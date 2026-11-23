@@ -17,36 +17,53 @@ limit=${3-300}
 # Includes
 source $VESTA/func/main.sh
 
+# JSON escaping (bez dodatnih zavisnosti)
+json_escape() {
+    local s=$1
+    s=${s//\\/\\\\}
+    s=${s//\"/\\\"}
+    s=${s//$'\n'/\\n}
+    s=${s//$'\r'/\\r}
+    s=${s//$'\t'/\\t}
+    s=${s//$'\b'/\\b}
+    s=${s//$'\f'/\\f}
+    REPLY=$s
+}
+
 # JSON list function
 json_list() {
-    IFS=$'\n'
-    i=1
-    objects=$(echo "$logs" |wc -l)
-    echo "{"
-    for str in $logs; do
-        ID=$(echo "$str" |cut -f 2 -d \')
-        DATE=$(echo "$str" |cut -f 4 -d \')
-        TIME=$(echo "$str" |cut -f 6 -d \')
-        CMD=$(echo "$str" |cut -f 8 -d \')
-        # CMD=${CMD//\"/\\\"}
-        CMD=$(echo "$CMD" | sed 's/\\ / /g')
-        echo -n '    "'$ID'": {
-        "CMD": "'$CMD'",
-        "UNDO": "'$UNDO'",
-        "TIME": "'$TIME'",
-        "DATE": "'$DATE'"
-    }'
-        if [ "$limit" -gt 0 ] && [ "$i" = "$limit" ]; then
-            break;
+    local str ID DATE TIME CMD
+    local id_json date_json time_json cmd_json undo_json
+    local i=0
+
+    printf '{\n'
+    while IFS= read -r str; do
+        [ -n "$str" ] || continue
+
+        ID=$(printf '%s\n' "$str" | cut -f 2 -d "'")
+        DATE=$(printf '%s\n' "$str" | cut -f 4 -d "'")
+        TIME=$(printf '%s\n' "$str" | cut -f 6 -d "'")
+        CMD=$(printf '%s\n' "$str" | cut -f 8 -d "'")
+        CMD=$(printf '%s\n' "$CMD" | sed 's/\\ / /g')
+
+        json_escape "$ID";   id_json=$REPLY
+        json_escape "$DATE"; date_json=$REPLY
+        json_escape "$TIME"; time_json=$REPLY
+        json_escape "$CMD";  cmd_json=$REPLY
+        json_escape "$UNDO"; undo_json=$REPLY
+
+        if (( i > 0 )); then
+            printf ',\n'
         fi
-        if [ "$i" -lt "$objects" ]; then
-            echo ','
-        else
-            echo
+        printf '    "%s": {\n        "CMD": "%s",\n        "UNDO": "%s",\n        "TIME": "%s",\n        "DATE": "%s"\n    }' \
+            "$id_json" "$cmd_json" "$undo_json" "$time_json" "$date_json"
+
+        ((++i))
+        if [ "$limit" -gt 0 ] && [ "$i" -ge "$limit" ]; then
+            break
         fi
-        ((i++))
-    done
-    echo '}'
+    done <<< "$logs"
+    printf '\n}\n'
 }
 
 shell_list() {
