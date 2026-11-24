@@ -1,0 +1,122 @@
+#!/bin/bash
+# info: enable BunnyCDN real visitor IP support in nginx
+# options: [SECRET]
+#
+# The function enables real visitor IP for sites behind BunnyCDN.
+# nginx passes the visitor IP to Apache (X-Real-IP) only for requests that come
+# from a Bunny edge server AND carry the header X-Bunny-Auth with the secret.
+# Every Bunny pull zone must have an Edge Rule:
+#   Add Request Header  X-Bunny-Auth: <secret>
+# Without the secret check, anyone with a Bunny account could point a pull zone
+# at this server and spoof any visitor IP.
+# If SECRET is omitted, an existing secret is kept, or a new one is generated.
+# Pass the same SECRET on several servers to use one Edge Rule for all of them.
+# Cloudflare (CF-Connecting-IP) keeps working unchanged.
+# Supported only with nginx as proxy in front of Apache (PROXY_SYSTEM=nginx).
+
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+# Argument definition
+secret="$1"
+
+source /etc/profile
+
+# Includes
+source $VESTA/func/main.sh
+source $VESTA/conf/vesta.conf
+
+NGINX_CONF="/etc/nginx/nginx.conf"
+BUNNY_CONF="/etc/nginx/conf.d/bunny.conf"
+SECRET_FILE="$VESTA/conf/bunnycdn.secret"
+BACKUP="$NGINX_CONF.bak-bunnycdn-$(date +%Y%m%d%H%M%S)"
+cmd="sudo /usr/local/vesta/bin/v-update-sys-bunnycdn-ips"
+
+
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+
+if [ ! -f "$NGINX_CONF" ]; then
+    echo "Error: nginx is not installed"
+    exit $E_NOTEXIST
+fi
+
+if [ "$PROXY_SYSTEM" != "nginx" ]; then
+    echo "Error: supported only with nginx as proxy (PROXY_SYSTEM=nginx)"
+    exit $E_INVALID
+fi
+
+if ! grep -qE '^\s*proxy_set_header\s+X-Real-IP\s+\$(remote_addr|client_ip);' "$NGINX_CONF"; then
+    echo "Error: no 'proxy_set_header X-Real-IP' line found in $NGINX_CONF, check it manually"
+    exit $E_PARSING
+fi
+
+if [ -n "$secret" ]; then
+    if ! [[ "$secret" =~ ^[A-Za-z0-9]{32,}$ ]]; then
+        echo "Error: SECRET must be at least 32 alphanumeric characters"
+        exit $E_INVALID
+    fi
+fi
+
+
+#----------------------------------------------------------#
+#                       Action                             #
+#----------------------------------------------------------#
+
+# Secret: given as argument, existing one, or newly generated
+if [ -n "$secret" ]; then
+    echo "$secret" > "$SECRET_FILE"
+elif [ ! -s "$SECRET_FILE" ]; then
+    openssl rand -hex 24 > "$SECRET_FILE"
+fi
+chmod 600 "$SECRET_FILE"
+secret=$(tr -cd 'A-Za-z0-9' < "$SECRET_FILE")
+
+cp -a "$NGINX_CONF" "$BACKUP"
+
+# Generate bunny.conf first (defines $client_ip used below)
+$BIN/v-update-sys-bunnycdn-ips
+check_result $? "Bunny IP list update failed"
+
+# Clean up an older realip based setup (X-Forwarded-For + recursive), if present
+sed -i 's/^\(\s*\)real_ip_header\s\+X-Forwarded-For;/\1real_ip_header     CF-Connecting-IP;/' "$NGINX_CONF"
+sed -i '/^\s*real_ip_recursive\s\+on;/d' "$NGINX_CONF"
+
+# Pass $client_ip to Apache and never forward the secret to the backend
+sed -i 's/^\(\s*proxy_set_header\s\+X-Real-IP\s\+\)\$remote_addr;/\1$client_ip;/' "$NGINX_CONF"
+if ! grep -qE '^\s*proxy_set_header\s+X-Bunny-Auth\s' "$NGINX_CONF"; then
+    sed -i 's/^\(\s*\)\(proxy_set_header\s\+X-Real-IP\s\+\$client_ip;\)/\1\2\n\1proxy_set_header    X-Bunny-Auth    "";/' "$NGINX_CONF"
+fi
+
+if ! nginx -t > /dev/null 2>&1; then
+    cp -a "$BACKUP" "$NGINX_CONF"
+    rm -f "$BUNNY_CONF"
+    echo "Error: nginx -t failed, changes reverted"
+    exit $E_RESTART
+fi
+systemctl reload nginx
+
+# Daily refresh at a random minute, so the whole fleet does not hit Bunny API at once
+check_cron=$(grep "$cmd" $VESTA/data/users/admin/cron.conf 2> /dev/null)
+if [ -z "$check_cron" ] && [ ! -z "$CRON_SYSTEM" ]; then
+    $BIN/v-add-cron-job admin "$((RANDOM % 60))" '04' '*' '*' '*' "$cmd"
+fi
+
+
+#----------------------------------------------------------#
+#                       Vesta                              #
+#----------------------------------------------------------#
+
+echo "BunnyCDN real IP support enabled (nginx.conf backup: $BACKUP)"
+echo ""
+echo "Add this Edge Rule to every Bunny pull zone that uses this server as origin:"
+echo "  Action:    Add Request Header"
+echo "  Header:    X-Bunny-Auth"
+echo "  Value:     $secret"
+echo "  Condition: Request URL, Match any, *"
+log_event "$OK" "$ARGUMENTS"
+
+exit

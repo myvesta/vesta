@@ -1,0 +1,72 @@
+#!/bin/bash
+# info: disable BunnyCDN real visitor IP support in nginx
+# options: NONE
+#
+# The function removes /etc/nginx/conf.d/bunny.conf, restores
+# 'proxy_set_header X-Real-IP $remote_addr', removes the X-Bunny-Auth line,
+# the stored secret and the daily cron job.
+
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+source /etc/profile
+
+# Includes
+source $VESTA/func/main.sh
+source $VESTA/conf/vesta.conf
+
+NGINX_CONF="/etc/nginx/nginx.conf"
+BUNNY_CONF="/etc/nginx/conf.d/bunny.conf"
+SECRET_FILE="$VESTA/conf/bunnycdn.secret"
+BACKUP="$NGINX_CONF.bak-bunnycdn-$(date +%Y%m%d%H%M%S)"
+cmd="sudo /usr/local/vesta/bin/v-update-sys-bunnycdn-ips"
+
+
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+
+if [ ! -f "$NGINX_CONF" ]; then
+    echo "Error: nginx is not installed"
+    exit $E_NOTEXIST
+fi
+
+
+#----------------------------------------------------------#
+#                       Action                             #
+#----------------------------------------------------------#
+
+cp -a "$NGINX_CONF" "$BACKUP"
+
+sed -i 's/^\(\s*proxy_set_header\s\+X-Real-IP\s\+\)\$client_ip;/\1$remote_addr;/' "$NGINX_CONF"
+sed -i '/^\s*proxy_set_header\s\+X-Bunny-Auth\s/d' "$NGINX_CONF"
+mv -f "$BUNNY_CONF" "$BUNNY_CONF.disabled" 2> /dev/null
+rm -f "$BUNNY_CONF.bak"
+
+if ! nginx -t > /dev/null 2>&1; then
+    cp -a "$BACKUP" "$NGINX_CONF"
+    mv -f "$BUNNY_CONF.disabled" "$BUNNY_CONF" 2> /dev/null
+    echo "Error: nginx -t failed, changes reverted"
+    exit $E_RESTART
+fi
+rm -f "$BUNNY_CONF.disabled" "$SECRET_FILE"
+systemctl reload nginx
+
+# Remove cron job
+check_cron=$(grep "$cmd" $VESTA/data/users/admin/cron.conf 2> /dev/null)
+if [ ! -z "$check_cron" ]; then
+    eval $check_cron
+    $BIN/v-delete-cron-job admin "$JOB"
+fi
+
+
+#----------------------------------------------------------#
+#                       Vesta                              #
+#----------------------------------------------------------#
+
+echo "BunnyCDN real IP support disabled"
+log_event "$OK" "$ARGUMENTS"
+
+exit
