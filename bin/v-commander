@@ -760,8 +760,8 @@ do
             if [ -f "/etc/apt/sources.list.d/nginx.list" ]; then
                 mv /etc/apt/sources.list.d/nginx.list "/root/nginx.list.backup.$(date +%Y%m%d%H%M%S)"
             else
-                echo "== nginx is already installed from Debian repository"
-                check_continue
+                echo "== nginx is already installed from Debian repository, if not, move /root/nginx.list.backup.* to /etc/apt/sources.list.d/nginx.list and run this command again"
+                continue;
             fi
 
             if [ "$release" -eq 10 ] || [ "$release" -eq 11 ]; then
